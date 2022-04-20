@@ -1,16 +1,16 @@
 {
   "name": "Search Result Blocker",
   "description": "Build an Extension!",
-  "version": "1.0",
+  "version": "0.1.1",
   "manifest_version": 3,
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "./js/background.js"
   },
   "host_permissions": ["http://*/*", "https://*/*"],
   "permissions": ["contextMenus", "storage", "scripting", "tabs", "activeTab"],
 
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "./views/popup.html"
   },
-  "options_page": "options.html"
+  "options_page": "./views/options.html"
 }

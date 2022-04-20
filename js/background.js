@@ -7,12 +7,13 @@ async function changeBackgroundColor() {
     return results[0];
   }
 
+  console.log(result.urls)
   // document.body.style.backgroundColor = "lightblue";
   let results = document.querySelectorAll("#search .g");
   for (let i = 0; i < results.length; i++) {
     const citeHTML = results[i].querySelector("cite").innerHTML;
     const domain = getDomain(citeHTML);
-   
+    
     if (result.urls.includes(domain)) {
       console.log("include");
       results[i].style.display="none";
@@ -56,6 +57,7 @@ function getDomain(url) {
 }
 // 右键菜单点击的时候触发
 chrome.contextMenus.onClicked.addListener((info) => {
+
   chrome.tabs.query(
     { windowId: chrome.windows.WINDOW_ID_CURRENT },
     async (tabs) => {
@@ -67,7 +69,6 @@ chrome.contextMenus.onClicked.addListener((info) => {
       console.log(activeTab);
       const domain = getDomain(activeTab.url);
       if (!urls.find((url) => url === domain)) {
-        urls = [];
         urls.push(domain);
       }
 
