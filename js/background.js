@@ -7,16 +7,16 @@ async function changeBackgroundColor() {
     return results[0];
   }
 
-  console.log(result.urls)
+  console.log(result.urls);
   // document.body.style.backgroundColor = "lightblue";
   let results = document.querySelectorAll("#search .g");
   for (let i = 0; i < results.length; i++) {
     const citeHTML = results[i].querySelector("cite").innerHTML;
     const domain = getDomain(citeHTML);
-    
+
     if (result.urls.includes(domain)) {
       console.log("include");
-      results[i].style.display="none";
+      results[i].style.display = "none";
     }
   }
 }
@@ -36,7 +36,7 @@ chrome.runtime.onInstalled.addListener(() => {
       // item的类型
       type: "normal",
       // 显示的文字，%s占位符会显示你选中的字
-      title: "标记为垃圾网站 %s",
+      title: "标记为垃圾网站",
       // 这个菜单的idj
       id: "MDN-search",
       // 可以出现这个菜单项的上下文
@@ -57,7 +57,6 @@ function getDomain(url) {
 }
 // 右键菜单点击的时候触发
 chrome.contextMenus.onClicked.addListener((info) => {
-
   chrome.tabs.query(
     { windowId: chrome.windows.WINDOW_ID_CURRENT },
     async (tabs) => {
@@ -75,7 +74,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
       // console.log("Value currently is " + JSON.stringify(result));
 
       chrome.storage.local.set({ urls }, function () {
-        console.log("Value is set to: " + JSON.stringify(urls));
+        console.log("标记成功");
       });
 
       chrome.storage.local.get("urls", function (result) {

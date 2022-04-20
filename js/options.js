@@ -1,55 +1,55 @@
 // 获取储存对域名信息
 let urls = [];
-getDomain();
-function getDomain() {
-  chrome.storage.local.get("urls", (data) => {
-    urls = data.urls;
-    showDomainList(data.urls);
-  });
-}
+const ol = document.querySelector("#domain-list");
+const fragment = document.createDocumentFragment();
 
-function setDoamin(domainList) {
-  chrome.storage.local.set({ urls: domainList }, () => {
-    getDomain();
-  });
-}
+const domain = {
+  get: () => {
+    return chrome.storage.local.get("urls");
+  },
+  set: (list) => {
+    chrome.storage.local.set({ urls: list }, () => domain.show());
+  },
+  add: (url) => {
+    urls.push(url);
+    domain.set(urls);
+  },
+  remove: (index) => {
+    urls.splice(index, 1);
+    domain.set(urls);
+  },
+  show: async () => {
+    const result = await domain.get();
 
-// 显示域名列表
-function showDomainList(urls) {
-  const fragment = document.createDocumentFragment();
-  const ol = document.querySelector("#domain-list");
-  ol.innerHTML = "";
-  urls.forEach((url, index) => {
-    const li = document.createElement("li");
-    const i = document.createElement("i");
-    i.innerText = "Remove";
-    i.dataset.index = index;
-    li.innerText = url;
-    li.appendChild(i);
-    fragment.appendChild(li);
-  });
+    ol.innerHTML = "";
 
-  ol.appendChild(fragment);
-}
+    if (result.urls.length === 0) return;
 
-function addDomain() {
-  const domain = document.querySelector("#input");
-  urls.push(domain);
-  chrome.storage.local.set({ urls }, () => {
-    getDomain();
-  });
-}
+    result.urls.forEach((url, index) => {
+      const li = document.createElement("li");
+      const i = document.createElement("i");
+      i.innerText = "------Remove------";
+      i.dataset.index = index;
+      li.innerText = url;
+      li.appendChild(i);
+      fragment.appendChild(li);
+      ol.appendChild(fragment);
+    });
+  },
+};
+
+domain.show();
+
 const submitBtn = document.querySelector("#btn");
+const input = document.querySelector("#input");
+submitBtn.addEventListener("click", () => {
+  if (input.value) {
+    domain.add(input.value);
+  }
+});
 
-submitBtn.addEventListener("click", addDomain);
-
-// 移除域名
-function removeDomain() {}
-
-const ol = document.querySelector("ol");
 ol.addEventListener("click", (e) => {
   if (e.target.nodeType === 1 && e.target.nodeName === "I") {
-    urls.splice(e.target.index, 1);
-    setDoamin(urls);
+    domain.remove(e.target.dataset.index);
   }
 });
