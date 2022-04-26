@@ -53,7 +53,8 @@
         nextPageBtn.click();
       }, 3000);
     } else {
-      console.log("没有更多了");
+      alert("采集完毕");
+      sessionStorage.setItem("STATUS", "end");
       sendMessage({ export: true });
     }
   }

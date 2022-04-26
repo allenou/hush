@@ -12,6 +12,13 @@ document.querySelector("#export").addEventListener("click", () => {
   exportExcel();
 });
 
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.export) {
+    exportExcel();
+    sendResponse(message);
+  }
+});
+
 /**
  * @description 导出表格
  */
