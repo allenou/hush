@@ -2,7 +2,7 @@
   /**
    * @description 手动点击开始采集后以后的每次注入脚本都直接执行（用于多页采集）
    */
-  const status = sessionStorage.getItem("status");
+  const status = sessionStorage.getItem("STATUS");
   if (status === "start") {
     start();
   }
@@ -12,9 +12,11 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("content 收到了 来自 popup 到消息");
 
-    sessionStorage.setItem("status", "start");
-    console.log(sessionStorage.getItem("status"));
-    start();
+    if (message.status) {
+      sessionStorage.setItem("STATUS", "start");
+      console.log(sessionStorage.getItem("STATUS"));
+      start();
+    }
 
     sendResponse({ status: "start" });
   });
