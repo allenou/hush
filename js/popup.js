@@ -1,60 +1,52 @@
- // 一个简单的sheet
- let sheetData = [
-  { department: "行政部", count: 2 },
-  { department: "技术部", count: 2 },
-];
-let sheet = XLSX.utils.json_to_sheet(sheetData);
-console.log(sheet)
-// 前往设置页面
-document.querySelector("#go-to-options").addEventListener("click", () => {
-  // window.open(chrome.runtime.getURL("./views/options.html"));
-  makeExcel();
+const getCurrentTab = async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab;
+};
+
+document.querySelector("#start").addEventListener("click", async () => {
+  const tab = await getCurrentTab();
+  chrome.tabs.sendMessage(tab.id, { status: true });
 });
 
-// 监听来自 content-script 的消息
-let shops = [];
-// chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-//   console.log("收到来自 content-script 的消息：");
-//   // shops.push(message.shops);
-//   console.log(shops.length, shops);
-//   console.log(message, sender, sendResponse);
-//   sendResponse("我是后台，我已收到你的消息：" + JSON.stringify(message));
-// });
+document.querySelector("#export").addEventListener("click", () => {
+  exportExcel();
+});
 
-// 监听来自 content-script 的消息
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+/**
+ * @description 接收来自 content-script 的消息
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.shops) {
+    const datas = sessionStorage.getItem("SHOPS")
+      ? JSON.parse(sessionStorage.getItem("SHOPS"))
+      : [];
+    sessionStorage.setItem(
+      "SHOPS",
+      JSON.stringify([...datas, ...message.shops])
+    );
+    console.log(shops.length, shops);
+  }
+
+  if (message.export) {
+    exportExcel();
+  }
   console.log("收到来自 content-script 的消息：");
 
-  shops.push(...request.shops);
-  console.log(shops.length, shops);
-  // console.log(request, sender, sendResponse);
-  sendResponse("我是后台，我已收到你的消息：" + JSON.stringify(request));
+  sendResponse("我是后台，我已收到你的消息：" + JSON.stringify(message));
 });
+/**
+ * @description 导出表格
+ */
+function exportExcel() {
+  let datas = [];
+  if (sessionStorage.getItem("SHOPS")) {
+    datas = JSON.parse(sessionStorage.getItem("SHOPS"));
+  }
+  const worksheet = XLSX.utils.json_to_sheet(datas);
 
-function makeExcel() {
-  // const workbook = new ExcelJS.Workbook();
-  // const worksheet = workbook.addWorksheet("大众点评商家数据");
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+  XLSX.writeFile(workbook, "大众点评店铺信息表.xlsx");
 }
-// function downloadExcel(name: string, columns: ProColumns[], rows?: any[]) {
-//   const excelColumns = columns
-//     .filter((item) => !item.hideInSearch)
-//     .map((item) => {
-//       return {
-//         header: item.title,
-//         key: item.dataIndex,
-//       };
-//     });
-//   const workbook = new Excel.Workbook();
-//   const worksheet = workbook.addWorksheet(name);
-
-//   worksheet.columns = excelColumns;
-//   if (rows && rows.length > 0) {
-//     worksheet.addRows(rows);
-//   }
-
-//   const buffer = await workbook.xlsx.writeBuffer();
-//   const blob = new Blob([buffer], {
-//     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-//   });
-//   FileSaver.saveAs(blob, `${name}.xlsx`);
-// }

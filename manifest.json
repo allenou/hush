@@ -3,14 +3,17 @@
   "description": "Build an Extension!",
   "version": "0.1.1",
   "manifest_version": 3,
-  "background": {
-    "service_worker": "./js/background.js"
-  },
+
   "host_permissions": ["http://*/*", "https://*/*"],
   "permissions": ["contextMenus", "storage", "scripting", "tabs", "activeTab"],
 
   "action": {
     "default_popup": "./views/popup.html"
   },
-  "options_page": "./views/options.html"
+  "content_scripts": [
+    {
+      "matches": ["https://*.dianping.com/*", "http://*.dianping.com/*"],
+      "js": ["./js/content.js"]
+    }
+  ]
 }

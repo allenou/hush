@@ -1,77 +1,69 @@
-/**
- * @description 开始
- */
-function start() {
-  getShops();
-  // nextPage();
-}
-/**
- * @description 获取店铺信息
- */
-function getShops() {
-  const cityNode = document.querySelector(".J-current-city");
-  let shops = [];
-  const shopNodeList = document.querySelectorAll("#shop-all-list li");
-  shopNodeList.forEach((item, index) => {
-    shops.push({
-      index,
-      city: cityNode ? cityNode.innerText : "",
-      shop: item.querySelector("h4").innerText,
-    });
-  });
-  sendMessage(shops);
-}
-/**
- * @description 下一页
- */
-function nextPage() {
-  const nextPageBtn = document.querySelector(".page .next");
-  if (nextPageBtn) {
-    setTimeout(() => {
-      nextPageBtn.click();
-    }, 3000);
+(function () {
+  /**
+   * @description 手动点击开始采集后以后的每次注入脚本都直接执行（用于多页采集）
+   */
+  const status = sessionStorage.getItem("status");
+  if (status === "start") {
+    start();
   }
-}
+  /**
+   * @description 接收来自 popup 的采集开始信息
+   */
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log("content 收到了 来自 popup 到消息");
 
-function onMessage() {}
-/**
- * @description
- */
-chrome.runtime.onMessage.addListener(function (message) {
-  console.log(message);
-});
+    sessionStorage.setItem("status", "start");
+    console.log(sessionStorage.getItem("status"));
+    start();
 
-function sendMessage(shops) {
-  chrome.runtime.sendMessage({ shops }, function (response) {
-    console.log("收到来自后台的回复：" + response);
+    sendResponse({ status: "start" });
   });
-}
 
-window.onload = start();
-// window.onload = function () {
-//   // chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-//   //   console.log("content");
-//   //   // 可写成switch形式 监听所有
-//   //   if (sender === "") {
-//   //     // do something
-//   //   }
-//   //   if (request.from === "cc") {
-//   //     // from 不是固定词，可使用其他自定义词汇
-//   //     // do something
-//   //   }
-//   //   // 发送回传
-//   //   sendResponse({ number: request.number });
-//   //   // // 修改dom
-//   //   // document.querySelector("#s-usersetting-top").innerText = request.number;
-//   //   // 重发信息
-//   //   chrome.runtime.sendMessage({ number: request.number + 1 }, (response) => {
-//   //     console.log(
-//   //       `content script -> background infos have been received. number: ${response.number}`
-//   //     );
-//   //   });
-//   // });
-// };
+  /**
+   * @description 开始
+   */
+  function start() {
+    getShops();
+    nextPage();
+  }
+  /**
+   * @description 获取店铺信息
+   */
+  function getShops() {
+    const cityNode = document.querySelector(".J-current-city");
+    let shops = [];
+    const shopNodeList = document.querySelectorAll("#shop-all-list li");
+    shopNodeList.forEach((item, index) => {
+      shops.push({
+        index,
+        city: cityNode ? cityNode.innerText : "",
+        shop: item.querySelector("h4").innerText,
+      });
+    });
+    sendMessage({ shops });
+  }
+  /**
+   * @description 下一页
+   */
+  function nextPage() {
+    const nextPageBtn = document.querySelector(".page .next");
+    if (nextPageBtn) {
+      setTimeout(() => {
+        nextPageBtn.click();
+      }, 3000);
+    } else {
+      console.log("没有更多了");
+      sendMessage({ export: true });
+    }
+  }
 
-// if (!isExecuted) {
-// }
-// isExecuted = true;
+  /**
+   * @description 发送信息
+   * @param {*} message
+   */
+  function sendMessage(message) {
+    chrome.runtime.sendMessage(message, (response) => {
+      console.log("收到来自后台的回复：" + response);
+    });
+  }
+})();
