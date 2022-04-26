@@ -12,7 +12,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       SHOPS: shops,
     });
     console.log(await chrome.storage.local.get(["SHOPS"]));
+    sendResponse(
+      "我是 background，我已收到你的消息：" + JSON.stringify(message)
+    );
   }
-
-  sendResponse("我是 background，我已收到你的消息：" + JSON.stringify(message));
 });

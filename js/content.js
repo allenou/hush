@@ -16,9 +16,8 @@
       sessionStorage.setItem("STATUS", "start");
       console.log(sessionStorage.getItem("STATUS"));
       start();
+      sendResponse({ status: "start" });
     }
-
-    sendResponse({ status: "start" });
   });
 
   /**
