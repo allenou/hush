@@ -217,6 +217,10 @@ export default defineContentScript({
     async function init(): Promise<void> {
       const hostname = getHostname();
       const { customEngines } = await get();
+
+      // 所有页面都显示浮动屏蔽按钮
+      injectFloatingBtn();
+
       currentEngine =
         BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ??
         customEngines.find((e) => e.hostname === hostname) ??
@@ -225,7 +229,6 @@ export default defineContentScript({
 
       injectCollapseBar();
       scanResults(currentEngine);
-      injectFloatingBtn();
 
       const container =
         document.querySelector(currentEngine.containerSelector) ?? document.body;
