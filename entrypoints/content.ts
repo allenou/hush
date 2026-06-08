@@ -201,18 +201,27 @@ export default defineContentScript({
       }
       console.log('[SRB] Found', patternCount.size, 'unique patterns');
 
+      // 输出所有出现 2 次以上的模式
+      const candidates = Array.from(patternCount.entries())
+        .filter(([, v]) => v.count >= 2)
+        .sort((a, b) => b[1].count - a[1].count);
+      console.log('[SRB] Patterns with count>=2:', candidates.length);
+      candidates.slice(0, 20).forEach(([key, { count, sample: el }]) => {
+        const links = el.querySelectorAll('a[href]').length;
+        console.log(`  ${key} x${count} links:${links}`, (el as Element).children.length > 0 ? el : '');
+      });
+
       let best: { key: string; count: number; el: Element; linkCount: number } | null = null;
       for (const [key, { count, sample: el }] of patternCount) {
         if (count < 3) continue;
         const links = el.querySelectorAll('a[href]');
         if (links.length === 0) continue;
-        console.log('[SRB] Candidate:', key, 'count:', count, 'links:', links.length);
         if (!best || count > best.count || (count === best.count && links.length > best.linkCount)) {
           best = { key, count, el, linkCount: links.length };
         }
       }
       if (!best) { console.log('[SRB] No suitable pattern found'); return null; }
-      console.log('[SRB] Best pattern:', best.key, 'count:', best.count, 'links:', best.linkCount);
+      console.log('[SRB] Best pattern:', best.key, 'count:', best.count, 'links:', best.linkCount, 'el:', best.el);
 
       const { el, count } = best;
       let container = el.parentElement;
