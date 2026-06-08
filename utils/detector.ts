@@ -63,6 +63,14 @@ function scanDomPatterns(): Map<string, ClassPattern> {
   }
 
   console.log('[SRB] Found', map.size, 'unique patterns');
+
+  // Debug: 按出现次数排序，列出前 20
+  const byCount = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
+  console.log('[SRB] Top 20 by count:');
+  byCount.slice(0, 20).forEach(([key, p]) => {
+    console.log('  ' + key + ' x' + p.count + ' links:' + p.linkCount + ' textLen:' + p.childTextLen);
+  });
+
   return map;
 }
 
