@@ -1,50 +1,93 @@
 <script lang="ts">
-  import { get, addDomain, removeDomain, subscribe } from '../../utils/storage';
+  import {
+    get,
+    getAllBlocked,
+    removeBlockedItem,
+    addCustomEngine,
+    removeCustomEngine,
+    subscribe,
+    addDomain,
+    addBlockedUrl,
+  } from '../../utils/storage';
+  import {
+    BUILT_IN_ENGINES,
+    type SearchEngineConfig,
+  } from '../../utils/search-engines';
   import { onMount } from 'svelte';
 
-  let urls: string[] = [];
+  let blockedItems: { type: 'domain' | 'url'; value: string; index: number }[] = [];
   let inputValue = '';
   let errorMsg = '';
+  let customEngines: SearchEngineConfig[] = [];
 
-  function isValidDomain(value: string): boolean {
-    try {
-      const url = value.startsWith('http') ? value : `https://${value}`;
-      const parsed = new URL(url);
-      return parsed.hostname.includes('.');
-    } catch {
-      return false;
-    }
-  }
+  // 自定义引擎表单
+  let newEngineName = '';
+  let newEngineHostname = '';
+  let newEngineContainer = '';
+  let newEngineItem = '';
+  let newEngineLink = '';
 
   async function loadData() {
+    blockedItems = await getAllBlocked();
     const storage = await get();
-    urls = storage.urls;
+    customEngines = storage.customEngines ?? [];
   }
 
   async function handleAdd() {
     const value = inputValue.trim();
     if (!value) return;
-    // 提取域名
-    const domain = value.startsWith('http')
-      ? new URL(value).hostname.replace(/^www\./, '')
-      : value.replace(/^www\./, '');
-    if (!isValidDomain(domain)) {
-      errorMsg = '请输入有效的域名';
-      return;
-    }
     errorMsg = '';
-    await addDomain(domain);
-    inputValue = '';
-    await loadData();
+
+    try {
+      if (
+        value.startsWith('http') &&
+        new URL(value).pathname !== '/'
+      ) {
+        await addBlockedUrl(value);
+      } else {
+        const domain = value.startsWith('http')
+          ? new URL(value).hostname.replace(/^www\./, '')
+          : value.replace(/^www\./, '');
+        new URL(domain.startsWith('http') ? domain : `https://${domain}`);
+        await addDomain(domain);
+      }
+      inputValue = '';
+      await loadData();
+    } catch {
+      errorMsg = '请输入有效的域名或 URL';
+    }
   }
 
-  async function handleRemove(index: number) {
-    await removeDomain(index);
+  async function handleRemove(item: { type: 'domain' | 'url'; index: number }) {
+    await removeBlockedItem(item.type, item.index);
     await loadData();
   }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') handleAdd();
+  }
+
+  async function handleAddEngine() {
+    if (!newEngineName || !newEngineHostname || !newEngineContainer || !newEngineItem) {
+      errorMsg = '请填写所有必填字段';
+      return;
+    }
+    const config: SearchEngineConfig = {
+      name: newEngineName,
+      hostname: newEngineHostname.replace(/^www\./, ''),
+      containerSelector: newEngineContainer,
+      itemSelector: newEngineItem,
+      linkSelector: newEngineLink || 'a[href]',
+    };
+    await addCustomEngine(config);
+    newEngineName = newEngineHostname = newEngineContainer = newEngineItem = newEngineLink = '';
+    errorMsg = '';
+    await loadData();
+  }
+
+  async function handleRemoveEngine(index: number) {
+    await removeCustomEngine(index);
+    await loadData();
   }
 
   onMount(() => {
@@ -54,32 +97,63 @@
 </script>
 
 <main>
-  <h1>屏蔽域名管理</h1>
+  <h1>屏蔽域名/链接 管理</h1>
   <div class="input-row">
     <input
       type="text"
-      id="input"
       bind:value={inputValue}
       onkeydown={handleKeydown}
-      placeholder="输入域名，如 example.com"
+      placeholder="输入域名或完整 URL，如 example.com 或 https://..."
     />
-    <button onclick={handleAdd}>添加域名</button>
+    <button onclick={handleAdd}>添加</button>
   </div>
   {#if errorMsg}
     <p class="error">{errorMsg}</p>
   {/if}
-  {#if urls.length === 0}
-    <p class="empty">暂无屏蔽域名</p>
+
+  {#if blockedItems.length === 0}
+    <p class="empty">暂无屏蔽内容</p>
   {:else}
     <ol>
-      {#each urls as url, i}
+      {#each blockedItems as item}
         <li>
-          <span>{url}</span>
-          <button class="remove" onclick={() => handleRemove(i)}>删除</button>
+          <span class="badge-type">{item.type === 'domain' ? '🌐' : '🔗'}</span>
+          <span class="value">{item.value}</span>
+          <button class="remove" onclick={() => handleRemove(item)}>删除</button>
         </li>
       {/each}
     </ol>
   {/if}
+
+  <hr />
+
+  <h2>已配置的搜索引擎</h2>
+  {#each BUILT_IN_ENGINES as engine}
+    <div class="engine-row">
+      <span class="engine-name">{engine.name}</span>
+      <span class="engine-host">({engine.hostname})</span>
+      <span class="builtin-tag">内置</span>
+    </div>
+  {/each}
+  {#each customEngines as engine, i}
+    <div class="engine-row">
+      <span class="engine-name">{engine.name}</span>
+      <span class="engine-host">({engine.hostname})</span>
+      <button class="remove" onclick={() => handleRemoveEngine(i)}>删除</button>
+    </div>
+  {/each}
+
+  <details>
+    <summary>手动添加搜索引擎</summary>
+    <div class="engine-form">
+      <input bind:value={newEngineName} placeholder="名称（如 我的搜索）" />
+      <input bind:value={newEngineHostname} placeholder="hostname（如 search.example.com）" />
+      <input bind:value={newEngineContainer} placeholder="容器选择器（如 #search）" />
+      <input bind:value={newEngineItem} placeholder="结果选择器（如 .result-item）" />
+      <input bind:value={newEngineLink} placeholder="链接选择器（默认 a[href]）" />
+      <button onclick={handleAddEngine}>添加</button>
+    </div>
+  </details>
 </main>
 
 <style>
@@ -87,25 +161,53 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     padding: 20px;
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
   }
   h1 { font-size: 18px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 20px 0 10px; }
   .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  input {
-    flex: 1; padding: 6px 10px;
-    border: 1px solid #ccc; border-radius: 4px;
-  }
+  input { flex: 1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
   button {
     padding: 6px 16px;
-    border: 1px solid #ccc; border-radius: 4px;
-    background: #fff; cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
   }
   button:hover { background: #f0f0f0; }
-  .error { color: #c00; font-size: 12px; margin-bottom: 8px; }
+  .error { color: #c00; font-size: 12px; }
   .empty { color: #999; font-style: italic; }
-  ol { padding-left: 24px; }
-  li { margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-  .remove { color: #c00; border-color: #c00; }
+  ol { padding-left: 0; list-style: none; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    background: #f9f9f9;
+    border-radius: 4px;
+  }
+  .badge-type { font-size: 14px; }
+  .value { flex: 1; word-break: break-all; }
+  .remove { color: #c00; border-color: #c00; padding: 2px 10px; }
   .remove:hover { background: #fff0f0; }
+  .engine-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+  }
+  .engine-name { font-weight: 500; }
+  .engine-host { color: #666; font-size: 12px; }
+  .builtin-tag {
+    font-size: 11px;
+    color: #999;
+    background: #eee;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .engine-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: #007bff; font-size: 13px; }
 </style>
