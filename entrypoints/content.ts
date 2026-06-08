@@ -119,21 +119,37 @@ export default defineContentScript({
       const hostname = getHostname();
       const { customEngines } = await get();
       injectFloatingBtn();
-      currentEngine = BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? customEngines.find((e) => e.hostname === hostname) ?? null;
-      if (!currentEngine) { setTimeout(() => tryAutoDetect(), 2000); return; }
-      const testContainer = document.querySelector(currentEngine.containerSelector);
-      const testItems = testContainer ? testContainer.querySelectorAll(currentEngine.itemSelector) : [];
-      if (!testContainer || testItems.length < 2) {
+
+      // 先查已保存的配置（可能来自之前的自动检测）
+      currentEngine = customEngines.find((e) => e.hostname === hostname) ?? null;
+      if (currentEngine) {
+        const testContainer = document.querySelector(currentEngine.containerSelector);
+        const testItems = testContainer ? testContainer.querySelectorAll(currentEngine.itemSelector) : [];
+        if (testContainer && testItems.length >= 2) {
+          injectCollapseBar(currentEngine.containerSelector);
+          scanResults(currentEngine);
+          const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
+          new MutationObserver(debounce(() => { if (currentEngine) scanResults(currentEngine); }, 300)).observe(c, { childList: true, subtree: true });
+          return;
+        }
+        // 配置失效，清除后重新检测
         const idx = customEngines.findIndex((e) => e.hostname === hostname);
-        if (idx >= 0) { customEngines.splice(idx, 1); await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } }); }
+        if (idx >= 0) {
+          customEngines.splice(idx, 1);
+          await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
+        }
         currentEngine = null;
-        setTimeout(() => tryAutoDetect(), 500);
-        return;
       }
-      injectCollapseBar(currentEngine.containerSelector);
-      scanResults(currentEngine);
-      const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
-      new MutationObserver(debounce(() => { if (currentEngine) scanResults(currentEngine); }, 300)).observe(c, { childList: true, subtree: true });
+
+      // 判断是否已知搜索引擎（根据 hostname 匹配内置列表）
+      const isKnown = BUILT_IN_ENGINES.some((e) => e.hostname === hostname);
+      if (isKnown) {
+        // 已知引擎但无有效配置 → 立即检测
+        await tryAutoDetect();
+      } else {
+        // 未知引擎 → 2 秒后尝试自动检测
+        setTimeout(() => tryAutoDetect(), 2000);
+      }
     }
 
     subscribe((storage) => {

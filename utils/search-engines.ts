@@ -6,45 +6,22 @@ export interface SearchEngineConfig {
   linkSelector: string;
 }
 
-export const BUILT_IN_ENGINES: SearchEngineConfig[] = [
-  {
-    name: 'Google',
-    hostname: 'www.google.com',
-    containerSelector: '#search',
-    itemSelector: '.g',
-    linkSelector: 'a[href]',
-  },
-  {
-    name: 'Baidu',
-    hostname: 'www.baidu.com',
-    containerSelector: '#content_left',
-    itemSelector: '.result',
-    linkSelector: 'a[href]',
-  },
-  {
-    name: 'Bing',
-    hostname: 'www.bing.com',
-    containerSelector: '#b_results',
-    itemSelector: '.b_algo',
-    linkSelector: 'a[href]',
-  },
-  {
-    name: 'DuckDuckGo',
-    hostname: 'duckduckgo.com',
-    containerSelector: '.results',
-    itemSelector: '.result',
-    linkSelector: 'a[href]',
-  },
-  {
-    name: '360搜索',
-    hostname: 'www.so.com',
-    containerSelector: 'ul.result',
-    itemSelector: 'li.res-list',
-    linkSelector: 'a[href]',
-  },
+export interface EngineInfo {
+  name: string;
+  hostname: string;
+  linkSelector: string;
+}
+
+/** 内置搜索引擎列表：仅用于识别和提取链接，DOM 结构由自动检测生成 */
+export const BUILT_IN_ENGINES: EngineInfo[] = [
+  { name: 'Google', hostname: 'google.com', linkSelector: 'a[href]' },
+  { name: 'Baidu', hostname: 'baidu.com', linkSelector: 'a[href]' },
+  { name: 'Bing', hostname: 'bing.com', linkSelector: 'a[href]' },
+  { name: 'DuckDuckGo', hostname: 'duckduckgo.com', linkSelector: 'a[href]' },
+  { name: '360搜索', hostname: 'so.com', linkSelector: 'a[href]' },
 ];
 
-export function detectSearchEngine(url: string): SearchEngineConfig | null {
+export function detectSearchEngine(url: string): EngineInfo | null {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, '');
     return BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? null;
