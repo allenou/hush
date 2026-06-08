@@ -358,7 +358,7 @@ export default defineContentScript({
           teachingTarget = el;
         };
 
-        // 点击 → 显示确认框
+        // 点击 → 发送结果到 Popup 确认
         const clickHandler = (e: MouseEvent) => {
           const el = e.target as Element;
           if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
@@ -370,7 +370,6 @@ export default defineContentScript({
           hint.remove();
           removeTeachingHighlight();
 
-          // 延迟执行，避免 capture 阶段事件冲突
           setTimeout(() => {
             const result = generateSelector(el);
             if (!result) {
@@ -394,46 +393,13 @@ export default defineContentScript({
               ? containerEl.querySelectorAll(config.itemSelector).length
               : 0;
 
-            // 创建确认框（放在延迟回调中，避免事件冲突）
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,0.25);';
-            document.body.appendChild(overlay);
-
-            const box = document.createElement('div');
-            box.style.cssText = [
-              'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);',
-              'z-index:1000001;background:#fff;border-radius:12px;',
-              'padding:24px 32px;box-shadow:0 8px 32px rgba(0,0,0,0.25);',
-              'text-align:center;min-width:280px;font-family:sans-serif;',
-            ].join(' ');
-            box.innerHTML = [
-              `<div style="font-size:16px;margin-bottom:12px;">识别到 <strong>${matchCount}</strong> 条搜索结果</div>`,
-              `<div style="font-size:13px;color:#666;margin-bottom:20px;">选择器：<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">${config.itemSelector}</code></div>`,
-              `<div style="display:flex;gap:12px;justify-content:center;">`,
-              `<button id="srb-yes" style="padding:8px 24px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">确定</button>`,
-              `<button id="srb-no" style="padding:8px 24px;background:#fff;color:#666;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:14px;">重试</button>`,
-              `</div>`,
-            ].join(' ');
-            document.body.appendChild(box);
-
-            document.getElementById('srb-yes')!.onclick = () => {
-              box.remove();
-              overlay.remove();
-              chrome.runtime.sendMessage({
-                type: 'srb-teaching-result',
-                success: true,
-                hostname: getHostname(),
-                config,
-              });
-            };
-
-            document.getElementById('srb-no')!.onclick = () => {
-              box.remove();
-              overlay.remove();
-              document.addEventListener('mousemove', moveHandler, true);
-              document.addEventListener('click', clickHandler, true);
-              document.body.appendChild(hint);
-            };
+            // 发送数据到 Popup，由 Popup 显示确认
+            chrome.runtime.sendMessage({
+              type: 'srb-teaching-confirm',
+              hostname: getHostname(),
+              config,
+              matchCount,
+            });
           }, 0);
         };
 
@@ -441,6 +407,15 @@ export default defineContentScript({
         document.addEventListener('click', clickHandler, true);
 
         sendResponse({ started: true });
+        return true;
+      }
+
+      // Popup 发来重试指令
+      if (msg.type === 'srb-teaching-retry') {
+        document.addEventListener('mousemove', moveHandler, true);
+        document.addEventListener('click', clickHandler, true);
+        document.body.appendChild(hint);
+        sendResponse({ retrying: true });
         return true;
       }
     });
