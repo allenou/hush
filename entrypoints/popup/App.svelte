@@ -9,10 +9,8 @@
   let enabled = true;
   let currentSiteBlocked = false;
   let showTeaching = false;
-  let teachingStep: 'idle' | 'clicking' | 'naming' | 'done' = 'idle';
-  let teachingName = '';
+  let teachingStep: 'idle' | 'clicking' | 'done' = 'idle';
   let teachingError = '';
-  let pendingConfig: any = null;
   let stats: { date: string; count: number }[] = [];
 
   async function getCurrentTab() {
@@ -53,16 +51,31 @@
     if (!tab?.id) return;
     teachingStep = 'clicking';
     teachingError = '';
-    pendingConfig = null;
 
-    // 监听 content script 的回复
     const listener = (msg: any) => {
       if (msg.type === 'srb-teaching-result') {
         if (msg.success) {
-          pendingConfig = msg.config;
-          teachingStep = 'naming';
+          // 自动保存，用 hostname 作为名称
+          const config = msg.config;
+          config.name = msg.hostname;
+          chrome.storage.local.get('blocker').then(async (result) => {
+            const data = result.blocker || {};
+            const engines = data.customEngines ?? [];
+            const existing = engines.findIndex(
+              (e: any) => e.hostname === config.hostname,
+            );
+            if (existing >= 0) {
+              engines[existing] = config;
+            } else {
+              engines.push(config);
+            }
+            await chrome.storage.local.set({
+              blocker: { ...data, customEngines: engines },
+            });
+            teachingStep = 'done';
+          });
         } else {
-          teachingError = msg.error || '识别失败，请重试';
+          teachingError = msg.error || '识别失败';
           teachingStep = 'idle';
         }
         chrome.runtime.onMessage.removeListener(listener);
@@ -73,29 +86,10 @@
     try {
       await chrome.tabs.sendMessage(tab.id, { type: 'srb-start-teaching' });
     } catch {
-      teachingError = '无法与此页面通信，请刷新后重试';
+      teachingError = '无法与此页面通信';
       teachingStep = 'idle';
       chrome.runtime.onMessage.removeListener(listener);
     }
-  }
-
-  async function saveEngine() {
-    if (!teachingName.trim() || !pendingConfig) return;
-    pendingConfig.name = teachingName.trim();
-    const { customEngines } = await get();
-    const existing = customEngines.findIndex(
-      (e) => e.hostname === pendingConfig.hostname,
-    );
-    if (existing >= 0) {
-      customEngines[existing] = pendingConfig;
-    } else {
-      customEngines.push(pendingConfig);
-    }
-    const current = await get();
-    await chrome.storage.local.set({
-      blocker: { ...current, customEngines },
-    });
-    teachingStep = 'done';
   }
 
   onMount(() => {
@@ -125,22 +119,15 @@
   {/if}
 
   {#if teachingStep === 'clicking'}
-    <section style="color: #28a745;">请在搜索结果页点击一条结果...</section>
+    <section style="color: #28a745;">在页面上移动鼠标，点击搜索结果完成标记</section>
   {/if}
 
   {#if teachingError}
     <section style="color: #c00; font-size: 12px;">{teachingError}</section>
   {/if}
 
-  {#if teachingStep === 'naming'}
-    <section class="teach-name">
-      <input type="text" bind:value={teachingName} placeholder="给这个搜索引擎起个名字" />
-      <button onclick={saveEngine}>保存</button>
-    </section>
-  {/if}
-
   {#if teachingStep === 'done'}
-    <section style="color: #28a745;">✅ 已学会！请刷新页面生效</section>
+    <section style="color: #28a745;">✅ 已学会！刷新页面后生效</section>
   {/if}
 
   {#if stats.length > 0}
@@ -179,8 +166,6 @@
   .teaching { display: flex; align-items: center; gap: 8px; }
   .btn-teach { background: #007bff; color: #fff; border-color: #007bff; }
   .btn-teach:hover { background: #0056b3; }
-  .teach-name { display: flex; gap: 6px; }
-  .teach-name input { flex: 1; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
   .stats { margin-top: 4px; }
   .stats h3 { font-size: 12px; margin: 0 0 6px; color: #666; }
   .chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; }

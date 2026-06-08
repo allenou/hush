@@ -308,50 +308,95 @@ export default defineContentScript({
       return JSON.stringify({ containerSelector, itemSelector, linkSelector: 'a[href]' });
     }
 
+    let teachingHighlight: HTMLDivElement | null = null;
+    let teachingTarget: Element | null = null;
+
+    function removeTeachingHighlight(): void {
+      teachingHighlight?.remove();
+      teachingHighlight = null;
+      teachingTarget = null;
+    }
+
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.type === 'srb-start-teaching') {
-        // 注入遮罩提示
-        const overlay = document.createElement('div');
-        overlay.id = 'srb-teaching-overlay';
-        overlay.style.cssText = [
-          'position: fixed; inset: 0; z-index: 999999;',
-          'background: rgba(0,0,0,0.3); display: flex;',
-          'align-items: center; justify-content: center;',
-        ].join(' ');
-        overlay.innerHTML =
-          '<div style="background:#fff;padding:20px 30px;border-radius:8px;font-size:16px;box-shadow:0 4px 20px rgba(0,0,0,0.2);">🎯 请点击任意一条搜索结果</div>';
-        document.body.appendChild(overlay);
+        removeTeachingHighlight();
 
-        // 等待用户点击
-        const handler = (e: MouseEvent) => {
+        // 创建高亮框
+        const highlight = document.createElement('div');
+        highlight.id = 'srb-teaching-highlight';
+        highlight.style.cssText = [
+          'position: fixed; pointer-events: none; z-index: 999999;',
+          'border: 3px dashed #007bff; background: rgba(0,123,255,0.08);',
+          'border-radius: 4px; display: none;',
+          'transition: all 0.1s ease;',
+        ].join(' ');
+        document.body.appendChild(highlight);
+        teachingHighlight = highlight;
+
+        // 提示条
+        const hint = document.createElement('div');
+        hint.id = 'srb-teaching-hint';
+        hint.textContent = '点击一条搜索结果完成标记';
+        hint.style.cssText = [
+          'position: fixed; top: 16px; left: 50%; transform: translateX(-50%);',
+          'z-index: 1000000; background: #007bff; color: #fff;',
+          'padding: 10px 20px; border-radius: 8px; font-size: 14px;',
+          'box-shadow: 0 4px 12px rgba(0,0,0,0.2);',
+        ].join(' ');
+        document.body.appendChild(hint);
+
+        // 鼠标移动 → 更新虚线框位置
+        const moveHandler = (e: MouseEvent) => {
+          const el = e.target as Element;
+          if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
+          const rect = el.getBoundingClientRect();
+          highlight.style.display = 'block';
+          highlight.style.left = `${rect.left + window.scrollX}px`;
+          highlight.style.top = `${rect.top + window.scrollY}px`;
+          highlight.style.width = `${rect.width}px`;
+          highlight.style.height = `${rect.height}px`;
+          teachingTarget = el;
+        };
+
+        // 点击 → 确认
+        const clickHandler = async (e: MouseEvent) => {
+          const el = e.target as Element;
+          if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
           e.preventDefault();
           e.stopPropagation();
-          overlay.remove();
-          document.removeEventListener('click', handler, true);
 
-          const result = generateSelector(e.target as Element);
+          document.removeEventListener('mousemove', moveHandler, true);
+          document.removeEventListener('click', clickHandler, true);
+          hint.remove();
+          removeTeachingHighlight();
+
+          const result = generateSelector(el);
           if (!result) {
             chrome.runtime.sendMessage({
               type: 'srb-teaching-result',
               success: false,
               hostname: getHostname(),
-              error: '无法识别搜索结果结构，请重试',
+              error: '无法识别搜索结果结构',
             });
             return;
           }
+
+          const config = {
+            ...JSON.parse(result),
+            name: getHostname(),
+            hostname: getHostname(),
+          };
 
           chrome.runtime.sendMessage({
             type: 'srb-teaching-result',
             success: true,
             hostname: getHostname(),
-            config: {
-              ...JSON.parse(result),
-              name: '',
-              hostname: getHostname(),
-            },
+            config,
           });
         };
-        document.addEventListener('click', handler, true);
+
+        document.addEventListener('mousemove', moveHandler, true);
+        document.addEventListener('click', clickHandler, true);
 
         sendResponse({ started: true });
         return true;
