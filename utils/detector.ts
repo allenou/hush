@@ -40,7 +40,7 @@ function detectByClassPattern(getHostname: () => string): SearchEngineConfig | n
 function scanDomPatterns(): Map<string, ClassPattern> {
   const map = new Map<string, ClassPattern>();
   // 用 XPath 或 querySelectorAll 扫描，限制深度避免过慢
-  const all = document.querySelectorAll('li, div, tr, section, article, dl, a.card, .result, [class*="result"], [class*="item"], [class*="hit"]');
+  const all = document.querySelectorAll('li, div, tr, section, article, dl, ol, .result, [class*="result"], [class*="item"], [class*="hit"]');
   console.log('[SRB] Scanning', all.length, 'candidate elements');
 
   for (const el of all) {
@@ -120,8 +120,8 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     for (const hint of resultHints) {
       if (cls.includes(hint)) { score += 150; break; }
     }
-    // 额外：res- 前缀也加分（如 res-list, res-item）
-    if (/^res-/.test(cls) || cls.includes('-res-')) score += 100;
+    // 额外：res- / res_ 前缀也加分（如 res-list, res-item, res_list）
+    if (/^res[-_]/.test(cls) || cls.includes('-res-') || cls.includes('_res-')) score += 100;
 
     // 4. 减分：UI 类关键词（ellipsis, tag, nav 等非结果特征）
     const uiWords = ['ellipsis', '-tag', 'spread', 'advert'];
@@ -141,14 +141,20 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     // 7. 减分：class 太短（div.a x3 这种一般是图标或简单的列表）
     if (cls.split(/\s+/).length <= 2 && p.count >= 20) score -= 100;
 
-    // 8. 区域加分（只奖 content_left 实际搜索结果区，不奖励 generic 的 main/center）
+    // 8. 区域加分
     let pc = p.sample.parentElement;
+    let inSidebar = false;
     while (pc && pc !== document.body) {
       const pcls = (pc.className as string).toLowerCase();
       if (pcls.includes('content_left')) score += 150;
-      if (pcls.includes('content_right') || pcls.includes('sidebar') || pcls.includes('aside') || pcls.includes('secondary')) score -= 200;
+      if (pcls.includes('content_right') || pcls.includes('sidebar') || pcls.includes('aside') || pcls.includes('secondary')) {
+        score -= 200;
+        inSidebar = true;
+      }
       pc = pc.parentElement;
     }
+    // 不在侧边栏也不算在 header/footer → 默认给个小加分
+    if (!inSidebar) score += 20;
 
     result.push(p);
     // 保留评分信息用于排序
@@ -198,7 +204,21 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
 
   // 如果能用 id 精确定位，只用 id
   if (container.id) {
-    parts.push(container.tagName.toLowerCase() + '#' + CSS.escape(container.id));
+    // 但 id 太长或有特殊字符时也用路径
+    const escapedId = CSS.escape(container.id);
+    if (container.id.length < 30 && !container.id.includes('\\')) {
+      parts.push(container.tagName.toLowerCase() + '#' + escapedId);
+    } else {
+      cur = container;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        const t = cur.tagName.toLowerCase();
+        const id = cur.id ? '#' + CSS.escape(cur.id) : '';
+        const c2 = Array.from(cur.classList).slice(0, 2).map((cl) => '.' + CSS.escape(cl)).join('');
+        parts.unshift(t + id + c2);
+        cur = cur.parentElement;
+        if (parts.length >= 3) break;
+      }
+    }
   } else {
     while (cur && cur !== document.body && cur !== document.documentElement) {
       const t = cur.tagName.toLowerCase();
@@ -206,7 +226,23 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
       const c2 = Array.from(cur.classList).slice(0, 2).map((cl) => '.' + CSS.escape(cl)).join('');
       parts.unshift(t + id + c2);
       cur = cur.parentElement;
-      if (cur?.id || parts.length >= 4) break; // 遇到 id 或够深了就停
+      if (cur?.id || parts.length >= 4) break;
+    }
+  }
+
+  // 如果生成的选择器太长，回退到只用父标签
+  const fullSelector = parts.join(' ');
+  if (fullSelector.length > 80) {
+    const fallback = container.tagName.toLowerCase() + itemSelector;
+    const fallbackEl = document.querySelector(fallback);
+    if (fallbackEl && fallbackEl.querySelectorAll(itemSelector).length >= 2) {
+      return {
+        name: getHostname(),
+        hostname: getHostname(),
+        containerSelector: container.tagName.toLowerCase(),
+        itemSelector,
+        linkSelector: 'a[href]',
+      };
     }
   }
 
@@ -219,12 +255,24 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
   };
 }
 
-/** 验证配置：容器能找到且有 2+ 匹配项 */
+/** 验证配置：容器能找到、有 2+ 匹配项、且多数项含有效链接 */
 function validateConfig(config: SearchEngineConfig): boolean {
   const containerEl = document.querySelector(config.containerSelector);
   if (!containerEl) { console.log('[SRB] Config invalid: container not found'); return false; }
   const items = containerEl.querySelectorAll(config.itemSelector);
   if (items.length < 2) { console.log('[SRB] Config invalid: only', items.length, 'items'); return false; }
-  console.log('[SRB] Config valid:', items.length, 'items matched');
+
+  // 验证多数项含有效链接（非空 href）
+  let validCount = 0;
+  items.forEach((item) => {
+    const link = item.querySelector<HTMLAnchorElement>(config.linkSelector);
+    if (link?.href && !link.href.startsWith('javascript:')) validCount++;
+  });
+  if (validCount < Math.max(2, items.length / 2)) {
+    console.log('[SRB] Config invalid: only', validCount, 'of', items.length, 'have valid links');
+    return false;
+  }
+
+  console.log('[SRB] Config valid:', items.length, 'items,', validCount, 'with links');
   return true;
 }
