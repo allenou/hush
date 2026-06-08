@@ -35,6 +35,13 @@ export const BUILT_IN_ENGINES: SearchEngineConfig[] = [
     itemSelector: '.result',
     linkSelector: 'a[href]',
   },
+  {
+    name: '360搜索',
+    hostname: 'www.so.com',
+    containerSelector: 'ul.result',
+    itemSelector: 'li.res-list',
+    linkSelector: 'a[href]',
+  },
 ];
 
 export function detectSearchEngine(url: string): SearchEngineConfig | null {
