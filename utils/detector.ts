@@ -26,8 +26,8 @@ function detectByClassPattern(getHostname: () => string): SearchEngineConfig | n
   const candidates = scorePatterns(patternMap);
   if (candidates.length === 0) { console.log('[SRB] No scored candidates'); return null; }
 
-  // 试 Top-3 候选，选第一个能生成有效配置的
-  for (const candidate of candidates.slice(0, 3)) {
+  // 试 Top-5 候选，选第一个能生成有效配置的
+  for (const candidate of candidates.slice(0, 5)) {
     const config = buildConfig(candidate, getHostname);
     if (config && validateConfig(config)) {
       return config;
@@ -88,7 +88,7 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
 
     // 排除导航/工具条类元素
     const blockWords = ['nav', 'menu', 'header', 'overflow', 'toolbar',
-      'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor'];
+      'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor', 'rank'];
     for (const w of blockWords) { if (cls.includes(w)) { filteredExclude++; continue outer; } }
 
     // 排除在 nav/header/footer 内的元素

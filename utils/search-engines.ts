@@ -19,6 +19,7 @@ export const BUILT_IN_ENGINES: EngineInfo[] = [
   { name: 'Bing', hostname: 'bing.com', linkSelector: 'a[href]' },
   { name: 'DuckDuckGo', hostname: 'duckduckgo.com', linkSelector: 'a[href]' },
   { name: '360搜索', hostname: 'so.com', linkSelector: 'a[href]' },
+  { name: '搜狗', hostname: 'sogou.com', linkSelector: 'a[href]' },
 ];
 
 export function detectSearchEngine(url: string): EngineInfo | null {
