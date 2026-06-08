@@ -255,10 +255,28 @@ export default defineContentScript({
 
         // 评分：基础分 = count * 10 + links * 5
         let score = count * 10 + links.length * 5;
-        // 加分项：class 包含 result/search/item 等关键词
-        if (/\b(result|search|item|algo)\b/.test(cls)) score += 100;
-        // 减分项：class 看起来像随机 hash（如 _1MWDu）
-        if (/_[a-zA-Z0-9]{5,}/.test(cls)) score -= 20;
+
+        // 关键加分：class 包含 result / c-container / xpath-log 等搜索结果特征
+        if (/\b(result|c-container|xpath-log)\b/.test(cls)) score += 500;
+
+        // 加分：包含 search / item / algo
+        if (/\b(search|item|algo)\b/.test(cls)) score += 50;
+
+        // 减分：class 包含 hash 随机字符（如 _1MWDu）
+        const hashMatch = cls.match(/_[a-zA-Z0-9]{5,}/);
+        if (hashMatch) score -= 20 * hashMatch.length;
+
+        // 根据父区域调整：如果在 content_left 加分，在 content_right 减分
+        let pc = el.parentElement;
+        let inLeft = false, inRight = false;
+        while (pc && pc !== document.body) {
+          const pcls = (pc.className as string).toLowerCase();
+          if (pcls.includes('content_left')) inLeft = true;
+          if (pcls.includes('content_right') || pcls.includes('cr-offset')) inRight = true;
+          pc = pc.parentElement;
+        }
+        if (inLeft) score += 200;
+        if (inRight) score -= 500;
 
         scored.push({ key, score, count, el, linkCount: links.length });
       }
