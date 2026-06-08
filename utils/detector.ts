@@ -109,33 +109,43 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     // === 评分策略 ===
     let score = 0;
 
-    // 1. 出现次数（核心指标）
-    score += Math.min(p.count, 30) * 15; // 上限 450 分
+    // 1. 出现次数（降低权重，避免 UI 元素碾压）
+    score += Math.min(p.count, 30) * 10; // 上限 300 分
 
-    // 2. 每个链接 +8
-    score += p.linkCount * 8;
+    // 2. 每个链接含文本内容越多越像搜索结果（而非图标/标签）
+    score += p.linkCount * 12;
 
     // 3. class 关键词加分（通用搜索结果特征）
     const resultHints = ['result', 'hit', 'search', 'algo', 'card', 'entry', 'listing', 'list-item'];
     for (const hint of resultHints) {
-      if (cls.includes(hint)) { score += 80; break; }
+      if (cls.includes(hint)) { score += 150; break; }
     }
+    // 额外：res- 前缀也加分（如 res-list, res-item）
+    if (/^res-/.test(cls) || cls.includes('-res-')) score += 100;
 
-    // 4. 链接文本和描述文本越长越像搜索结果
+    // 4. 减分：UI 类关键词（ellipsis, tag, nav 等非结果特征）
+    const uiWords = ['ellipsis', '-tag', 'spread', 'advert'];
+    for (const w of uiWords) { if (cls.includes(w)) score -= 150; }
+
+    // 5. 链接数过多（>5）说明可能是广告容器而非搜索结果项
+    if (p.linkCount > 5) score -= 100 * Math.floor(p.linkCount / 5);
+    if (p.linkCount === 1 && p.count > 10) score -= 60; // 只有 1 个链接且大量重复 → UI 元素
+
+    // 6. 链接文本和描述文本越长越像搜索结果
     if (p.childTextLen > 60) score += 30;
 
-    // 5. 减分：class 含随机 hash（如 _1MWDu, _2X7ZC）
+    // 6. 减分：class 含随机 hash（如 _1MWDu, _2X7ZC）
     const hashes = cls.match(/_[a-zA-Z0-9]{5,}/g);
     if (hashes) score -= 15 * hashes.length;
 
-    // 6. 减分：class 太短（div.a x3 这种一般是图标或简单的列表）
+    // 7. 减分：class 太短（div.a x3 这种一般是图标或简单的列表）
     if (cls.split(/\s+/).length <= 2 && p.count >= 20) score -= 100;
 
-    // 7. 加分：元素不在侧边栏
+    // 8. 区域加分（只奖 content_left 实际搜索结果区，不奖励 generic 的 main/center）
     let pc = p.sample.parentElement;
     while (pc && pc !== document.body) {
       const pcls = (pc.className as string).toLowerCase();
-      if (pcls.includes('content_left') || pcls.includes('main') || pcls.includes('primary') || pcls.includes('center')) score += 100;
+      if (pcls.includes('content_left')) score += 150;
       if (pcls.includes('content_right') || pcls.includes('sidebar') || pcls.includes('aside') || pcls.includes('secondary')) score -= 200;
       pc = pc.parentElement;
     }
