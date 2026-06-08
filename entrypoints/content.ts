@@ -117,7 +117,12 @@ export default defineContentScript({
     function scanResults(engine: SearchEngineConfig): void {
       if (!isEnabled) return;
       const container = document.querySelector(engine.containerSelector);
-      if (!container) { console.log('[SRB] scanResults: container not found:', engine.containerSelector); return; }
+      if (!container) {
+        console.log('[SRB] scanResults: container not found:', engine.containerSelector);
+        // 容器不存在 → 可能是配置错误，重新检测
+        setTimeout(() => { tryAutoDetect(); }, 500);
+        return;
+      }
       const items = container.querySelectorAll(engine.itemSelector);
       console.log('[SRB] scanResults: container', engine.containerSelector, 'itemSelector', engine.itemSelector, 'found', items.length, 'items');
       if (items.length === 0) {
@@ -147,6 +152,18 @@ export default defineContentScript({
       injectFloatingBtn();
       currentEngine = BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? customEngines.find((e) => e.hostname === hostname) ?? null;
       if (!currentEngine) { console.log('[SRB] No engine found, will auto-detect in 2s'); return; }
+      // 验证容器是否存在，不存在则从自定义引擎中移除
+      if (!document.querySelector(currentEngine.containerSelector)) {
+        console.log('[SRB] Saved config container not found, removing bad config');
+        const idx = customEngines.findIndex((e) => e.hostname === hostname);
+        if (idx >= 0) {
+          customEngines.splice(idx, 1);
+          await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
+        }
+        currentEngine = null;
+        setTimeout(() => { tryAutoDetect(); }, 500);
+        return;
+      }
       console.log('[SRB] Engine found:', currentEngine.name, 'container:', currentEngine.containerSelector, 'item:', currentEngine.itemSelector);
       injectCollapseBar();
       scanResults(currentEngine);
@@ -212,10 +229,29 @@ export default defineContentScript({
       });
 
       let best: { key: string; count: number; el: Element; linkCount: number } | null = null;
+      outer:
       for (const [key, { count, sample: el }] of patternCount) {
         if (count < 3) continue;
         const links = el.querySelectorAll('a[href]');
         if (links.length === 0) continue;
+
+        // 排除导航/菜单/header/footer 类元素
+        const cls = (el.className as string).toLowerCase();
+        const excludeWords = ['nav', 'menu', 'header', 'footer', 'overflow', 'toolbar', 'tab', 'breadcrumb', 'pagination', 'sidebar'];
+        for (const word of excludeWords) {
+          if (cls.includes(word)) continue outer;
+        }
+
+        // 向上检查是否在 nav/header/footer 内部
+        let parent = el.parentElement;
+        while (parent && parent !== document.body) {
+          const ptag = parent.tagName.toLowerCase();
+          const pcls = (parent.className as string).toLowerCase();
+          if (ptag === 'nav' || ptag === 'header' || ptag === 'footer') continue outer;
+          if (['nav', 'menu', 'header', 'footer'].some((w) => pcls.includes(w))) continue outer;
+          parent = parent.parentElement;
+        }
+
         if (!best || count > best.count || (count === best.count && links.length > best.linkCount)) {
           best = { key, count, el, linkCount: links.length };
         }
@@ -262,13 +298,21 @@ export default defineContentScript({
       if (!detected) { console.log('[SRB] Auto-detect: no config generated'); return; }
       console.log('[SRB] Auto-detect generated config:', JSON.stringify(detected));
       const { customEngines } = await get();
-      if (customEngines.some((e) => e.hostname === detected.hostname)) { console.log('[SRB] Already have config for', detected.hostname); return; }
+
+      // 验证配置是否有效（容器能找到且有 2+ 匹配项）
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl) { console.log('[SRB] Container not found:', detected.containerSelector); return; }
       const items = containerEl.querySelectorAll(detected.itemSelector);
       if (items.length < 2) { console.log('[SRB] Too few items:', items.length); return; }
-      console.log('[SRB] Auto-detect success, saving config with', items.length, 'items');
-      customEngines.push(detected);
+
+      // 替换已有配置（可能是之前误检测的）
+      const existing = customEngines.findIndex((e) => e.hostname === detected.hostname);
+      if (existing >= 0) {
+        console.log('[SRB] Replacing existing config for', detected.hostname);
+        customEngines[existing] = detected;
+      } else {
+        customEngines.push(detected);
+      }
       await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
       currentEngine = detected;
       injectCollapseBar();
