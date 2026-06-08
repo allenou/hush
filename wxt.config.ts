@@ -6,8 +6,8 @@ export default defineConfig({
     name: 'Search Result Blocker',
     description: 'Block unwanted search results by domain',
     version: '0.2.0',
-    permissions: ['contextMenus', 'storage', 'scripting', 'tabs', 'activeTab'],
-    host_permissions: ['http://*/*', 'https://*/*'],
+    permissions: ['contextMenus', 'storage', 'activeTab'],
+    host_permissions: ['*://*.google.com/*', '*://*.baidu.com/*', '*://*.bing.com/*', '*://duckduckgo.com/*'],
     action: {
       default_popup: '/popup.html',
     },

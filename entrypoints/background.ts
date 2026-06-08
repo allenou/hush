@@ -1,6 +1,5 @@
-import { defineBackground } from 'wxt/sandbox';
+import { defineBackground } from 'wxt/utils/define-background';
 import { extractDomain } from '../utils/domain';
-import { isSearchEngine } from '../utils/search-engines';
 import { addDomain, get } from '../utils/storage';
 
 export default defineBackground(() => {
@@ -28,20 +27,5 @@ export default defineBackground(() => {
     } catch (err) {
       console.error('[SRB] Failed to block domain:', err);
     }
-  });
-
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status !== 'complete') return;
-    if (!tab?.url || !isSearchEngine(tab.url)) return;
-
-    get().then(({ enabled }) => {
-      if (!enabled) return;
-      chrome.scripting
-        .executeScript({
-          target: { tabId },
-          files: ['content-scripts/content.js'],
-        })
-        .catch(() => {});
-    });
   });
 });
