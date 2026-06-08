@@ -130,9 +130,11 @@ export default defineContentScript({
     async function init(): Promise<void> {
       const hostname = getHostname();
       const { customEngines } = await get();
+      console.log('[SRB] Init on', hostname, 'built-in:', BUILT_IN_ENGINES.some((e) => e.hostname === hostname), 'custom:', customEngines.some((e) => e.hostname === hostname));
       injectFloatingBtn();
       currentEngine = BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? customEngines.find((e) => e.hostname === hostname) ?? null;
-      if (!currentEngine) return;
+      if (!currentEngine) { console.log('[SRB] No engine found, will auto-detect in 2s'); return; }
+      console.log('[SRB] Engine found:', currentEngine.name);
       injectCollapseBar();
       scanResults(currentEngine);
       const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
@@ -172,6 +174,7 @@ export default defineContentScript({
     function autoDetectSearchResults(): SearchEngineConfig | null {
       const patternCount = new Map<string, { count: number; sample: Element }>();
       const all = document.querySelectorAll('*');
+      console.log('[SRB] Auto-detect scanning', all.length, 'elements');
       for (const el of all) {
         if (el.children.length === 0) continue;
         const tag = el.tagName.toLowerCase();
@@ -183,17 +186,20 @@ export default defineContentScript({
         entry.count++;
         patternCount.set(key, entry);
       }
+      console.log('[SRB] Found', patternCount.size, 'unique patterns');
 
       let best: { key: string; count: number; el: Element; linkCount: number } | null = null;
       for (const [key, { count, sample: el }] of patternCount) {
         if (count < 3) continue;
         const links = el.querySelectorAll('a[href]');
         if (links.length === 0) continue;
+        console.log('[SRB] Candidate:', key, 'count:', count, 'links:', links.length);
         if (!best || count > best.count || (count === best.count && links.length > best.linkCount)) {
           best = { key, count, el, linkCount: links.length };
         }
       }
-      if (!best) return null;
+      if (!best) { console.log('[SRB] No suitable pattern found'); return null; }
+      console.log('[SRB] Best pattern:', best.key, 'count:', best.count, 'links:', best.linkCount);
 
       const { el, count } = best;
       let container = el.parentElement;
@@ -231,11 +237,15 @@ export default defineContentScript({
 
     async function tryAutoDetect(): Promise<void> {
       const detected = autoDetectSearchResults();
-      if (!detected) return;
+      if (!detected) { console.log('[SRB] Auto-detect: no config generated'); return; }
+      console.log('[SRB] Auto-detect generated config:', JSON.stringify(detected));
       const { customEngines } = await get();
-      if (customEngines.some((e) => e.hostname === detected.hostname)) return;
+      if (customEngines.some((e) => e.hostname === detected.hostname)) { console.log('[SRB] Already have config for', detected.hostname); return; }
       const containerEl = document.querySelector(detected.containerSelector);
-      if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) return;
+      if (!containerEl) { console.log('[SRB] Container not found:', detected.containerSelector); return; }
+      const items = containerEl.querySelectorAll(detected.itemSelector);
+      if (items.length < 2) { console.log('[SRB] Too few items:', items.length); return; }
+      console.log('[SRB] Auto-detect success, saving config with', items.length, 'items');
       customEngines.push(detected);
       await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
       currentEngine = detected;
