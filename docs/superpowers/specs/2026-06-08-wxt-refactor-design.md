@@ -8,8 +8,8 @@
 
 ### 保持不变
 - 右键菜单标记域名 → chrome.storage → 搜索结果页隐藏匹配域名的核心链路
-- storage 数据结构 `{ urls: string[] }`
 - assets 目录下的图标等静态资源
+- 扩展名称 "Search Result Blocker"（manifest 中被外部改为 "DP BOT"，重构时恢复原名称）
 
 ### 重构内容
 - 全部 JS → TypeScript
@@ -36,6 +36,7 @@
 | 语言 | TypeScript |
 | UI | Svelte |
 | 构建 | Vite（WXT 封装） |
+| Svelte 集成 | @wxt-dev/module-svelte |
 | 存储 | chrome.storage（WXT 类型封装） |
 
 ## 项目结构
@@ -45,10 +46,11 @@ search-result-blocker/
 ├── entrypoints/
 │   ├── background.ts              # Service Worker
 │   ├── content.ts                 # 搜索结果页屏蔽脚本
-│   ├── popup.html                 # Popup HTML 外壳
+│   ├── popup/
+│   │   ├── index.html             # HTML 外壳（~5行）
 │   │   └── App.svelte             # Popup 组件（含 mount 逻辑）
-│   ├── options.html               # Options HTML 外壳
 │   └── options/
+│       ├── index.html             # HTML 外壳（~5行）
 │       └── App.svelte             # 设置页组件（含 mount 逻辑）
 ├── utils/
 │   ├── domain.ts                  # 域名提取 & 校验
@@ -75,35 +77,48 @@ search-result-blocker/
 - 导出 `isSearchEngine(url: string) => SearchEngine | null` 检测函数
 
 ### `utils/storage.ts`
+
 ```typescript
-interface BlockedDomains { urls: string[] }
+interface ExtensionStorage {
+  urls: string[];                // 被屏蔽的域名列表
+  blockCount: number;            // 拦截总数
+  enabled: boolean;              // 全局启用/禁用开关
+}
 ```
-- 类型安全的 get / add / remove 方法
+
+- 默认值：`{ urls: [], blockCount: 0, enabled: true }`
+- 类型安全的 get / add / remove / incrementBlockCount / setEnabled 方法
 - 封装 chrome.storage.local 的 get/set，提供默认值
+- 所有读取操作有 try/catch，失败时返回默认值
 
 ### `entrypoints/background.ts`
 - 注册右键菜单（"标记为垃圾网站"）
-- `contextMenus.onClicked` → extractDomain → storage.add
-- `tabs.onUpdated` → 判断是否搜索引擎页面 → scripting.executeScript 注入 content script
+- `contextMenus.onClicked` → 检查 enabled 开关 → extractDomain → storage.add
+- `tabs.onUpdated` → 判断是否搜索引擎页面且 enabled → scripting.executeScript 注入 content script
 - 只在 `changeInfo.status === 'complete'` 时注入，避免重复执行
 
 ### `entrypoints/content.ts`
-- 获取当前页面搜索引擎配置
-- 读取 blocked domains
+- 获取当前页面搜索引擎配置（通过 hostname 匹配）
+- 读取 storage 中的 blocked domains 和 enabled 状态
 - 遍历匹配的搜索结果卡片，隐藏匹配域名的项
-- 使用 MutationObserver 处理动态加载的搜索结果
-- try/catch 兜底，防止屏蔽逻辑出错影响页面正常使用
+- **MutationObserver 策略**：
+  - 观察根容器（如 `#search`、`#content_left`、`#b_results`），若无则观察 `<body>`
+  - 每次观察到子节点变化时，对新出现的搜索结果卡片执行屏蔽
+  - 持续监听，不断开（页面可能继续滚动加载）
+  - 防抖处理（300ms），避免频繁执行
+- try/catch 兜底，阻止屏蔽逻辑出错影响页面正常使用
 
 ### `entrypoints/popup/App.svelte`
-- 在当前网站启用/禁用 checkbox（绑定 storage）
-- 当前页面拦截次数
-- 拦截总数
+- 全局启用/禁用开关 checkbox（绑定 storage.enabled）
+- 拦截总数（绑定 storage.blockCount）
+- 当前页面拦截次数（运行时统计，不持久化）
 - "设置"按钮跳转 options 页面
 - 响应式绑定 storage，数据变更自动更新
 
 ### `entrypoints/options/App.svelte`
 - 当前屏蔽域名列表（每项显示域名 + 删除按钮）
 - 添加域名输入框 + 按钮
+- 验证输入是否为合法域名，不合法的给出提示
 - 列表为空时显示提示文案
 - 添加 / 删除操作即时更新
 
@@ -131,10 +146,11 @@ interface BlockedDomains { urls: string[] }
 
 - **URL 解析失败**（`new URL()` 抛异常）→ 返回 null，不阻塞流程
 - **非搜索引擎页面** → background 跳过注入，content 不执行
-- **storage 为空或损坏** → 默认空数组
-- **搜索结果动态加载** → MutationObserver 观察
+- **storage 为空或损坏** → getter 返回默认值 `{ urls: [], blockCount: 0, enabled: true }`
+- **搜索结果动态加载** → MutationObserver 防抖 300ms 持续监听
 - **右键菜单点击时 tab 为空** → 安全守卫返回
 - **域名重复** → 添加时去重
+- **扩展被禁用** → background 和 content 均检查 `storage.enabled`，false 时跳过所有操作
 
 ## 不纳入本次重构的内容
 
