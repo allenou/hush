@@ -7,25 +7,27 @@ export function getHostname(): string {
 export function extractResultUrl(item: Element, linkSelector: string): string {
   const link = item.querySelector<HTMLAnchorElement>(linkSelector);
   const href = link?.href ?? '';
+  if (!href) return '';
+  if (!isSearchEngineRedirect(href)) return href;
 
-  // 如果 href 是当前搜索引擎域名的内部链接 → 跳转链接，需从属性取真实 URL
-  if (isSearchEngineRedirect(href)) {
-    // 1. mu 属性（百度放在结果容器上）
-    const mu = item.getAttribute('mu');
-    if (mu) return mu;
+  // 跳转链接 → 遍历所有属性找真实 URL
+  const currentHost = new URL(window.location.href).hostname.replace(/^www\./, '');
 
-    // 2. data-mdurl（360 搜索放在 a 标签上）
-    const mdurl = link?.getAttribute('data-mdurl');
-    if (mdurl) return mdurl;
-
-    // 3. cite 元素文本（Google/Bing 显示真实 URL）
-    const cite = item.querySelector('cite');
-    if (cite?.textContent) return cite.textContent.trim();
-
-    // 4. data-url / data-href 等常见属性
-    const dataUrl = item.getAttribute('data-url') || item.getAttribute('data-href');
-    if (dataUrl) return dataUrl;
+  // 扫 link 元素的所有属性
+  if (link) {
+    for (let i = 0; i < link.attributes.length; i++) {
+      const val = link.attributes[i].value;
+      if (/^https?:\/\//.test(val) && !val.includes(currentHost)) return val;
+    }
   }
+  // 扫 item 元素的所有属性
+  for (let i = 0; i < item.attributes.length; i++) {
+    const val = item.attributes[i].value;
+    if (/^https?:\/\//.test(val) && !val.includes(currentHost)) return val;
+  }
+  // 扫 cite 文本
+  const cite = item.querySelector('cite');
+  if (cite?.textContent) return cite.textContent.trim();
 
   return href;
 }
