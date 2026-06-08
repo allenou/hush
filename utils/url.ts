@@ -10,15 +10,19 @@ export function extractResultUrl(item: Element, linkSelector: string): string {
 
   // 如果 href 是当前搜索引擎域名的内部链接 → 跳转链接，需从属性取真实 URL
   if (isSearchEngineRedirect(href)) {
-    // 优先取 mu 属性（百度）
+    // 1. mu 属性（百度放在结果容器上）
     const mu = item.getAttribute('mu');
     if (mu) return mu;
 
-    // 其次取 cite 元素文本（Google/Bing 显示真实 URL）
+    // 2. data-mdurl（360 搜索放在 a 标签上）
+    const mdurl = link?.getAttribute('data-mdurl');
+    if (mdurl) return mdurl;
+
+    // 3. cite 元素文本（Google/Bing 显示真实 URL）
     const cite = item.querySelector('cite');
     if (cite?.textContent) return cite.textContent.trim();
 
-    // 最后取 data-url 等常见属性
+    // 4. data-url / data-href 等常见属性
     const dataUrl = item.getAttribute('data-url') || item.getAttribute('data-href');
     if (dataUrl) return dataUrl;
   }
