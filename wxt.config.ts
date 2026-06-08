@@ -6,7 +6,7 @@ export default defineConfig({
     name: 'Search Result Blocker',
     description: 'Block unwanted search results by domain',
     version: '0.2.0',
-    permissions: ['contextMenus', 'storage', 'activeTab'],
+    permissions: ['storage', 'activeTab'],
     host_permissions: ['<all_urls>'],
     action: {
       default_popup: '/popup.html',
