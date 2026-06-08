@@ -87,8 +87,8 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     const cls = (p.sample.className as string).toLowerCase();
 
     // 排除导航/工具条类元素
-    const blockWords = ['nav', 'menu', 'header', 'footer', 'overflow', 'toolbar', 'tab',
-      'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor', 'aside'];
+    const blockWords = ['nav', 'menu', 'header', 'overflow', 'toolbar',
+      'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor'];
     for (const w of blockWords) { if (cls.includes(w)) { filteredExclude++; continue outer; } }
 
     // 排除在 nav/header/footer 内的元素
