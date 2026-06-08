@@ -3,22 +3,41 @@ export function getHostname(): string {
   return new URL(window.location.href).hostname.replace(/^www\./, '');
 }
 
-/** 从结果元素中提取真实 URL（处理百度跳转链接） */
+/** 从搜索结果元素中提取真实 URL（处理搜索引擎跳转链接） */
 export function extractResultUrl(item: Element, linkSelector: string): string {
-  let url = '';
   const link = item.querySelector<HTMLAnchorElement>(linkSelector);
-  url = link?.href ?? '';
+  const href = link?.href ?? '';
 
-  // 百度会把真实 URL 放在 mu 属性上
-  if (!url || url.includes('baidu.com/link?')) {
+  // 如果 href 是当前搜索引擎域名的内部链接 → 跳转链接，需从属性取真实 URL
+  if (isSearchEngineRedirect(href)) {
+    // 优先取 mu 属性（百度）
     const mu = item.getAttribute('mu');
-    if (mu) url = mu;
+    if (mu) return mu;
+
+    // 其次取 cite 元素文本（Google/Bing 显示真实 URL）
+    const cite = item.querySelector('cite');
+    if (cite?.textContent) return cite.textContent.trim();
+
+    // 最后取 data-url 等常见属性
+    const dataUrl = item.getAttribute('data-url') || item.getAttribute('data-href');
+    if (dataUrl) return dataUrl;
   }
 
-  // 如果还是跳转链接，尝试 cite 元素
-  if (!url || url.includes('baidu.com/link?')) {
-    const cite = item.querySelector('cite');
-    if (cite?.textContent) url = cite.textContent.trim();
+  return href;
+}
+
+/** 判断 URL 是否为搜索引擎内部跳转链接 */
+function isSearchEngineRedirect(url: string): boolean {
+  if (!url) return false;
+  try {
+    const current = new URL(window.location.href).hostname.replace(/^www\./, '');
+    const target = new URL(url).hostname.replace(/^www\./, '');
+    // 如果链接指向当前搜索引擎自身 → 是跳转链接
+    if (target === current) return true;
+  } catch {
+    // URL 解析失败
   }
-  return url;
+  // 常见跳转路径特征
+  const redirectPaths = ['/url?', '/link?', '/ck/', '/l/', '/goto/', '/redirect'];
+  return redirectPaths.some((p) => url.includes(p));
 }
