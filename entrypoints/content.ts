@@ -40,13 +40,34 @@ export default defineContentScript({
       bar.style.display = count > 0 ? 'block' : 'none';
     }
 
+    /** 从结果元素中提取真实 URL（处理百度跳转链接） */
+    function extractResultUrl(item: Element): string {
+      const engine = currentEngine;
+      let url = '';
+      // 1. 优先取链接的 href
+      if (engine) {
+        const link = item.querySelector<HTMLAnchorElement>(engine.linkSelector);
+        url = link?.href ?? '';
+      }
+      // 2. 百度会把真实 URL 放在 mu 属性上
+      if (!url || url.includes('baidu.com/link?')) {
+        const mu = item.getAttribute('mu');
+        if (mu) url = mu;
+      }
+      // 3. 如果还是 baidu 跳转链接，尝试从 cite 元素取文本
+      if (!url || url.includes('baidu.com/link?')) {
+        const cite = item.querySelector('cite');
+        if (cite?.textContent) url = cite.textContent.trim();
+      }
+      return url;
+    }
+
     function processItem(item: Element): void {
       if (item.hasAttribute('data-srb-processed')) return;
       item.setAttribute('data-srb-processed', 'true');
       const engine = currentEngine;
       if (!engine) return;
-      const link = item.querySelector<HTMLAnchorElement>(engine.linkSelector);
-      const href = link?.href ?? '';
+      const href = extractResultUrl(item);
       if (!href) return;
       const domainMatch = blockedDomains.some((d) => href.includes(d));
       const urlMatch = blockedUrls.includes(href);
