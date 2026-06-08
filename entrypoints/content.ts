@@ -121,13 +121,15 @@ export default defineContentScript({
       const items = container.querySelectorAll(engine.itemSelector);
       console.log('[SRB] scanResults: container', engine.containerSelector, 'itemSelector', engine.itemSelector, 'found', items.length, 'items');
       if (items.length === 0) {
-        // Debug: 在容器内找所有子元素看看
+        // Debug: 容器内子元素（可直接点击跳转页面位置）
         const children = container.children;
         console.log('[SRB] Container children:', children.length);
-        for (let i = 0; i < Math.min(children.length, 5); i++) {
-          const c = children[i];
-          console.log('[SRB]   child', i, c.tagName, (c as Element).className, c.querySelector('a[href]')?.getAttribute('href'));
+        for (let i = 0; i < Math.min(children.length, 8); i++) {
+          const c = children[i] as Element;
+          console.log('[SRB] child ' + i, c);
         }
+      } else {
+        console.log('[SRB] First 3 items:', items[0], items[1], items[2]);
       }
       items.forEach((item) => processItem(item));
       updateCollapseBar();
