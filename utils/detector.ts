@@ -140,7 +140,15 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     (p as any).__score = score;
   }
 
-  console.log('[SRB] Filter: count<3=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
+  console.log('[SRB] Filter: total=' + map.size + ' count<3=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
+  if (result.length === 0) {
+    // 把 count>=3 && links>0 的被排除项打印出来
+    for (const [, p] of map) {
+      if (p.count >= 3 && p.linkCount > 0) {
+        console.log('[SRB] Excluded candidate:', p.key, 'x' + p.count, 'links:', p.linkCount);
+      }
+    }
+  }
 
   result.sort((a, b) => ((b as any).__score ?? 0) - ((a as any).__score ?? 0));
 
