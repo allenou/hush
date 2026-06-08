@@ -357,12 +357,19 @@ export default defineContentScript({
       new MutationObserver(debounce(() => { if (currentEngine) scanResults(currentEngine); }, 300)).observe(c, { childList: true, subtree: true });
     }
 
-    // 初始化
+    // 订阅 storage 变化，重新扫描
     subscribe((storage) => {
       blockedDomains = storage.urls;
       blockedUrls = storage.blockedUrls;
       isEnabled = storage.enabled;
-      if (currentEngine) scanResults(currentEngine);
+      if (currentEngine) {
+        // 清除已处理标记，使元素可以被重新评估（屏蔽→徽标，取消→按钮）
+        const container = document.querySelector(currentEngine.containerSelector);
+        if (container) {
+          container.querySelectorAll('[data-srb-processed]').forEach((el) => el.removeAttribute('data-srb-processed'));
+        }
+        scanResults(currentEngine);
+      }
     });
 
     get().then((storage) => {
