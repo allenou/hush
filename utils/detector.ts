@@ -69,26 +69,27 @@ function scanDomPatterns(): Map<string, ClassPattern> {
 /** 给候选模式评分，返回按分降序的 Top10 */
 function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
   const result: ClassPattern[] = [];
+  let filteredCount = 0, filteredNoLinks = 0, filteredExclude = 0;
 
   outer:
   for (const [, p] of map) {
-    if (p.count < 3) continue;
-    if (p.linkCount === 0) continue;
+    if (p.count < 3) { filteredCount++; continue; }
+    if (p.linkCount === 0) { filteredNoLinks++; continue; }
 
     const cls = (p.sample.className as string).toLowerCase();
 
     // 排除导航/工具条类元素
     const blockWords = ['nav', 'menu', 'header', 'footer', 'overflow', 'toolbar', 'tab',
       'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor', 'aside'];
-    for (const w of blockWords) { if (cls.includes(w)) continue outer; }
+    for (const w of blockWords) { if (cls.includes(w)) { filteredExclude++; continue outer; } }
 
     // 排除在 nav/header/footer 内的元素
     let parent = p.sample.parentElement;
     while (parent && parent !== document.body) {
       const pt = parent.tagName.toLowerCase();
       const pc = (parent.className as string).toLowerCase();
-      if (pt === 'nav' || pt === 'header' || pt === 'footer') continue outer;
-      if (blockWords.some((w) => pc.includes(w))) continue outer;
+      if (pt === 'nav' || pt === 'header' || pt === 'footer') { filteredExclude++; continue outer; }
+      if (blockWords.some((w) => pc.includes(w))) { filteredExclude++; continue outer; }
       parent = parent.parentElement;
     }
 
@@ -130,6 +131,8 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     // 保留评分信息用于排序
     (p as any).__score = score;
   }
+
+  console.log('[SRB] Filter: count<3=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
 
   result.sort((a, b) => ((b as any).__score ?? 0) - ((a as any).__score ?? 0));
 
