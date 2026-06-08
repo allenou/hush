@@ -228,36 +228,49 @@ export default defineContentScript({
         console.log(`  ${key} x${count} links:${links}`, (el as Element).children.length > 0 ? el : '');
       });
 
-      let best: { key: string; count: number; el: Element; linkCount: number } | null = null;
+      // 给每个候选打分，选最优
+      interface Score { key: string; score: number; count: number; el: Element; linkCount: number }
+      const scored: Score[] = [];
       outer:
       for (const [key, { count, sample: el }] of patternCount) {
         if (count < 3) continue;
         const links = el.querySelectorAll('a[href]');
         if (links.length === 0) continue;
 
-        // 排除导航/菜单/header/footer 类元素
         const cls = (el.className as string).toLowerCase();
-        const excludeWords = ['nav', 'menu', 'header', 'footer', 'overflow', 'toolbar', 'tab', 'breadcrumb', 'pagination', 'sidebar'];
+        const excludeWords = ['nav', 'menu', 'header', 'footer', 'overflow', 'toolbar', 'tab', 'breadcrumb', 'pagination', 'sidebar', 'toplist'];
         for (const word of excludeWords) {
           if (cls.includes(word)) continue outer;
         }
 
-        // 向上检查是否在 nav/header/footer 内部
+        // 向上检查是否在 nav/header/footer/sidebar 内部
         let parent = el.parentElement;
         while (parent && parent !== document.body) {
           const ptag = parent.tagName.toLowerCase();
           const pcls = (parent.className as string).toLowerCase();
           if (ptag === 'nav' || ptag === 'header' || ptag === 'footer') continue outer;
-          if (['nav', 'menu', 'header', 'footer'].some((w) => pcls.includes(w))) continue outer;
+          if (['nav', 'menu', 'header', 'footer', 'sidebar', 'aside', 'right', 'cr-offset'].some((w) => pcls.includes(w))) continue outer;
           parent = parent.parentElement;
         }
 
-        if (!best || count > best.count || (count === best.count && links.length > best.linkCount)) {
-          best = { key, count, el, linkCount: links.length };
-        }
+        // 评分：基础分 = count * 10 + links * 5
+        let score = count * 10 + links.length * 5;
+        // 加分项：class 包含 result/search/item 等关键词
+        if (/\b(result|search|item|algo)\b/.test(cls)) score += 100;
+        // 减分项：class 看起来像随机 hash（如 _1MWDu）
+        if (/_[a-zA-Z0-9]{5,}/.test(cls)) score -= 20;
+
+        scored.push({ key, score, count, el, linkCount: links.length });
       }
-      if (!best) { console.log('[SRB] No suitable pattern found'); return null; }
-      console.log('[SRB] Best pattern:', best.key, 'count:', best.count, 'links:', best.linkCount, 'el:', best.el);
+
+      if (scored.length === 0) { console.log('[SRB] No suitable pattern found'); return null; }
+
+      scored.sort((a, b) => b.score - a.score);
+      console.log('[SRB] Top 3 candidates:');
+      scored.slice(0, 3).forEach((c) => console.log('  ', c.key, 'score:', c.score, 'count:', c.count, 'links:', c.linkCount, 'el:', c.el));
+
+      const best = scored[0];
+      console.log('[SRB] Best pattern:', best.key, 'score:', best.score, 'count:', best.count, 'links:', best.linkCount);
 
       const { el, count } = best;
       let container = el.parentElement;
@@ -301,9 +314,12 @@ export default defineContentScript({
 
       // 验证配置是否有效（容器能找到且有 2+ 匹配项）
       const containerEl = document.querySelector(detected.containerSelector);
-      if (!containerEl) { console.log('[SRB] Container not found:', detected.containerSelector); return; }
-      const items = containerEl.querySelectorAll(detected.itemSelector);
-      if (items.length < 2) { console.log('[SRB] Too few items:', items.length); return; }
+      if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {
+        console.log('[SRB] Generated config invalid, will retry in 3s');
+        // 重试一次（可能页面还没渲染完）
+        setTimeout(() => tryAutoDetect(), 3000);
+        return;
+      }
 
       // 替换已有配置（可能是之前误检测的）
       const existing = customEngines.findIndex((e) => e.hostname === detected.hostname);
