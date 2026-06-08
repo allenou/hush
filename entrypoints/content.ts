@@ -309,17 +309,51 @@ export default defineContentScript({
     }
 
     let teachingHighlight: HTMLDivElement | null = null;
-    let teachingTarget: Element | null = null;
+    let hoveredEl: Element | null = null;
+    let depthOffset = 0;
+
+    function getTargetElement(): Element | null {
+      if (!hoveredEl) return null;
+      let el: Element = hoveredEl;
+      for (let i = 0; i < depthOffset; i++) {
+        if (el.parentElement && el.parentElement !== document.body) {
+          el = el.parentElement;
+        }
+      }
+      return el;
+    }
+
+    function updateHighlight(): void {
+      const hl = teachingHighlight;
+      if (!hl || !hoveredEl) { hl?.style.display = 'none'; return; }
+      const el = getTargetElement();
+      if (!el) { hl.style.display = 'none'; return; }
+      const rect = el.getBoundingClientRect();
+      hl.style.display = 'block';
+      hl.style.left = `${rect.left + window.scrollX}px`;
+      hl.style.top = `${rect.top + window.scrollY}px`;
+      hl.style.width = `${rect.width}px`;
+      hl.style.height = `${rect.height}px`;
+      // 更新提示条显示当前标签
+      const hint = document.getElementById('srb-teaching-hint');
+      if (hint) {
+        const tag = el.tagName.toLowerCase();
+        const cls = el.className.trim().slice(0, 40);
+        hint.innerHTML = `点击标记 · <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:3px;">&lt;${tag}${cls ? ` class=&quot;${cls}&quot;` : ''}&gt;</code> ${depthOffset > 0 ? ` · 上移 ${depthOffset} 级` : ''} · <span style="font-size:12px;opacity:0.8;">+/- 调整</span>`;
+      }
+    }
 
     function removeTeachingHighlight(): void {
       teachingHighlight?.remove();
       teachingHighlight = null;
-      teachingTarget = null;
+      hoveredEl = null;
+      depthOffset = 0;
     }
 
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.type === 'srb-start-teaching') {
         removeTeachingHighlight();
+        depthOffset = 0;
 
         // 创建高亮框
         const highlight = document.createElement('div');
@@ -336,26 +370,34 @@ export default defineContentScript({
         // 提示条
         const hint = document.createElement('div');
         hint.id = 'srb-teaching-hint';
-        hint.textContent = '点击一条搜索结果完成标记';
         hint.style.cssText = [
           'position: fixed; top: 16px; left: 50%; transform: translateX(-50%);',
           'z-index: 1000000; background: #007bff; color: #fff;',
           'padding: 10px 20px; border-radius: 8px; font-size: 14px;',
           'box-shadow: 0 4px 12px rgba(0,0,0,0.2);',
+          'white-space: nowrap;',
         ].join(' ');
+        hint.textContent = '移动鼠标选择元素，+/- 调整范围';
         document.body.appendChild(hint);
 
-        // 鼠标移动 → 更新虚线框位置
+        // 鼠标移动 → 记录悬停元素
         const moveHandler = (e: MouseEvent) => {
           const el = e.target as Element;
           if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
-          const rect = el.getBoundingClientRect();
-          highlight.style.display = 'block';
-          highlight.style.left = `${rect.left + window.scrollX}px`;
-          highlight.style.top = `${rect.top + window.scrollY}px`;
-          highlight.style.width = `${rect.width}px`;
-          highlight.style.height = `${rect.height}px`;
-          teachingTarget = el;
+          hoveredEl = el;
+          depthOffset = 0;
+          updateHighlight();
+        };
+
+        // 键盘 + / - 调整深度
+        const keyHandler = (e: KeyboardEvent) => {
+          if (e.key === '+' || e.key === '=') {
+            depthOffset++;
+            updateHighlight();
+          } else if (e.key === '-' || e.key === '_') {
+            if (depthOffset > 0) depthOffset--;
+            updateHighlight();
+          }
         };
 
         // 点击 → 发送结果到 Popup 确认
@@ -367,11 +409,15 @@ export default defineContentScript({
 
           document.removeEventListener('mousemove', moveHandler, true);
           document.removeEventListener('click', clickHandler, true);
+          document.removeEventListener('keydown', keyHandler, true);
           hint.remove();
           removeTeachingHighlight();
 
+          const target = getTargetElement();
+          if (!target) return;
+
           setTimeout(() => {
-            const result = generateSelector(el);
+            const result = generateSelector(target);
             if (!result) {
               chrome.runtime.sendMessage({
                 type: 'srb-teaching-result',
@@ -393,7 +439,6 @@ export default defineContentScript({
               ? containerEl.querySelectorAll(config.itemSelector).length
               : 0;
 
-            // 发送数据到 Popup，由 Popup 显示确认
             chrome.runtime.sendMessage({
               type: 'srb-teaching-confirm',
               hostname: getHostname(),
@@ -405,6 +450,9 @@ export default defineContentScript({
 
         document.addEventListener('mousemove', moveHandler, true);
         document.addEventListener('click', clickHandler, true);
+        document.addEventListener('keydown', keyHandler, true);
+
+        sendResponse({ started: true });
 
         sendResponse({ started: true });
         return true;
