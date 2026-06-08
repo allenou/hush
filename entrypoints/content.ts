@@ -253,5 +253,109 @@ export default defineContentScript({
       isEnabled = storage.enabled;
       init();
     });
+
+    // ===== Teaching Mode =====
+    /** DOM 选择器自动生成 */
+    function generateSelector(el: Element): string | null {
+      let parent = el.parentElement;
+      let container: Element | null = null;
+      let itemTag = '';
+      let itemClass = '';
+
+      while (parent && parent !== document.body) {
+        const similar = Array.from(parent.children).filter(
+          (c) => c.tagName === el.tagName && c.className === el.className,
+        );
+        if (similar.length >= 3) {
+          container = parent;
+          itemTag = el.tagName.toLowerCase();
+          const cls = el.className.trim();
+          itemClass = cls
+            ? cls
+                .split(/\s+/)
+                .map((c) => `.${CSS.escape(c)}`)
+                .join('')
+            : '';
+          break;
+        }
+        parent = parent.parentElement;
+      }
+
+      if (!container) return null;
+
+      // 生成容器选择器路径
+      const parts: string[] = [];
+      let current: Element | null = container;
+      while (current && current !== document.body && current !== document.documentElement) {
+        const tag = current.tagName.toLowerCase();
+        const id = current.id ? `#${CSS.escape(current.id)}` : '';
+        const cls = Array.from(current.classList)
+          .slice(0, 2)
+          .map((c) => `.${CSS.escape(c)}`)
+          .join('');
+        parts.unshift(`${tag}${id}${cls}`);
+        current = current.parentElement;
+      }
+      const containerSelector = parts.join(' ') || 'body';
+      const itemSelector = `${itemTag}${itemClass}`;
+
+      // 验证
+      const containerEl = document.querySelector(containerSelector);
+      if (!containerEl) return null;
+      const matchCount = containerEl.querySelectorAll(itemSelector).length;
+      if (matchCount < 2) return null;
+
+      return JSON.stringify({ containerSelector, itemSelector, linkSelector: 'a[href]' });
+    }
+
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg.type === 'srb-start-teaching') {
+        // 注入遮罩提示
+        const overlay = document.createElement('div');
+        overlay.id = 'srb-teaching-overlay';
+        overlay.style.cssText = [
+          'position: fixed; inset: 0; z-index: 999999;',
+          'background: rgba(0,0,0,0.3); display: flex;',
+          'align-items: center; justify-content: center;',
+        ].join(' ');
+        overlay.innerHTML =
+          '<div style="background:#fff;padding:20px 30px;border-radius:8px;font-size:16px;box-shadow:0 4px 20px rgba(0,0,0,0.2);">🎯 请点击任意一条搜索结果</div>';
+        document.body.appendChild(overlay);
+
+        // 等待用户点击
+        const handler = (e: MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          overlay.remove();
+          document.removeEventListener('click', handler, true);
+
+          const result = generateSelector(e.target as Element);
+          if (!result) {
+            chrome.runtime.sendMessage({
+              type: 'srb-teaching-result',
+              success: false,
+              hostname: getHostname(),
+              error: '无法识别搜索结果结构，请重试',
+            });
+            return;
+          }
+
+          chrome.runtime.sendMessage({
+            type: 'srb-teaching-result',
+            success: true,
+            hostname: getHostname(),
+            config: {
+              ...JSON.parse(result),
+              name: '',
+              hostname: getHostname(),
+            },
+          });
+        };
+        document.addEventListener('click', handler, true);
+
+        sendResponse({ started: true });
+        return true;
+      }
+    });
   },
 });
