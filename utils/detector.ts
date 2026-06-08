@@ -97,7 +97,12 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
       const pt = parent.tagName.toLowerCase();
       const pc = (parent.className as string).toLowerCase();
       if (pt === 'nav' || pt === 'header' || pt === 'footer') { filteredExclude++; continue outer; }
-      if (blockWords.some((w) => pc.includes(w))) { filteredExclude++; continue outer; }
+      for (const w of blockWords) {
+        if (pc.includes(w)) {
+          console.log('[SRB] Excluded by parent:', p.key, 'parent has "' + w + '" in class "' + pc + '"');
+          filteredExclude++; continue outer;
+        }
+      }
       parent = parent.parentElement;
     }
 
