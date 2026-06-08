@@ -117,8 +117,19 @@ export default defineContentScript({
     function scanResults(engine: SearchEngineConfig): void {
       if (!isEnabled) return;
       const container = document.querySelector(engine.containerSelector);
-      if (!container) return;
-      container.querySelectorAll(engine.itemSelector).forEach((item) => processItem(item));
+      if (!container) { console.log('[SRB] scanResults: container not found:', engine.containerSelector); return; }
+      const items = container.querySelectorAll(engine.itemSelector);
+      console.log('[SRB] scanResults: container', engine.containerSelector, 'itemSelector', engine.itemSelector, 'found', items.length, 'items');
+      if (items.length === 0) {
+        // Debug: 在容器内找所有子元素看看
+        const children = container.children;
+        console.log('[SRB] Container children:', children.length);
+        for (let i = 0; i < Math.min(children.length, 5); i++) {
+          const c = children[i];
+          console.log('[SRB]   child', i, c.tagName, (c as Element).className, c.querySelector('a[href]')?.getAttribute('href'));
+        }
+      }
+      items.forEach((item) => processItem(item));
       updateCollapseBar();
     }
 
@@ -134,7 +145,7 @@ export default defineContentScript({
       injectFloatingBtn();
       currentEngine = BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? customEngines.find((e) => e.hostname === hostname) ?? null;
       if (!currentEngine) { console.log('[SRB] No engine found, will auto-detect in 2s'); return; }
-      console.log('[SRB] Engine found:', currentEngine.name);
+      console.log('[SRB] Engine found:', currentEngine.name, 'container:', currentEngine.containerSelector, 'item:', currentEngine.itemSelector);
       injectCollapseBar();
       scanResults(currentEngine);
       const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
