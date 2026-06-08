@@ -58,7 +58,6 @@ export default defineContentScript({
       const href = link?.href ?? '';
       if (!href) return;
 
-      // 检查是否已被屏蔽
       const domainMatch = blockedDomains.some((d) => href.includes(d));
       const urlMatch = blockedUrls.includes(href);
 
@@ -105,9 +104,7 @@ export default defineContentScript({
         'border-top:1px solid #eee;">屏蔽此链接</button>',
       ].join(' ');
 
-      item.addEventListener('mouseenter', () => {
-        btn.style.display = 'flex';
-      });
+      item.addEventListener('mouseenter', () => { btn.style.display = 'flex'; });
       item.addEventListener('mouseleave', (e) => {
         if (!popup.contains(e.relatedTarget as Node) && e.relatedTarget !== btn) {
           btn.style.display = 'none';
@@ -123,7 +120,6 @@ export default defineContentScript({
       popup.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
         const domain = new URL(href).hostname.replace(/^www\./, '');
-
         if (target.classList.contains('srb-opt-domain')) {
           await addDomain(domain);
         } else if (target.classList.contains('srb-opt-url')) {
@@ -143,12 +139,7 @@ export default defineContentScript({
     }
 
     /** 注入已屏蔽徽标 */
-    function injectBadge(
-      item: Element,
-      domainMatch: boolean,
-      urlMatch: boolean,
-      href: string,
-    ): void {
+    function injectBadge(item: Element, domainMatch: boolean, urlMatch: boolean, href: string): void {
       if (item.querySelector('.srb-blocked-badge')) return;
 
       const badge = document.createElement('div');
@@ -165,14 +156,10 @@ export default defineContentScript({
       (item as HTMLElement).style.position =
         (item as HTMLElement).style.position || 'relative';
 
-      badge.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        e.preventDefault();
+      badge.addEventListener('click', async () => {
         badge.remove();
-        const currentDomains = blockedDomains;
         const domain = new URL(href).hostname.replace(/^www\./, '');
-        const domainIdx = currentDomains.indexOf(domain);
-
+        const domainIdx = blockedDomains.indexOf(domain);
         if (domainIdx >= 0 && !urlMatch) {
           await removeBlockedItem('domain', domainIdx);
         } else if (urlMatch && domainIdx === -1) {
@@ -203,10 +190,7 @@ export default defineContentScript({
       updateCollapseBar();
     }
 
-    const debounce = <T extends (...args: unknown[]) => void>(
-      fn: T,
-      ms: number,
-    ): T => {
+    const debounce = <T extends (...args: unknown[]) => void>(fn: T, ms: number): T => {
       let timer: ReturnType<typeof setTimeout>;
       return ((...args: unknown[]) => {
         clearTimeout(timer);
@@ -218,7 +202,6 @@ export default defineContentScript({
       const hostname = getHostname();
       const { customEngines } = await get();
 
-      // 所有页面都显示浮动屏蔽按钮
       injectFloatingBtn();
 
       currentEngine =
@@ -230,12 +213,9 @@ export default defineContentScript({
       injectCollapseBar();
       scanResults(currentEngine);
 
-      const container =
-        document.querySelector(currentEngine.containerSelector) ?? document.body;
+      const container = document.querySelector(currentEngine.containerSelector) ?? document.body;
       const observer = new MutationObserver(
-        debounce(() => {
-          if (currentEngine) scanResults(currentEngine);
-        }, 300),
+        debounce(() => { if (currentEngine) scanResults(currentEngine); }, 300),
       );
       observer.observe(container, { childList: true, subtree: true });
     }
@@ -243,85 +223,47 @@ export default defineContentScript({
     /** 浮动屏蔽按钮 */
     function injectFloatingBtn(): void {
       if (document.getElementById('srb-float-btn')) return;
-
       const btn = document.createElement('div');
       btn.id = 'srb-float-btn';
       btn.innerHTML = '🛡';
       btn.title = '屏蔽此网站';
-      btn.style.cssText = [
-        'position: fixed; bottom: 24px; right: 24px; z-index: 999999;',
-        'width: 48px; height: 48px; border-radius: 50%;',
-        'background: #007bff; color: #fff; font-size: 22px;',
-        'display: flex; align-items: center; justify-content: center;',
-        'cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25);',
-        'user-select: none; transition: transform 0.15s;',
-      ].join(' ');
+      btn.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;width:48px;height:48px;border-radius:50%;background:#007bff;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.25);user-select:none;transition:transform 0.15s;';
       btn.onmouseenter = () => { btn.style.transform = 'scale(1.1)'; };
       btn.onmouseleave = () => { btn.style.transform = ''; };
 
       const popup = document.createElement('div');
       popup.id = 'srb-float-popup';
-      popup.style.cssText = [
-        'position: fixed; bottom: 80px; right: 24px; z-index: 999999;',
-        'background: #fff; border: 1px solid #ddd; border-radius: 10px;',
-        'box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: none;',
-        'flex-direction: column; min-width: 160px; overflow: hidden;',
-      ].join(' ');
-      popup.innerHTML = [
-        '<button class="srb-fopt" data-action="domain" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🌐 屏蔽此域名</button>',
-        '<button class="srb-fopt" data-action="url" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;">🔗 屏蔽此链接</button>',
-      ].join(' ');
+      popup.style.cssText = 'position:fixed;bottom:80px;right:24px;z-index:999999;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.2);display:none;flex-direction:column;min-width:160px;overflow:hidden;';
+      popup.innerHTML = '<button class="srb-fopt" data-action="domain" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🌐 屏蔽此域名</button><button class="srb-fopt" data-action="url" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;">🔗 屏蔽此链接</button>';
 
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
-      };
+      btn.onclick = (e) => { e.stopPropagation(); popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex'; };
 
       popup.onclick = async (e) => {
         const target = e.target as HTMLElement;
         if (!target.classList.contains('srb-fopt')) return;
         const action = target.getAttribute('data-action');
-        const url = window.location.href;
-        const domain = getHostname();
-
-        if (action === 'domain') {
-          await addDomain(domain);
-        } else if (action === 'url') {
-          await addBlockedUrl(url);
-        }
+        if (action === 'domain') await addDomain(getHostname());
+        else if (action === 'url') await addBlockedUrl(window.location.href);
         await recordBlock();
         popup.style.display = 'none';
-
-        // 短暂反馈
-        const orig = btn.innerHTML;
         btn.innerHTML = '✅';
         btn.style.background = '#28a745';
-        setTimeout(() => {
-          btn.innerHTML = orig;
-          btn.style.background = '#007bff';
-        }, 1500);
+        setTimeout(() => { btn.innerHTML = '🛡'; btn.style.background = '#007bff'; }, 1500);
       };
 
-      // 点击其它区域关闭 popup
-      document.addEventListener('click', () => {
-        popup.style.display = 'none';
-      }, true);
-
+      document.addEventListener('click', () => { popup.style.display = 'none'; }, true);
       document.body.appendChild(btn);
       document.body.appendChild(popup);
     }
 
-    // 订阅 storage 变化
+    // 订阅 + 初始化
     subscribe((storage) => {
       blockedDomains = storage.urls;
       blockedUrls = storage.blockedUrls;
       isEnabled = storage.enabled;
-      if (currentEngine) {
-        scanResults(currentEngine);
-      }
+      if (currentEngine) scanResults(currentEngine);
     });
 
-    // 初始化
     get().then((storage) => {
       blockedDomains = storage.urls;
       blockedUrls = storage.blockedUrls;
@@ -330,7 +272,6 @@ export default defineContentScript({
     });
 
     // ===== Teaching Mode =====
-    /** DOM 选择器自动生成 */
     function generateSelector(el: Element): string | null {
       let parent = el.parentElement;
       let container: Element | null = null;
@@ -345,12 +286,7 @@ export default defineContentScript({
           container = parent;
           itemTag = el.tagName.toLowerCase();
           const cls = el.className.trim();
-          itemClass = cls
-            ? cls
-                .split(/\s+/)
-                .map((c) => `.${CSS.escape(c)}`)
-                .join('')
-            : '';
+          itemClass = cls ? cls.split(/\s+/).map((c) => `.${CSS.escape(c)}`).join('') : '';
           break;
         }
         parent = parent.parentElement;
@@ -358,186 +294,220 @@ export default defineContentScript({
 
       if (!container) return null;
 
-      // 生成容器选择器路径
       const parts: string[] = [];
       let current: Element | null = container;
       while (current && current !== document.body && current !== document.documentElement) {
         const tag = current.tagName.toLowerCase();
         const id = current.id ? `#${CSS.escape(current.id)}` : '';
-        const cls = Array.from(current.classList)
-          .slice(0, 2)
-          .map((c) => `.${CSS.escape(c)}`)
-          .join('');
+        const cls = Array.from(current.classList).slice(0, 2).map((c) => `.${CSS.escape(c)}`).join('');
         parts.unshift(`${tag}${id}${cls}`);
         current = current.parentElement;
       }
       const containerSelector = parts.join(' ') || 'body';
       const itemSelector = `${itemTag}${itemClass}`;
 
-      // 验证
       const containerEl = document.querySelector(containerSelector);
-      if (!containerEl) return null;
-      const matchCount = containerEl.querySelectorAll(itemSelector).length;
-      if (matchCount < 2) return null;
-
+      if (!containerEl || containerEl.querySelectorAll(itemSelector).length < 2) return null;
       return JSON.stringify({ containerSelector, itemSelector, linkSelector: 'a[href]' });
     }
 
-    let teachingHighlight: HTMLDivElement | null = null;
+    let hlEl: HTMLDivElement | null = null;
     let hoveredEl: Element | null = null;
-    let depthOffset = 0;
+    let selectedDomPath: { tag: string; cls: string; id: string; el: Element }[] = [];
+    let selectedLevel = 0;
+    let panelEl: HTMLDivElement | null = null;
 
-    function getTargetElement(): Element | null {
-      if (!hoveredEl) return null;
-      let el: Element = hoveredEl;
-      for (let i = 0; i < depthOffset; i++) {
-        if (el.parentElement && el.parentElement !== document.body) {
-          el = el.parentElement;
-        }
-      }
-      return el;
+    function getTargetEl(): Element | null {
+      if (!hoveredEl || selectedDomPath.length === 0) return null;
+      const idx = selectedDomPath.length - 1 - selectedLevel;
+      return selectedDomPath[Math.min(idx, selectedDomPath.length - 1)]?.el ?? null;
     }
 
-    function updateHighlight(): void {
-      const hl = teachingHighlight;
-      if (!hl || !hoveredEl) { if (hl) hl.style.display = 'none'; return; }
-      const el = getTargetElement();
-      if (!el) { hl.style.display = 'none'; return; }
-      const rect = el.getBoundingClientRect();
-      hl.style.display = 'block';
-      hl.style.left = `${rect.left + window.scrollX}px`;
-      hl.style.top = `${rect.top + window.scrollY}px`;
-      hl.style.width = `${rect.width}px`;
-      hl.style.height = `${rect.height}px`;
-      // 更新提示条显示当前标签
-      const hint = document.getElementById('srb-teaching-hint');
-      if (hint) {
-        const tag = el.tagName.toLowerCase();
-        const cls = el.className.trim().slice(0, 40);
-        hint.innerHTML = `点击标记 · <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:3px;">&lt;${tag}${cls ? ` class=&quot;${cls}&quot;` : ''}&gt;</code> ${depthOffset > 0 ? ` · 上移 ${depthOffset} 级` : ''} · <span style="font-size:12px;opacity:0.8;">+/- 调整</span>`;
-      }
+    function updateHl(): void {
+      if (!hlEl || !hoveredEl) { if (hlEl) hlEl.style.display = 'none'; return; }
+      const el = getTargetEl();
+      if (!el) { hlEl.style.display = 'none'; return; }
+      const r = el.getBoundingClientRect();
+      hlEl.style.display = 'block';
+      hlEl.style.left = r.left + window.scrollX + 'px';
+      hlEl.style.top = r.top + window.scrollY + 'px';
+      hlEl.style.width = r.width + 'px';
+      hlEl.style.height = r.height + 'px';
     }
 
-    function removeTeachingHighlight(): void {
-      teachingHighlight?.remove();
-      teachingHighlight = null;
-      hoveredEl = null;
-      depthOffset = 0;
+    function renderPanel(locked: boolean, matchCount = 0, config?: any): void {
+      if (!panelEl || selectedDomPath.length === 0) return;
+      const activeStart = selectedDomPath.length - 1 - selectedLevel;
+
+      const crumbs = selectedDomPath.map((item, i) => {
+        const active = i >= activeStart;
+        const label = item.id || item.cls || item.tag;
+        return `<span class="srb-cr" data-idx="${i}" style="cursor:pointer;display:inline-block;padding:4px 10px;border-radius:4px;${active ? 'background:#007bff;color:#fff;' : 'color:#999;'}font-size:12px;white-space:nowrap;transition:0.1s;">${item.tag}${item.id || item.cls ? ': ' + (item.id || item.cls) : ''}</span>`;
+      }).join('<span style="color:#ccc;font-size:10px;"> &gt; </span>');
+
+      if (!locked) {
+        panelEl.innerHTML = `<div style="padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">🎯</span><div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;min-width:0;">${crumbs}</div></div>`;
+      } else {
+        panelEl.innerHTML = `<div style="padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">✅</span><div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;min-width:0;">${crumbs}</div><span style="font-size:12px;color:#666;">匹配 ${matchCount} 条</span><button id="srb-cfm" style="padding:6px 20px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">确定</button><button id="srb-rtry" style="padding:6px 20px;background:#fff;color:#666;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px;">重选</button></div>`;
+      }
+
+      panelEl.querySelectorAll('.srb-cr').forEach((el) => {
+        el.addEventListener('click', () => {
+          selectedLevel = selectedDomPath.length - 1 - parseInt((el as HTMLElement).dataset.idx!);
+          updateHl();
+          renderPanel(locked, matchCount, config);
+        });
+      });
+    }
+
+    function removeTeachUI(): void {
+      hlEl?.remove(); hlEl = null;
+      panelEl?.remove(); panelEl = null;
+      hoveredEl = null; selectedDomPath = []; selectedLevel = 0;
     }
 
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.type === 'srb-start-teaching') {
-        removeTeachingHighlight();
-        depthOffset = 0;
+        removeTeachUI();
+        selectedLevel = 0;
 
-        // 创建高亮框
-        const highlight = document.createElement('div');
-        highlight.id = 'srb-teaching-highlight';
-        highlight.style.cssText = [
-          'position: fixed; pointer-events: none; z-index: 999999;',
-          'border: 3px dashed #007bff; background: rgba(0,123,255,0.08);',
-          'border-radius: 4px; display: none;',
-          'transition: all 0.1s ease;',
-        ].join(' ');
-        document.body.appendChild(highlight);
-        teachingHighlight = highlight;
+        hlEl = document.createElement('div');
+        hlEl.style.cssText = 'position:fixed;pointer-events:none;z-index:999999;border:3px dashed #007bff;background:rgba(0,123,255,0.08);border-radius:4px;display:none;';
+        document.body.appendChild(hlEl);
 
-        // 提示条
-        const hint = document.createElement('div');
-        hint.id = 'srb-teaching-hint';
-        hint.style.cssText = [
-          'position: fixed; top: 16px; left: 50%; transform: translateX(-50%);',
-          'z-index: 1000000; background: #007bff; color: #fff;',
-          'padding: 10px 20px; border-radius: 8px; font-size: 14px;',
-          'box-shadow: 0 4px 12px rgba(0,0,0,0.2);',
-          'white-space: nowrap;',
-        ].join(' ');
-        hint.textContent = '移动鼠标选择元素，+/- 调整范围';
-        document.body.appendChild(hint);
+        panelEl = document.createElement('div');
+        panelEl.id = 'srb-panel';
+        panelEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:1000000;background:#fff;border-top:2px solid #007bff;box-shadow:0 -4px 16px rgba(0,0,0,0.15);font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+        document.body.appendChild(panelEl);
 
-        // 鼠标移动 → 记录悬停元素
-        const moveHandler = (e: MouseEvent) => {
+        const onMove = (e: MouseEvent) => {
           const el = e.target as Element;
-          if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
+          if (el.id.startsWith('srb-') || el.closest('#srb-panel')) return;
           hoveredEl = el;
-          depthOffset = 0;
-          updateHighlight();
-        };
-
-        // 键盘 + / - 调整深度
-        const keyHandler = (e: KeyboardEvent) => {
-          if (e.key === '+' || e.key === '=') {
-            depthOffset++;
-            updateHighlight();
-          } else if (e.key === '-' || e.key === '_') {
-            if (depthOffset > 0) depthOffset--;
-            updateHighlight();
+          selectedLevel = 0;
+          // 构建 DOM 路径
+          const path: typeof selectedDomPath = [];
+          let cur: Element | null = el;
+          while (cur && cur !== document.body && cur !== document.documentElement) {
+            path.unshift({ tag: cur.tagName.toLowerCase(), cls: cur.className.trim().slice(0, 30), id: cur.id ? '#' + cur.id : '', el: cur });
+            cur = cur.parentElement;
           }
+          selectedDomPath = path;
+          updateHl();
+          renderPanel(false);
         };
 
-        // 点击 → 发送结果到 Popup 确认
-        const clickHandler = (e: MouseEvent) => {
+        const onClick = (e: MouseEvent) => {
           const el = e.target as Element;
-          if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
+          if (el.id.startsWith('srb-') || el.closest('#srb-panel')) return;
           e.preventDefault();
           e.stopPropagation();
 
-          document.removeEventListener('mousemove', moveHandler, true);
-          document.removeEventListener('click', clickHandler, true);
-          document.removeEventListener('keydown', keyHandler, true);
-          hint.remove();
-          removeTeachingHighlight();
+          document.removeEventListener('mousemove', onMove, true);
+          document.removeEventListener('click', onClick, true);
 
-          const target = getTargetElement();
+          const target = getTargetEl();
           if (!target) return;
 
-          setTimeout(() => {
-            const result = generateSelector(target);
-            if (!result) {
-              chrome.runtime.sendMessage({
-                type: 'srb-teaching-result',
-                success: false,
-                hostname: getHostname(),
-                error: '无法识别搜索结果结构',
-              });
-              return;
-            }
+          const result = generateSelector(target);
+          if (!result) {
+            chrome.runtime.sendMessage({ type: 'srb-teaching-result', success: false, hostname: getHostname(), error: '无法识别搜索结果结构' });
+            removeTeachUI();
+            return;
+          }
 
-            const config = {
-              ...JSON.parse(result),
-              name: getHostname(),
-              hostname: getHostname(),
-            };
+          const config = JSON.parse(result);
+          config.name = getHostname();
+          config.hostname = getHostname();
+          const containerEl = document.querySelector(config.containerSelector);
+          const matchCount = containerEl ? containerEl.querySelectorAll(config.itemSelector).length : 0;
 
-            const containerEl = document.querySelector(config.containerSelector);
-            const matchCount = containerEl
-              ? containerEl.querySelectorAll(config.itemSelector).length
-              : 0;
+          renderPanel(true, matchCount, config);
 
-            chrome.runtime.sendMessage({
-              type: 'srb-teaching-confirm',
-              hostname: getHostname(),
-              config,
-              matchCount,
-            });
-          }, 0);
+          document.getElementById('srb-cfm')?.addEventListener('click', () => {
+            removeTeachUI();
+            chrome.runtime.sendMessage({ type: 'srb-teaching-confirm', hostname: getHostname(), config, matchCount });
+          });
+
+          document.getElementById('srb-rtry')?.addEventListener('click', () => {
+            removeTeachUI();
+            chrome.runtime.sendMessage({ type: 'srb-teaching-retry', hostname: getHostname() });
+          });
         };
 
-        document.addEventListener('mousemove', moveHandler, true);
-        document.addEventListener('click', clickHandler, true);
-        document.addEventListener('keydown', keyHandler, true);
-
-        sendResponse({ started: true });
-
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('click', onClick, true);
         sendResponse({ started: true });
         return true;
       }
 
-      // Popup 发来重试指令
       if (msg.type === 'srb-teaching-retry') {
-        document.addEventListener('mousemove', moveHandler, true);
-        document.addEventListener('click', clickHandler, true);
-        document.body.appendChild(hint);
+        removeTeachUI();
+        selectedLevel = 0;
+
+        hlEl = document.createElement('div');
+        hlEl.style.cssText = 'position:fixed;pointer-events:none;z-index:999999;border:3px dashed #007bff;background:rgba(0,123,255,0.08);border-radius:4px;display:none;';
+        document.body.appendChild(hlEl);
+
+        panelEl = document.createElement('div');
+        panelEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:1000000;background:#fff;border-top:2px solid #007bff;box-shadow:0 -4px 16px rgba(0,0,0,0.15);font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+        document.body.appendChild(panelEl);
+
+        const onMove = (e: MouseEvent) => {
+          const el = e.target as Element;
+          if (el.id.startsWith('srb-') || el.closest('#srb-panel')) return;
+          hoveredEl = el;
+          selectedLevel = 0;
+          const path: typeof selectedDomPath = [];
+          let cur: Element | null = el;
+          while (cur && cur !== document.body && cur !== document.documentElement) {
+            path.unshift({ tag: cur.tagName.toLowerCase(), cls: cur.className.trim().slice(0, 30), id: cur.id ? '#' + cur.id : '', el: cur });
+            cur = cur.parentElement;
+          }
+          selectedDomPath = path;
+          updateHl();
+          renderPanel(false);
+        };
+
+        const onClick = (e: MouseEvent) => {
+          const el = e.target as Element;
+          if (el.id.startsWith('srb-') || el.closest('#srb-panel')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          document.removeEventListener('mousemove', onMove, true);
+          document.removeEventListener('click', onClick, true);
+
+          const target = getTargetEl();
+          if (!target) return;
+
+          const result = generateSelector(target);
+          if (!result) {
+            chrome.runtime.sendMessage({ type: 'srb-teaching-result', success: false, hostname: getHostname(), error: '无法识别' });
+            removeTeachUI();
+            return;
+          }
+
+          const config = JSON.parse(result);
+          config.name = getHostname();
+          config.hostname = getHostname();
+          const containerEl = document.querySelector(config.containerSelector);
+          const matchCount = containerEl ? containerEl.querySelectorAll(config.itemSelector).length : 0;
+
+          renderPanel(true, matchCount, config);
+
+          document.getElementById('srb-cfm')?.addEventListener('click', () => {
+            removeTeachUI();
+            chrome.runtime.sendMessage({ type: 'srb-teaching-confirm', hostname: getHostname(), config, matchCount });
+          });
+
+          document.getElementById('srb-rtry')?.addEventListener('click', () => {
+            removeTeachUI();
+            chrome.runtime.sendMessage({ type: 'srb-teaching-retry', hostname: getHostname() });
+          });
+        };
+
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('click', onClick, true);
         sendResponse({ retrying: true });
         return true;
       }
