@@ -106,7 +106,10 @@ const DEFAULT: ExtensionStorage = {
 - 当检测到某个结果已被屏蔽时，不隐藏该结果
 - 在卡片右上角（屏蔽按钮位置）显示灰色"已屏蔽"标签
 - 鼠标移到标签上显示"点击取消屏蔽"
-- 点击后从 storage 移除对应条目，卡片恢复正常
+- 每个徽标在注入时记录匹配类型（domain 匹配 / URL 精确匹配），点击取消时精确移除：
+  - 若本条结果是因域名匹配而被屏蔽 → 弹出确认"取消屏蔽此域名？" → 从 `urls` 移除
+  - 若本条结果是因 URL 精确匹配而被屏蔽 → 直接从 `blockedUrls` 移除
+  - 若两者都匹配 → 弹出选项"取消域名屏蔽 / 取消链接屏蔽"
 
 ## Teaching Mode（Content Script + Popup）
 
@@ -139,22 +142,38 @@ Popup 显示"已学会！这个网站叫？" → 用户可自定义名称 → �
 立即在当前页生效
 ```
 
-### 搜索引擎配置兼容
+### 搜索引擎配置升级
 
-预置引擎（Google/Baidu/Bing/DDG）需要从原有的 `{ hostname, selector }` 升级为完整配置
-`{ name, hostname, containerSelector, itemSelector, linkSelector }`，同时保留 `selector` 作为容
-器选择器兼容。Teaching Mode 新学的引擎直接使用完整格式。
+预置引擎（Google/Baidu/Bing/DDG）原有的 `{ hostname, selector }`（selector 为 `#search .g`
+混合选择器），需要拆分为完整格式：
 
 ```typescript
-// 预置引擎升级示例
-{
-  name: 'Google',
-  hostname: 'www.google.com',
-  containerSelector: '#search',
-  itemSelector: '.g',
-  linkSelector: 'a[href]',
+// 新格式
+interface SearchEngineConfig {
+  name: string;
+  hostname: string;
+  containerSelector: string;   // 容器元素选择器，如 '#search'
+  itemSelector: string;        // 单条结果选择器，如 '.g'
+  linkSelector: string;        // 链接元素选择器，用于提取 URL
 }
+
+// 预置引擎升级
+const BUILT_IN_ENGINES: SearchEngineConfig[] = [
+  {
+    name: 'Google',
+    hostname: 'www.google.com',
+    containerSelector: '#search',
+    itemSelector: '.g',
+    linkSelector: 'a[href]',
+  },
+  // ...
+];
 ```
+
+Content script 不再用 `querySelectorAll(selector)` 一次拿到所有条目，而是：
+1. `querySelector(containerSelector)` 定位容器
+2. `container.querySelectorAll(itemSelector)` 拿到所有结果
+3. 每条结果中 `result.querySelector(linkSelector)` 提取 URL
 
 ### DOM 选择器自动生成策略
 
@@ -209,7 +228,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 1. `blockCount` +1（总计数）
 2. `stats` 数组中当天的记录 +1
 
-Popup 读取最近 7 天的 `stats`，用纯 CSS 条形图或文本形式展示趋势（无图表库依赖）。
+Popup 在现有布局下方新增统计区域，读取最近 7 天的 `stats`，用纯 CSS 条形图展示趋势（无图表库依赖）。
 
 ```
 拦截趋势（近 7 天）
@@ -220,17 +239,17 @@ Popup 读取最近 7 天的 `stats`，用纯 CSS 条形图或文本形式展示�
 
 ## 折叠提示条
 
-在搜索页面顶部注入一个提示条：
+在搜索页面顶部注入一个纯展示提示条：
 
 ```
-┌──────────────────────────────────────┐
-│ 🚫 已屏蔽 5 个低质量结果  [取消全部] │
-└──────────────────────────────────────┘
+┌────────────────────────────┐
+│ 🚫 已屏蔽 5 个低质量结果   │
+└────────────────────────────┘
 ```
 
 - 固定在搜索框下方或结果列表顶部
-- 展示当前页面被屏蔽的结果数量（由 content script 实时统计）
-- "[取消全部]" → 清除当前页面上所有被屏蔽的条目（从 storage 移除，恢复显示）
+- 展示当前页面被屏蔽的结果数量（content script 实时统计 badge 数量）
+- 纯展示，无操作按钮（取消屏蔽走单个结果 badge 的点击操作）
 
 ## 边界情况
 
