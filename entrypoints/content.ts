@@ -358,7 +358,7 @@ export default defineContentScript({
           teachingTarget = el;
         };
 
-        // 点击 → 确认
+        // 点击 → 显示确认框
         const clickHandler = async (e: MouseEvent) => {
           const el = e.target as Element;
           if (el === highlight || el === hint || el.id.startsWith('srb-')) return;
@@ -387,11 +387,61 @@ export default defineContentScript({
             hostname: getHostname(),
           };
 
-          chrome.runtime.sendMessage({
-            type: 'srb-teaching-result',
-            success: true,
-            hostname: getHostname(),
-            config,
+          // 计算匹配数
+          const containerEl = document.querySelector(config.containerSelector);
+          const matchCount = containerEl
+            ? containerEl.querySelectorAll(config.itemSelector).length
+            : 0;
+
+          // 确认框
+          const confirmBox = document.createElement('div');
+          confirmBox.id = 'srb-confirm';
+          confirmBox.style.cssText = [
+            'position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);',
+            'z-index: 1000001; background: #fff; border-radius: 12px;',
+            'padding: 24px 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);',
+            'text-align: center; min-width: 280px;',
+          ].join(' ');
+          confirmBox.innerHTML = [
+            `<div style="font-size: 16px; margin-bottom: 12px;">`,
+            `  识别到 <strong>${matchCount}</strong> 条搜索结果`,
+            `</div>`,
+            `<div style="font-size: 13px; color: #666; margin-bottom: 20px;">`,
+            `  选择器：<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">${config.itemSelector}</code>`,
+            `</div>`,
+            `<div style="display:flex;gap:12px;justify-content:center;">`,
+            `<button id="srb-confirm-yes" style="padding:8px 24px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">确定</button>`,
+            `<button id="srb-confirm-no" style="padding:8px 24px;background:#fff;color:#666;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:14px;">重试</button>`,
+            `</div>`,
+          ].join(' ');
+
+          // 遮罩
+          const overlay = document.createElement('div');
+          overlay.style.cssText = [
+            'position: fixed; inset: 0; z-index: 1000000;',
+            'background: rgba(0,0,0,0.25);',
+          ].join(' ');
+          document.body.appendChild(overlay);
+          document.body.appendChild(confirmBox);
+
+          confirmBox.querySelector('#srb-confirm-yes')!.addEventListener('click', () => {
+            confirmBox.remove();
+            overlay.remove();
+            chrome.runtime.sendMessage({
+              type: 'srb-teaching-result',
+              success: true,
+              hostname: getHostname(),
+              config,
+            });
+          });
+
+          confirmBox.querySelector('#srb-confirm-no')!.addEventListener('click', () => {
+            confirmBox.remove();
+            overlay.remove();
+            // 重新进入选择模式
+            document.addEventListener('mousemove', moveHandler, true);
+            document.addEventListener('click', clickHandler, true);
+            document.body.appendChild(hint);
           });
         };
 
