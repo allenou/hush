@@ -19,8 +19,9 @@ export default defineContentScript({
       item.setAttribute('data-srb-processed', 'true');
       if (!currentEngine) return;
       const href = extractResultUrl(item, currentEngine.linkSelector);
-      if (!href) return;
+      if (!href) { console.log('[SRB] processItem: no href for', item); return; }
       const domainMatch = blockedDomains.some((d) => href.includes(d));
+      if (domainMatch) console.log('[SRB] BADGE match:', href, 'domain in', blockedDomains);
       const urlMatch = blockedUrls.includes(href);
       if (domainMatch || urlMatch) injectBadge(item, domainMatch, urlMatch, href);
       else injectBlockButton(item, href);
