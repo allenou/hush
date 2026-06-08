@@ -225,6 +225,7 @@ export default defineContentScript({
 
       injectCollapseBar();
       scanResults(currentEngine);
+      injectFloatingBtn();
 
       const container =
         document.querySelector(currentEngine.containerSelector) ?? document.body;
@@ -234,6 +235,77 @@ export default defineContentScript({
         }, 300),
       );
       observer.observe(container, { childList: true, subtree: true });
+    }
+
+    /** 浮动屏蔽按钮 */
+    function injectFloatingBtn(): void {
+      if (document.getElementById('srb-float-btn')) return;
+
+      const btn = document.createElement('div');
+      btn.id = 'srb-float-btn';
+      btn.innerHTML = '🛡';
+      btn.title = '屏蔽此网站';
+      btn.style.cssText = [
+        'position: fixed; bottom: 24px; right: 24px; z-index: 999999;',
+        'width: 48px; height: 48px; border-radius: 50%;',
+        'background: #007bff; color: #fff; font-size: 22px;',
+        'display: flex; align-items: center; justify-content: center;',
+        'cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25);',
+        'user-select: none; transition: transform 0.15s;',
+      ].join(' ');
+      btn.onmouseenter = () => { btn.style.transform = 'scale(1.1)'; };
+      btn.onmouseleave = () => { btn.style.transform = ''; };
+
+      const popup = document.createElement('div');
+      popup.id = 'srb-float-popup';
+      popup.style.cssText = [
+        'position: fixed; bottom: 80px; right: 24px; z-index: 999999;',
+        'background: #fff; border: 1px solid #ddd; border-radius: 10px;',
+        'box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: none;',
+        'flex-direction: column; min-width: 160px; overflow: hidden;',
+      ].join(' ');
+      popup.innerHTML = [
+        '<button class="srb-fopt" data-action="domain" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🌐 屏蔽此域名</button>',
+        '<button class="srb-fopt" data-action="url" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;">🔗 屏蔽此链接</button>',
+      ].join(' ');
+
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+      };
+
+      popup.onclick = async (e) => {
+        const target = e.target as HTMLElement;
+        if (!target.classList.contains('srb-fopt')) return;
+        const action = target.getAttribute('data-action');
+        const url = window.location.href;
+        const domain = getHostname();
+
+        if (action === 'domain') {
+          await addDomain(domain);
+        } else if (action === 'url') {
+          await addBlockedUrl(url);
+        }
+        await recordBlock();
+        popup.style.display = 'none';
+
+        // 短暂反馈
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅';
+        btn.style.background = '#28a745';
+        setTimeout(() => {
+          btn.innerHTML = orig;
+          btn.style.background = '#007bff';
+        }, 1500);
+      };
+
+      // 点击其它区域关闭 popup
+      document.addEventListener('click', () => {
+        popup.style.display = 'none';
+      }, true);
+
+      document.body.appendChild(btn);
+      document.body.appendChild(popup);
     }
 
     // 订阅 storage 变化
@@ -325,7 +397,7 @@ export default defineContentScript({
 
     function updateHighlight(): void {
       const hl = teachingHighlight;
-      if (!hl || !hoveredEl) { hl?.style.display = 'none'; return; }
+      if (!hl || !hoveredEl) { if (hl) hl.style.display = 'none'; return; }
       const el = getTargetElement();
       if (!el) { hl.style.display = 'none'; return; }
       const rect = el.getBoundingClientRect();
