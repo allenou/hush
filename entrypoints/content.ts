@@ -152,9 +152,11 @@ export default defineContentScript({
       injectFloatingBtn();
       currentEngine = BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? customEngines.find((e) => e.hostname === hostname) ?? null;
       if (!currentEngine) { console.log('[SRB] No engine found, will auto-detect in 2s'); return; }
-      // 验证容器是否存在，不存在则从自定义引擎中移除
-      if (!document.querySelector(currentEngine.containerSelector)) {
-        console.log('[SRB] Saved config container not found, removing bad config');
+      // 验证配置是否有效：容器存在且匹配 2+ 个结果项
+      const testContainer = document.querySelector(currentEngine.containerSelector);
+      const testItems = testContainer ? testContainer.querySelectorAll(currentEngine.itemSelector) : [];
+      if (!testContainer || testItems.length < 2) {
+        console.log('[SRB] Saved config invalid (container:', !!testContainer, 'items:', testItems.length, '), removing bad config');
         const idx = customEngines.findIndex((e) => e.hostname === hostname);
         if (idx >= 0) {
           customEngines.splice(idx, 1);
