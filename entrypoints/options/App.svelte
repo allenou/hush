@@ -16,9 +16,12 @@
   import { onMount } from 'svelte';
 
   let blockedItems: { type: 'domain' | 'url' | 'selector'; value: string; index: number }[] = [];
+  let filter: 'all' | 'domain' | 'url' | 'selector' = 'all';
   let inputValue = '';
   let errorMsg = '';
   let customEngines: SearchEngineConfig[] = [];
+
+  $: filteredItems = filter === 'all' ? blockedItems : blockedItems.filter((i) => i.type === filter);
 
   // 自定义引擎表单
   let newEngineName = '';
@@ -111,11 +114,18 @@
     <p class="error">{errorMsg}</p>
   {/if}
 
-  {#if blockedItems.length === 0}
-    <p class="empty">暂无屏蔽内容</p>
+  <div class="filter-bar">
+    <button class:active={filter === 'all'} onclick={() => filter = 'all'}>全部</button>
+    <button class:active={filter === 'domain'} onclick={() => filter = 'domain'}>🌐 域名</button>
+    <button class:active={filter === 'url'} onclick={() => filter = 'url'}>🔗 链接</button>
+    <button class:active={filter === 'selector'} onclick={() => filter = 'selector'}>✂️ 选择器</button>
+  </div>
+
+  {#if filteredItems.length === 0}
+    <p class="empty">暂无{filter === 'all' ? '' : '此类'}屏蔽内容</p>
   {:else}
     <ol>
-      {#each blockedItems as item}
+      {#each filteredItems as item}
         <li>
           <span class="badge-type">{item.type === 'domain' ? '🌐' : item.type === 'url' ? '🔗' : '✂️'}</span>
           <span class="value">{item.value}</span>
@@ -178,6 +188,9 @@
   button:hover { background: #f0f0f0; }
   .error { color: #c00; font-size: 12px; }
   .empty { color: #999; font-style: italic; }
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-bar button.active { background: #007bff; color: #fff; border-color: #007bff; }
+  .filter-bar button.active:hover { background: #0056b3; }
   ol { padding-left: 0; list-style: none; }
   li {
     display: flex;
