@@ -6,11 +6,12 @@ export interface ExtensionStorage {
   blockCount: number;
   enabled: boolean;
   customEngines: SearchEngineConfig[];
+  blockedSelectors: string[];
   stats: BlockStats[];
 }
 
 export interface BlockItem {
-  type: 'domain' | 'url';
+  type: 'domain' | 'url' | 'selector';
   value: string;
   index: number;
 }
@@ -26,6 +27,7 @@ const DEFAULT: ExtensionStorage = {
   blockCount: 0,
   enabled: true,
   customEngines: [],
+  blockedSelectors: [],
   stats: [],
 };
 
@@ -85,19 +87,38 @@ export async function removeBlockedUrl(index: number): Promise<void> {
   await set({ blockedUrls });
 }
 
-export async function removeBlockedItem(type: 'domain' | 'url', index: number): Promise<void> {
+export async function removeBlockedItem(type: 'domain' | 'url' | 'selector', index: number): Promise<void> {
   if (type === 'domain') {
     await removeDomain(index);
-  } else {
+  } else if (type === 'url') {
     await removeBlockedUrl(index);
+  } else {
+    await removeBlockedSelector(index);
   }
 }
 
 export async function getAllBlocked(): Promise<BlockItem[]> {
-  const { urls, blockedUrls } = await get();
+  const { urls, blockedUrls, blockedSelectors } = await get();
   const domains: BlockItem[] = urls.map((value, index) => ({ type: 'domain', value, index }));
   const urlItems: BlockItem[] = blockedUrls.map((value, index) => ({ type: 'url', value, index }));
-  return [...domains, ...urlItems];
+  const selectorItems: BlockItem[] = blockedSelectors.map((s, index) => {
+    const sep = s.indexOf('||');
+    return { type: 'selector', value: sep >= 0 ? s.slice(sep + 2) : s, index };
+  });
+  return [...domains, ...urlItems, ...selectorItems];
+}
+
+export async function addBlockedSelector(selector: string): Promise<void> {
+  const { blockedSelectors } = await get();
+  if (!blockedSelectors.includes(selector)) {
+    await set({ blockedSelectors: [...blockedSelectors, selector] });
+  }
+}
+
+export async function removeBlockedSelector(index: number): Promise<void> {
+  const { blockedSelectors } = await get();
+  blockedSelectors.splice(index, 1);
+  await set({ blockedSelectors });
 }
 
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {

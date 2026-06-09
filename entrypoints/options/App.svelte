@@ -15,7 +15,7 @@
   } from '../../utils/search-engines';
   import { onMount } from 'svelte';
 
-  let blockedItems: { type: 'domain' | 'url'; value: string; index: number }[] = [];
+  let blockedItems: { type: 'domain' | 'url' | 'selector'; value: string; index: number }[] = [];
   let inputValue = '';
   let errorMsg = '';
   let customEngines: SearchEngineConfig[] = [];
@@ -58,7 +58,7 @@
     }
   }
 
-  async function handleRemove(item: { type: 'domain' | 'url'; index: number }) {
+  async function handleRemove(item: { type: 'domain' | 'url' | 'selector'; index: number }) {
     await removeBlockedItem(item.type, item.index);
     await loadData();
   }
@@ -117,7 +117,7 @@
     <ol>
       {#each blockedItems as item}
         <li>
-          <span class="badge-type">{item.type === 'domain' ? '🌐' : '🔗'}</span>
+          <span class="badge-type">{item.type === 'domain' ? '🌐' : item.type === 'url' ? '🔗' : '✂️'}</span>
           <span class="value">{item.value}</span>
           <button class="remove" onclick={() => handleRemove(item)}>删除</button>
         </li>

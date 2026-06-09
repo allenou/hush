@@ -16,14 +16,20 @@ export function injectFloatingBtn(): void {
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.style.cssText = 'position:fixed;bottom:80px;right:24px;z-index:999999;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.2);display:none;flex-direction:column;min-width:160px;overflow:hidden;';
-  popup.innerHTML = '<button class="srb-fopt" data-action="domain" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🌐 屏蔽此域名</button><button class="srb-fopt" data-action="url" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;">🔗 屏蔽此链接</button>';
+  popup.innerHTML = '<button class="srb-fopt" data-action="domain" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🌐 屏蔽此域名</button><button class="srb-fopt" data-action="url" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;border-bottom:1px solid #eee;">🔗 屏蔽此链接</button><button class="srb-fopt" data-action="pick" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;text-align:left;">✂️ 选取屏蔽</button>';
 
   btn.onclick = (e) => { e.stopPropagation(); popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex'; };
 
   popup.onclick = async (e) => {
     const t = e.target as HTMLElement;
     if (!t.classList.contains('srb-fopt')) return;
-    if (t.getAttribute('data-action') === 'domain') await addDomain(getHostname());
+    const action = t.getAttribute('data-action');
+    if (action === 'pick') {
+      popup.style.display = 'none';
+      document.dispatchEvent(new CustomEvent('srb-start-picker'));
+      return;
+    }
+    if (action === 'domain') await addDomain(getHostname());
     else await addBlockedUrl(window.location.href);
     await recordBlock();
     popup.style.display = 'none';
