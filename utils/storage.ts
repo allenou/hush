@@ -5,6 +5,7 @@ export interface ExtensionStorage {
   blockedUrls: string[];
   blockCount: number;
   enabled: boolean;
+  blockAds: boolean;
   customEngines: SearchEngineConfig[];
   blockedSelectors: string[];
   stats: BlockStats[];
@@ -26,6 +27,7 @@ const DEFAULT: ExtensionStorage = {
   blockedUrls: [],
   blockCount: 0,
   enabled: true,
+  blockAds: true,
   customEngines: [],
   blockedSelectors: [],
   stats: [],
@@ -158,4 +160,8 @@ export async function incrementBlockCount(): Promise<void> {
 
 export async function setEnabled(enabled: boolean): Promise<void> {
   await set({ enabled });
+}
+
+export async function setBlockAds(blockAds: boolean): Promise<void> {
+  await set({ blockAds });
 }

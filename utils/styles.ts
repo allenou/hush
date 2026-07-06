@@ -57,6 +57,19 @@ const CSS = `
 }
 .srb-blocked-badge:hover { background:#d0d0d0; }
 
+/* 广告屏蔽蒙版 */
+.srb-ad-mask {
+  position:absolute; inset:0; z-index:9998;
+  background:rgba(255,255,255,0.85); pointer-events:none;
+}
+.srb-ad-badge {
+  position:absolute; top:4px; right:4px; z-index:9999;
+  padding:2px 8px; border-radius:4px;
+  background:#fff3cd; color:#856404; font-size:11px;
+  cursor:pointer; user-select:none; border:1px solid #ffc107;
+}
+.srb-ad-badge:hover { background:#ffe69c; }
+
 /* 折叠条 */
 .srb-collapse-bar {
   padding:6px 12px; margin:4px 0; font-size:13px;

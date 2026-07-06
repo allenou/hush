@@ -1,6 +1,6 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { BUILT_IN_ENGINES, type SearchEngineConfig } from '../utils/search-engines';
-import { get, addDomain, addBlockedUrl, removeBlockedItem, recordBlock, subscribe } from '../utils/storage';
+import { get, addDomain, addBlockedUrl, removeBlockedItem, recordBlock, setBlockAds, subscribe } from '../utils/storage';
 import { injectStyles } from '../utils/styles';
 import { activatePicker, deactivatePicker, isPickerActive } from '../utils/picker';
 import { getHostname, extractResultUrl } from '../utils/url';
@@ -27,6 +27,7 @@ export default defineContentScript({
     let blockedUrls: string[] = [];
     let blockedSelectors: string[] = [];
     let isEnabled = true;
+    let blockAds = true;
     let currentEngine: SearchEngineConfig | null = null;
 
     // ========== 选择器规则应用 ==========
@@ -59,6 +60,16 @@ export default defineContentScript({
 
     // ========== 搜索结果处理 ==========
 
+    /** 判断搜索结果项是否包含广告标记 */
+    function isAdItem(item: Element): boolean {
+      const text = (item.textContent ?? '').toLowerCase();
+      if (text.includes('广告') || text.includes('推广')) return true;
+      const cls = (item.className as string).toLowerCase();
+      if (/\b(?:ad|sponsor)\b/.test(cls)) return true;
+      if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i]')) return true;
+      return false;
+    }
+
     function processItem(item: Element): void {
       if (item.hasAttribute('data-srb-processed')) return;
       item.setAttribute('data-srb-processed', 'true');
@@ -69,6 +80,7 @@ export default defineContentScript({
       if (di >= 0) console.log('[SRB] BADGE match:', href, 'domain in', blockedDomains);
       const urlMatch = blockedUrls.includes(href);
       if (di >= 0 || urlMatch) injectBadge(item, di >= 0, urlMatch, href);
+      else if (blockAds && isAdItem(item)) injectAdBadge(item, href);
       else injectBlockButton(item, href);
     }
 
@@ -145,12 +157,77 @@ export default defineContentScript({
       item.appendChild(badge);
     }
 
+    function injectAdBadge(item: Element, href: string): void {
+      if (item.querySelector('.srb-ad-badge')) return;
+      const mask = document.createElement('div');
+      mask.className = 'srb-ad-mask';
+      (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'srb-ad-badge';
+      badge.textContent = '📢 广告';
+      badge.title = '点击取消屏蔽（临时）';
+      badge.addEventListener('click', () => {
+        mask.remove();
+        badge.remove();
+        // 临时取消后显示 ⊕ 按钮，让用户可永久屏蔽
+        if (href) injectBlockButton(item, href);
+      });
+      item.appendChild(mask);
+      item.appendChild(badge);
+    }
+
     function scanResults(engine: SearchEngineConfig): void {
       if (!isEnabled) return;
       const container = document.querySelector(engine.containerSelector);
       if (!container) { setTimeout(() => { tryAutoDetect(); }, 500); return; }
       container.querySelectorAll(engine.itemSelector).forEach((item) => processItem(item));
+      scanForAds();
       updateCollapseBar();
+    }
+
+    /** 广告扫描 — 从广告标记 badge（短文本）向上找父级结果项，屏蔽结果项而非 badge */
+    function scanForAds(): void {
+      if (!blockAds || !isEnabled) return;
+
+      // 找页面上所有短文本广告标记（span / small / label / a / 带 ad 类的元素）
+      const badges = document.querySelectorAll<HTMLElement>(
+        'span, small, label, em, i, b, strong, a, ' +
+        '[class*="ad-label"], [class*="ad-badge"], [class*="badge"]',
+      );
+
+      badges.forEach((badge) => {
+        if (badge.hasAttribute('data-srb-ad-badge')) return;
+        const t = (badge.textContent ?? '').trim();
+        // 只有短文本（<20 字符）才有可能是个 badge 标记，不是正文
+        if (t.length === 0 || t.length > 20) return;
+        if (badge.children.length > 3) return; // 子元素太多不可能是 badge
+
+        const lower = t.toLowerCase();
+        const isAdLabel = t === '广告' || t === '推广' || lower === 'ad' || lower === 'sponsored';
+
+        if (!isAdLabel) return;
+        badge.setAttribute('data-srb-ad-badge', 'true');
+
+        // 从 badge 向上找到父级结果项：必须有链接、有多个子元素
+        let parent: HTMLElement | null = badge.parentElement;
+        let depth = 0;
+        while (parent && parent !== document.body && depth < 8) {
+          if (
+            parent.querySelector('a[href]') &&
+            ['li', 'div', 'section', 'article', 'tr'].includes(parent.tagName.toLowerCase()) &&
+            parent.children.length >= 2
+          ) {
+            if (!parent.hasAttribute('data-srb-ad-scanned')) {
+              parent.setAttribute('data-srb-ad-scanned', 'true');
+              injectAdBadge(parent, '');
+            }
+            break;
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
+      });
     }
 
     // ========== 自动检测 ==========
@@ -204,9 +281,9 @@ export default defineContentScript({
       injectStyles();
       injectFloatingBtn();
 
-      // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽
+      // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽和广告检测
       const selectorObs = new MutationObserver(
-        debounce(() => { if (isEnabled) applyBlockedSelectors(); }, 300)
+        debounce(() => { if (isEnabled) { applyBlockedSelectors(); scanForAds(); } }, 300)
       );
       selectorObs.observe(document.body, { childList: true, subtree: true });
 
@@ -239,6 +316,8 @@ export default defineContentScript({
       } else {
         setTimeout(() => tryAutoDetect(), 2000);
       }
+      // 无论如何都执行一次广告扫描（引擎检测可能失败）
+      scanForAds();
     }
 
     subscribe((storage) => {
@@ -246,19 +325,28 @@ export default defineContentScript({
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
+      blockAds = storage.blockAds ?? true;
 
       if (!isEnabled) {
         restoreBlockedSelectors();
-        document.querySelectorAll('.srb-mask, .srb-blocked-badge').forEach((el) => el.remove());
-        document.querySelectorAll('[data-srb-processed]').forEach((el) => el.removeAttribute('data-srb-processed'));
+        document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge').forEach((el) => el.remove());
+        document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
+          el.removeAttribute('data-srb-processed');
+          el.removeAttribute('data-srb-ad-scanned');
+        });
         return;
       }
 
       applyBlockedSelectors();
+      // 清除旧标记重新扫描
+      document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
+        el.removeAttribute('data-srb-processed');
+        el.removeAttribute('data-srb-ad-scanned');
+      });
       if (currentEngine) {
-        const container = document.querySelector(currentEngine.containerSelector);
-        if (container) container.querySelectorAll('[data-srb-processed]').forEach((el) => el.removeAttribute('data-srb-processed'));
         scanResults(currentEngine);
+      } else {
+        scanForAds();
       }
     });
 
@@ -267,6 +355,7 @@ export default defineContentScript({
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
+      blockAds = storage.blockAds ?? true;
       init();
       checkSavedSelectors();
     });
