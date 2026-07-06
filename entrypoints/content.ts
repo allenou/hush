@@ -209,23 +209,25 @@ export default defineContentScript({
         if (!isAdLabel) return;
         badge.setAttribute('data-srb-ad-badge', 'true');
 
-        // 从 badge 向上找到父级结果项：必须有链接、有多个子元素
-        let parent: HTMLElement | null = badge.parentElement;
+        // 从 badge 向上找到最外层的父级结果项（优先 li/section/article/tr，不卡在内层 div）
+        let best: HTMLElement | null = null;
+        let cur: HTMLElement | null = badge.parentElement;
         let depth = 0;
-        while (parent && parent !== document.body && depth < 8) {
-          if (
-            parent.querySelector('a[href]') &&
-            ['li', 'div', 'section', 'article', 'tr'].includes(parent.tagName.toLowerCase()) &&
-            parent.children.length >= 2
-          ) {
-            if (!parent.hasAttribute('data-srb-ad-scanned')) {
-              parent.setAttribute('data-srb-ad-scanned', 'true');
-              injectAdBadge(parent, '');
+        while (cur && cur !== document.body && depth < 8) {
+          const tag = cur.tagName.toLowerCase();
+          if (cur.querySelector('a[href]') && cur.children.length >= 2) {
+            if (['li', 'section', 'article', 'tr'].includes(tag)) {
+              best = cur;
+              break; // 找到明确的结果项容器，停下
             }
-            break;
+            if (tag === 'div') best = cur; // 先记着，继续找更好的
           }
-          parent = parent.parentElement;
+          cur = cur.parentElement;
           depth++;
+        }
+        if (best && !best.hasAttribute('data-srb-ad-scanned')) {
+          best.setAttribute('data-srb-ad-scanned', 'true');
+          injectAdBadge(best, '');
         }
       });
     }
