@@ -285,7 +285,11 @@ export default defineContentScript({
 
       // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽和广告检测
       const selectorObs = new MutationObserver(
-        debounce(() => { if (isEnabled) { applyBlockedSelectors(); scanForAds(); } }, 300)
+        debounce(() => {
+          if (isEnabled) { applyBlockedSelectors(); scanForAds(); }
+          // 翻页后内容异步加载，延迟再扫一次兜底
+          if (isEnabled && blockAds) setTimeout(scanForAds, 1500);
+        }, 300)
       );
       selectorObs.observe(document.body, { childList: true, subtree: true });
 
@@ -320,6 +324,8 @@ export default defineContentScript({
       }
       // 无论如何都执行一次广告扫描（引擎检测可能失败）
       scanForAds();
+      // 延迟再扫一次，兜底异步加载的广告标签
+      setTimeout(scanForAds, 1500);
     }
 
     subscribe((storage) => {
