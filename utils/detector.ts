@@ -129,7 +129,7 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
 
     // 5. 链接数过多（>5）说明可能是广告容器而非搜索结果项
     if (p.linkCount > 5) score -= 100 * Math.floor(p.linkCount / 5);
-    if (p.linkCount === 1 && p.count > 10) score -= 60; // 只有 1 个链接且大量重复 → UI 元素
+    if (p.linkCount === 1 && p.count > 15) score -= 30; // 只有 1 个链接且大量重复 → UI 元素
 
     // 6. 链接文本和描述文本越长越像搜索结果
     if (p.childTextLen > 60) score += 30;
@@ -155,6 +155,16 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
     }
     // 不在侧边栏也不算在 header/footer → 默认给个小加分
     if (!inSidebar) score += 20;
+
+    // 9. 页面位置加分：搜索结果通常在页面中间区域
+    const rect = p.sample.getBoundingClientRect();
+    const vpW = window.innerWidth;
+    const vpCx = vpW / 2;
+    const elCx = rect.left + rect.width / 2;
+    const distFromCenter = Math.abs(elCx - vpCx) / vpW;
+    if (distFromCenter < 0.15) score += 80;
+    else if (distFromCenter < 0.3) score += 30;
+    else score -= 60;
 
     result.push(p);
     // 保留评分信息用于排序
@@ -189,7 +199,7 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
     const similar = Array.from(container.children).filter(
       (c) => c.tagName === el.tagName && (c.className as string) === (el.className as string),
     );
-    if (similar.length >= count) break;
+    if (similar.length >= count * 0.6) break;
     container = container.parentElement;
   }
   if (!container || container === document.body) container = el.parentElement;

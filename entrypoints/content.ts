@@ -171,7 +171,10 @@ export default defineContentScript({
       autoDetectRetries++;
 
       const detected = autoDetectSearchResults(getHostname);
-      if (!detected) return;
+      if (!detected) {
+        setTimeout(() => tryAutoDetect(), 3000);
+        return;
+      }
       const { customEngines } = await get();
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {
@@ -200,6 +203,12 @@ export default defineContentScript({
 
       injectStyles();
       injectFloatingBtn();
+
+      // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽
+      const selectorObs = new MutationObserver(
+        debounce(() => { if (isEnabled) applyBlockedSelectors(); }, 300)
+      );
+      selectorObs.observe(document.body, { childList: true, subtree: true });
 
       if (onStartPicker) document.removeEventListener('srb-start-picker', onStartPicker);
       onStartPicker = () => activatePicker(getHostname);
