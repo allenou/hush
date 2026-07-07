@@ -32,26 +32,53 @@ export default defineContentScript({
 
     // ========== 选择器规则应用 ==========
 
-    function execOnSelectors(fn: (el: HTMLElement) => void): void {
-      if (!isEnabled && fn.toString().includes('none')) return;
+function applyBlockedSelectors(): void {
+      if (!isEnabled) return;
+      const curHost = getHostname();
+      blockedSelectors.forEach((entry) => {
+        const sep = entry.indexOf('||');
+        if (sep === -1) return;
+        if (entry.slice(0, sep) !== curHost) return;
+        const selector = entry.slice(sep + 2);
+        try {
+          document.querySelectorAll(selector).forEach((el) => {
+            if (el.querySelector('.srb-mask, .srb-blocked-badge')) return;
+            (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
+            const mask = document.createElement('div');
+            mask.className = 'srb-mask';
+            el.appendChild(mask);
+            const badge = document.createElement('div');
+            badge.className = 'srb-blocked-badge';
+            badge.textContent = '已屏蔽';
+            badge.title = '点击取消屏蔽';
+            badge.setAttribute('data-entry', entry);
+            badge.addEventListener('click', async () => {
+              mask.remove();
+              badge.remove();
+              const fullEntry = badge.getAttribute('data-entry');
+              if (fullEntry) {
+                const idx = blockedSelectors.indexOf(fullEntry);
+                if (idx >= 0) await removeBlockedItem('selector', idx);
+              }
+            });
+            el.appendChild(badge);
+          });
+        } catch { /* skip */ }
+      });
+    }
+
+    function restoreBlockedSelectors(): void {
       const curHost = getHostname();
       blockedSelectors.forEach((entry) => {
         const sep = entry.indexOf('||');
         if (sep === -1) return;
         if (entry.slice(0, sep) !== curHost) return;
         try {
-          document.querySelectorAll(entry.slice(sep + 2)).forEach((el) => fn(el as HTMLElement));
+          document.querySelectorAll(entry.slice(sep + 2)).forEach((el) => {
+            el.querySelectorAll('.srb-mask, .srb-blocked-badge').forEach((b) => b.remove());
+          });
         } catch { /* skip */ }
       });
-    }
-
-    function applyBlockedSelectors(): void {
-      if (!isEnabled) return;
-      execOnSelectors((el) => { el.style.display = 'none'; });
-    }
-
-    function restoreBlockedSelectors(): void {
-      execOnSelectors((el) => { el.style.display = ''; });
     }
 
     function checkSavedSelectors(): void {
@@ -286,7 +313,9 @@ export default defineContentScript({
       injectCollapseBar(detected.containerSelector);
       scanResults(detected);
       const c = document.querySelector(detected.containerSelector) ?? document.body;
-      new MutationObserver(debounce(() => { if (currentEngine) { scanResults(currentEngine); applyBlockedSelectors(); } }, 300))
+      new MutationObserver(debounce(() => { if (currentEngine) { scanResults(currentEngine); scanForAds();
+            if (currentEngine) scanResults(currentEngine);
+            applyBlockedSelectors(); } }, 300))
         .observe(c, { childList: true, subtree: true });
     }
 
@@ -305,9 +334,9 @@ export default defineContentScript({
       const selectorObs = new MutationObserver(
         debounce(() => {
           if (isEnabled) {
-            applyBlockedSelectors();
             scanForAds();
             if (currentEngine) scanResults(currentEngine);
+            applyBlockedSelectors();
           }
           // 翻页后内容异步加载，延迟再扫一次兜底
           if (isEnabled && blockAds) setTimeout(scanForAds, 1500);
@@ -330,7 +359,9 @@ export default defineContentScript({
           injectCollapseBar(currentEngine.containerSelector);
           scanResults(currentEngine);
           const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
-          new MutationObserver(debounce(() => { if (currentEngine) { scanResults(currentEngine); applyBlockedSelectors(); } }, 300))
+          new MutationObserver(debounce(() => { if (currentEngine) { scanResults(currentEngine); scanForAds();
+            if (currentEngine) scanResults(currentEngine);
+            applyBlockedSelectors(); } }, 300))
             .observe(c, { childList: true, subtree: true });
           return;
         }
@@ -371,7 +402,9 @@ export default defineContentScript({
         return;
       }
 
-      applyBlockedSelectors();
+      scanForAds();
+            if (currentEngine) scanResults(currentEngine);
+            applyBlockedSelectors();
       // 清除旧标记和已有徽章，确保重新扫描完全生效
       document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
         el.removeAttribute('data-srb-processed');

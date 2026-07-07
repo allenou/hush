@@ -22,7 +22,15 @@ function generateSelector(el: Element): string {
     .filter((c) => !/^[a-z]*[0-9a-f]{5,}/i.test(c) && !/^_/.test(c) && !/^css-/.test(c) && c.length > 2)
     .slice(0, 2);
   if (stableClasses.length > 0) {
-    return el.tagName.toLowerCase() + '.' + stableClasses.map((c) => CSS.escape(c)).join('.');
+    const base = el.tagName.toLowerCase() + '.' + stableClasses.map((c) => CSS.escape(c)).join('.');
+    // 加上 nth-child 避免命中同 class 的所有元素
+    const parent = el.parentElement;
+    if (parent) {
+      const siblings = Array.from(parent.children);
+      const idx = siblings.indexOf(el) + 1;
+      return base + ':nth-child(' + idx + ')';
+    }
+    return base;
   }
   const parts: string[] = [];
   let cur: Element | null = el;
@@ -185,7 +193,7 @@ export function activatePicker(getHostnameFn: () => string): void {
       return;
     }
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) {
+    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast, .srb-mask, .srb-blocked-badge')) {
       highlight.style.display = 'none';
       document.body.style.cursor = 'not-allowed';
       return;
@@ -207,7 +215,7 @@ export function activatePicker(getHostnameFn: () => string): void {
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     if (!el || el === document.body || el === document.documentElement) return;
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) return;
+    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast, .srb-mask, .srb-blocked-badge')) return;
 
     const selector = generateSelector(target);
     deactivatePicker();
