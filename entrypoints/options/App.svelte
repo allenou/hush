@@ -86,41 +86,23 @@
   <!-- List -->
   <section class="section">
     <div class="section-inner">
-
-        <table>
-          <thead>
-            <tr>
-              <th class="col-type">类型</th>
-              <th class="col-val">值</th>
-              <th class="col-del"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#if blockedItems.length === 0}
-              <tr>
-                <td colspan="3">
-                  <div class="empty">
-                    <p>暂无屏蔽内容</p>
-                  </div>
-                </td>
-              </tr>
-            {:else}
-              {#each blockedItems as item}
-                <tr>
-                  <td class="col-type">
-                    <span class="type-badge" class:domain={item.type === 'domain'} class:url={item.type === 'url'} class:selector={item.type === 'selector'}>
-                      {item.type === 'domain' ? '🌐 域名' : item.type === 'url' ? '🔗 链接' : '✂️ 选择器'}
-                    </span>
-                  </td>
-                  <td class="col-val"><code>{item.value}</code></td>
-                  <td class="col-del">
-                    <button class="del" onclick={() => handleRemove(item)} aria-label="删除">✕</button>
-                  </td>
-                </tr>
-              {/each}
-            {/if}
-          </tbody>
-        </table>
+      <div class="list-scroll">
+        {#if blockedItems.length === 0}
+          <div class="empty">
+            <p>暂无屏蔽内容</p>
+          </div>
+        {:else}
+          {#each blockedItems as item}
+            <div class="list-row">
+              <span class="type-badge" class:domain={item.type === 'domain'} class:url={item.type === 'url'} class:selector={item.type === 'selector'}>
+                {item.type === 'domain' ? '🌐 域名' : item.type === 'url' ? '🔗 链接' : '✂️ 选择器'}
+              </span>
+              <code class="row-val">{item.value}</code>
+              <button class="del" onclick={() => handleRemove(item)} aria-label="删除">✕</button>
+            </div>
+          {/each}
+        {/if}
+      </div>
     </div>
   </section>
 
@@ -158,7 +140,7 @@
 
   .section:last-child { border-bottom: none; }
   .section-inner {
-    max-width: 900px;
+    
     margin: 0 auto;
     padding: 20px 24px;
   }
