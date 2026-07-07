@@ -156,6 +156,10 @@
   .section {
     border-bottom: 1px solid #E5E7EB;
   }
+  main > .section:first-child .section-inner {
+    padding-top: 0;
+  }
+
   .section:last-child { border-bottom: none; }
   .section-inner {
     max-width: 900px;
@@ -214,8 +218,25 @@
   /* Empty */
   .empty { text-align: center; padding: 40px 16px; color: #9CA3AF; font-size: 14px; }
 
-  /* Table */
-  table { width: 100%; border-collapse: collapse; }
+  /* Table scroll */
+  table { width: 100%; display: block; }
+  thead, tbody { display: block; }
+  thead { width: 100%; }
+  tbody {
+    display: block;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  thead tr, tbody tr { display: table; width: 100%; table-layout: fixed; }
+  table { width: 100%; display: block; }
+  thead, tbody { display: block; }
+  thead { width: 100%; }
+  tbody {
+    display: block;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  thead tr, tbody tr { display: table; width: 100%; table-layout: fixed; }
   th {
     text-align: left;
     font-size: 11px;
