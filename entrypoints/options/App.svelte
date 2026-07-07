@@ -95,11 +95,6 @@
         <button class:active={filter === 'selector'} onclick={() => filter = 'selector'}>选择器</button>
       </div>
 
-      {#if filteredItems.length === 0}
-        <div class="empty">
-          <p>暂无{filter === 'all' ? '' : '此类'}屏蔽内容</p>
-        </div>
-      {:else}
         <table>
           <thead>
             <tr>
@@ -109,22 +104,31 @@
             </tr>
           </thead>
           <tbody>
-            {#each filteredItems as item}
+            {#if filteredItems.length === 0}
               <tr>
-                <td class="col-type">
-                  <span class="type-badge" class:domain={item.type === 'domain'} class:url={item.type === 'url'} class:selector={item.type === 'selector'}>
-                    {item.type === 'domain' ? '🌐 域名' : item.type === 'url' ? '🔗 链接' : '✂️ 选择器'}
-                  </span>
-                </td>
-                <td class="col-val"><code>{item.value}</code></td>
-                <td class="col-del">
-                  <button class="del" onclick={() => handleRemove(item)} aria-label="删除">✕</button>
+                <td colspan="3">
+                  <div class="empty">
+                    <p>暂无{filter === 'all' ? '' : '此类'}屏蔽内容</p>
+                  </div>
                 </td>
               </tr>
-            {/each}
+            {:else}
+              {#each filteredItems as item}
+                <tr>
+                  <td class="col-type">
+                    <span class="type-badge" class:domain={item.type === 'domain'} class:url={item.type === 'url'} class:selector={item.type === 'selector'}>
+                      {item.type === 'domain' ? '🌐 域名' : item.type === 'url' ? '🔗 链接' : '✂️ 选择器'}
+                    </span>
+                  </td>
+                  <td class="col-val"><code>{item.value}</code></td>
+                  <td class="col-del">
+                    <button class="del" onclick={() => handleRemove(item)} aria-label="删除">✕</button>
+                  </td>
+                </tr>
+              {/each}
+            {/if}
           </tbody>
         </table>
-      {/if}
     </div>
   </section>
 
