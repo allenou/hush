@@ -44,14 +44,11 @@ export function injectFloatingBtn(): void {
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
   if (isSearchEngine(window.location.href)) {
-    popup.innerHTML =
-      '<button class="srb-fopt" data-action="pick">✂️ 选取屏蔽</button>' +
-      '<button class="srb-fopt" data-action="settings">⚙️</button>';
+    popup.innerHTML = '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取屏蔽</button>';
   } else {
     popup.innerHTML =
-      '<button class="srb-fopt" data-action="domain">🌐 屏蔽此域名</button>' +
-      '<button class="srb-fopt" data-action="url">🔗 屏蔽此链接</button>' +
-      '<button class="srb-fopt" data-action="settings">⚙️</button>';
+      '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 屏蔽此域名</button>' +
+      '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 屏蔽此链接</button>';
   }
 
   // ===== 位置初始化 =====
@@ -141,19 +138,15 @@ export function injectFloatingBtn(): void {
   document.addEventListener('touchend', onUp);
 
   popup.onclick = async (e) => {
-    const t = e.target as HTMLElement;
-    if (!t.classList.contains('srb-fopt')) return;
-    const action = t.getAttribute('data-action');
+    const target = (e.target as HTMLElement).closest('.srb-fopt') as HTMLElement | null;
+    if (!target) return;
+    const action = target.getAttribute('data-action');
     if (action === 'pick') {
       popup.style.display = 'none';
       document.dispatchEvent(new CustomEvent('srb-start-picker'));
       return;
     }
-    if (action === 'settings') {
-      popup.style.display = 'none';
-      chrome.runtime.openOptionsPage?.();
-      return;
-    }
+
     if (action === 'domain') await addDomain(getHostname());
     else await addBlockedUrl(window.location.href);
     await recordBlock();

@@ -327,7 +327,7 @@
     background: #fff;
     color: #6B7280;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 14px;
     font-family: inherit;
     transition: all 0.12s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);

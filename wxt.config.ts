@@ -10,7 +10,9 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     action: {
       default_popup: '/popup.html',
+      default_title: 'Search Result Blocker',
     },
+
     icons: {
       '16': '/icons/icon-16.png',
       '32': '/icons/icon-32.png',

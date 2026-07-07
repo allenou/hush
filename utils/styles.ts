@@ -103,18 +103,18 @@ const CSS = `
   transform: rotate(45deg);
 }
 .srb-fopt {
-  padding: 9px 12px;
+  padding: 12px 16px;
   border: none;
   border-radius: var(--srb-radius-sm);
   background: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   text-align: left;
   color: var(--srb-text);
   font-family: var(--srb-font);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   transition: background 0.1s;
 }
 .srb-fopt:hover {
@@ -137,7 +137,7 @@ const CSS = `
   background: var(--srb-surface);
   border: 1px solid var(--srb-border);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
   display: none;
   align-items: center;
@@ -271,7 +271,7 @@ const CSS = `
 .srb-collapse-bar {
   padding: 8px 14px;
   margin: 6px 0;
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--srb-font);
   background: var(--srb-accent-light);
   color: var(--srb-accent);
@@ -291,7 +291,7 @@ const CSS = `
   padding: 10px 16px;
   background: var(--srb-accent);
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-family: var(--srb-font);
   text-align: center;
   box-shadow: var(--srb-shadow-md);
@@ -328,7 +328,7 @@ const CSS = `
   padding: 24px;
   max-width: 480px;
   width: 90%;
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--srb-font);
   line-height: 1.5;
   color: var(--srb-text);
@@ -336,7 +336,7 @@ const CSS = `
 .srb-picker-confirm-title {
   margin-bottom: 16px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--srb-text);
 }
 .srb-picker-confirm-code {
@@ -349,7 +349,7 @@ const CSS = `
 }
 .srb-picker-confirm-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
   margin-top: 20px;
 }
@@ -359,7 +359,7 @@ const CSS = `
   border-radius: var(--srb-radius-sm);
   background: var(--srb-surface);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--srb-font);
   color: var(--srb-text-secondary);
   transition: background 0.1s;
@@ -374,7 +374,7 @@ const CSS = `
   background: var(--srb-accent);
   color: #fff;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--srb-font);
   font-weight: 500;
   transition: background 0.1s;
@@ -394,7 +394,7 @@ const CSS = `
   color: #fff;
   padding: 10px 20px;
   border-radius: var(--srb-radius-sm);
-  font-size: 13px;
+  font-size: 15px;
   font-family: var(--srb-font);
   display: flex;
   align-items: center;
