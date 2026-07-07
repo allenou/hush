@@ -18,14 +18,12 @@ export function injectFloatingBtn(): void {
   const btn = document.createElement('button');
   btn.id = 'srb-float-btn';
   btn.className = 'srb-float-btn';
-  // Use the extension icon as the button logo
-  const iconUrl = chrome.runtime.getURL('icons/icon-32.png');
-  btn.style.backgroundImage = `url('${iconUrl}')`;
-  btn.style.backgroundSize = '22px';
-  btn.style.backgroundRepeat = 'no-repeat';
-  btn.style.backgroundPosition = 'center';
-  btn.style.backgroundColor = '#fff';
-  btn.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = chrome.runtime.getURL('icons/icon-32.png');
+  img.style.width = '22px';
+  img.style.height = '22px';
+  img.alt = '';
+  btn.appendChild(img);
   btn.title = '搜索结果屏蔽工具';
   btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
   btn.onmouseleave = () => { btn.style.transform = ''; };
