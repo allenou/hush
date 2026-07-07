@@ -18,7 +18,14 @@ export function injectFloatingBtn(): void {
   const btn = document.createElement('button');
   btn.id = 'srb-float-btn';
   btn.className = 'srb-float-btn';
-  btn.innerHTML = '✕';
+  // Use the extension icon as the button logo
+  const iconUrl = chrome.runtime.getURL('icons/icon-32.png');
+  btn.style.backgroundImage = `url('${iconUrl}')`;
+  btn.style.backgroundSize = '22px';
+  btn.style.backgroundRepeat = 'no-repeat';
+  btn.style.backgroundPosition = 'center';
+  btn.style.backgroundColor = '#fff';
+  btn.innerHTML = '';
   btn.title = '搜索结果屏蔽工具';
   btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
   btn.onmouseleave = () => { btn.style.transform = ''; };
@@ -47,9 +54,8 @@ export function injectFloatingBtn(): void {
     else await addBlockedUrl(window.location.href);
     await recordBlock();
     popup.style.display = 'none';
-    btn.innerHTML = '✓';
-    btn.style.background = '#1F2937';
-    setTimeout(() => { btn.innerHTML = '✕'; btn.style.background = '#1F2937'; }, 1500);
+    btn.style.opacity = '0.6';
+    setTimeout(() => { btn.style.opacity = '1'; }, 1200);
   };
 
   document.addEventListener('click', () => { popup.style.display = 'none'; }, true);

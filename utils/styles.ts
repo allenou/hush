@@ -36,19 +36,23 @@ const CSS = `
   z-index: 999999;
   width: 40px;
   height: 40px;
-  border: none;
+  border: 1px solid #E5E7EB;
   border-radius: 50%;
-  background: #1F2937;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 300;
+  background: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   user-select: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.srb-float-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+.srb-float-btn:active {
+  transform: scale(0.95);
 }
 .srb-float-btn:hover {
   transform: scale(1.08);
