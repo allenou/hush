@@ -2,40 +2,30 @@
   import {
     getAllBlocked,
     removeBlockedItem,
-    addCustomEngine,
-    removeCustomEngine,
     addDomain,
     addBlockedUrl,
     get,
     subscribe,
   } from '../../utils/storage';
-  import {
-    BUILT_IN_ENGINES,
-    type SearchEngineConfig,
-  } from '../../utils/search-engines';
   import { onMount } from 'svelte';
 
   let blockedItems: { type: 'domain' | 'url' | 'selector'; value: string; index: number }[] = [];
   let filter: 'all' | 'domain' | 'url' | 'selector' = 'all';
   let inputValue = '';
   let errorMsg = '';
-  let customEngines: SearchEngineConfig[] = [];
   let totalBlockCount = 0;
   let blockAds = false;
 
   $: filteredItems = filter === 'all' ? blockedItems : blockedItems.filter((i) => i.type === filter);
 
-  let enginesOpen = false;
-  function toggleEngines() { enginesOpen = !enginesOpen; }
-async function toggleAdBlock() {
-    blockAds = !blockAds;
-    await setBlockAds(blockAds);
+  async function toggleAdBlock() {
+      blockAds = !blockAds;
+      await setBlockAds(blockAds);
   }
 
   async function loadData() {
     const storage = await get();
     blockedItems = await getAllBlocked();
-    customEngines = storage.customEngines ?? [];
     totalBlockCount = storage.blockCount;
     blockAds = storage.blockAds ?? false;
   }
@@ -70,10 +60,6 @@ async function toggleAdBlock() {
     if (e.key === 'Enter') handleAdd();
   }
 
-  async function handleRemoveEngine(index: number) {
-    await removeCustomEngine(index);
-    await loadData();
-  }
 
   onMount(() => {
     loadData();
@@ -152,7 +138,7 @@ async function toggleAdBlock() {
     </div>
   </section>
 
-  <!-- Engines -->
+
   <!-- Ad Block -->
   <section class="section">
     <div class="section-inner">
@@ -168,47 +154,11 @@ async function toggleAdBlock() {
       <p class="ad-hint">开启后自动标记搜索结果中的广告链接</p>
     </div>
   </section>
-
-  <section class="section">
-    <div class="section-inner">
-      <div class="engines-header" onclick={toggleEngines} onkeydown={(e) => e.key === 'Enter' && toggleEngines()}
-        tabindex="0" role="button" aria-expanded={enginesOpen}>
-        <span>🔧 搜索引擎 <span class="cnt">{BUILT_IN_ENGINES.length + customEngines.length}</span></span>
-        <span class="chev">{enginesOpen ? '▲' : '▼'}</span>
-      </div>
-
-      {#if enginesOpen}
-        <div class="engines-body">
-          {#each BUILT_IN_ENGINES as engine}
-            <div class="eg-row">
-              <span class="eg-n">{engine.name}</span>
-              <code class="eg-h">{engine.hostname}</code>
-              <span class="eg-tag">内置</span>
-            </div>
-          {/each}
-          {#each customEngines as engine, i}
-            <div class="eg-row">
-              <span class="eg-n">{engine.name}</span>
-              <code class="eg-h">{engine.hostname}</code>
-              <button class="del" onclick={() => handleRemoveEngine(i)}>✕</button>
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  </section>
 </main>
 
 <style>
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    background: #fff;
-    color: #1D1D1F;
-    -webkit-font-smoothing: antialiased;
-  }
+
+
 
   /* Header - full width green bar */
   header {
@@ -344,56 +294,7 @@ async function toggleAdBlock() {
   .del:hover { background: #FEF2F2; color: #DC2626; }
 
   /* Engines */
-  .engines-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    user-select: none;
-    padding: 4px 0;
-    transition: background 0.1s;
-  }
-  .engines-header:hover { color: #059669; }
-  .cnt {
-    font-size: 11px;
-    background: #E5E7EB;
-    color: #6B7280;
-    padding: 1px 7px;
-    border-radius: 999px;
-    margin-left: 4px;
-    font-weight: 600;
-  }
-  .chev { font-size: 10px; color: #9CA3AF; }
 
-  .engines-body {
-    margin-top: 12px;
-    border-top: 1px solid #F3F4F6;
-    padding-top: 12px;
-  }
-  .eg-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 0;
-  }
-  .eg-row + .eg-row { border-top: 1px solid #F9FAFB; }
-  .eg-n { font-weight: 600; font-size: 13px; min-width: 80px; }
-  .eg-h {
-    font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
-    font-size: 12px;
-    color: #6B7280;
-  }
-  .eg-tag {
-    margin-left: auto;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: #F3F4F6;
-    color: #6B7280;
-  }
 
   .ad-toggle {
     display: flex;
