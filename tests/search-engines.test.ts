@@ -105,6 +105,16 @@ describe('BUILT_IN_ENGINES', () => {
     expect(hostnames).not.toContain('duckduckgo.com');
   });
 
+  it('has no duplicate hostnames', () => {
+    const hostnames = BUILT_IN_ENGINES.map((e) => e.hostname);
+    expect(new Set(hostnames).size).toBe(hostnames.length);
+  });
+
+  it('has no duplicate names', () => {
+    const names = BUILT_IN_ENGINES.map((e) => e.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
   it('all engines have required fields', () => {
     for (const engine of BUILT_IN_ENGINES) {
       expect(engine.name).toBeTruthy();

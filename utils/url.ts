@@ -33,7 +33,7 @@ export function extractResultUrl(item: Element, linkSelector: string): string {
 }
 
 /** 判断 URL 是否为搜索引擎内部跳转链接 */
-function isSearchEngineRedirect(url: string): boolean {
+export function isSearchEngineRedirect(url: string): boolean {
   if (!url) return false;
   try {
     const current = new URL(window.location.href).hostname.replace(/^www\./, '');

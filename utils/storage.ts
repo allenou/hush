@@ -47,15 +47,26 @@ export function subscribe(fn: Listener): () => void {
   return () => listeners.delete(fn);
 }
 
+function freshDefaults(): ExtensionStorage {
+  return {
+    ...DEFAULT,
+    urls: [...DEFAULT.urls],
+    blockedUrls: [...DEFAULT.blockedUrls],
+    blockedSelectors: [...DEFAULT.blockedSelectors],
+    customEngines: [...DEFAULT.customEngines],
+    stats: [...DEFAULT.stats],
+  };
+}
+
 export async function get(): Promise<ExtensionStorage> {
   try {
     const result = await chrome.storage.local.get('blocker');
     if (result.blocker && typeof result.blocker === 'object') {
-      return { ...DEFAULT, ...result.blocker };
+      return { ...freshDefaults(), ...result.blocker };
     }
-    return DEFAULT;
+    return freshDefaults();
   } catch {
-    return DEFAULT;
+    return freshDefaults();
   }
 }
 
