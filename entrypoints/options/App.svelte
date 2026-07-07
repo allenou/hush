@@ -10,12 +10,10 @@
   import { onMount } from 'svelte';
 
   let blockedItems: { type: 'domain' | 'url' | 'selector'; value: string; index: number }[] = [];
-  let filter: 'all' | 'domain' | 'url' | 'selector' = 'all';
   let inputValue = '';
   let errorMsg = '';
   let blockAds = false;
 
-  $: filteredItems = filter === 'all' ? blockedItems : blockedItems.filter((i) => i.type === filter);
 
   async function toggleAdBlock() {
       blockAds = !blockAds;
@@ -85,15 +83,9 @@
     </div>
   </section>
 
-  <!-- Tabs + Table -->
+  <!-- List -->
   <section class="section">
     <div class="section-inner">
-      <div class="tabs">
-        <button class:active={filter === 'all'} onclick={() => filter = 'all'}>全部</button>
-        <button class:active={filter === 'domain'} onclick={() => filter = 'domain'}>域名</button>
-        <button class:active={filter === 'url'} onclick={() => filter = 'url'}>链接</button>
-        <button class:active={filter === 'selector'} onclick={() => filter = 'selector'}>选择器</button>
-      </div>
 
         <table>
           <thead>
@@ -104,16 +96,16 @@
             </tr>
           </thead>
           <tbody>
-            {#if filteredItems.length === 0}
+            {#if blockedItems.length === 0}
               <tr>
                 <td colspan="3">
                   <div class="empty">
-                    <p>暂无{filter === 'all' ? '' : '此类'}屏蔽内容</p>
+                    <p>暂无屏蔽内容</p>
                   </div>
                 </td>
               </tr>
             {:else}
-              {#each filteredItems as item}
+              {#each blockedItems as item}
                 <tr>
                   <td class="col-type">
                     <span class="type-badge" class:domain={item.type === 'domain'} class:url={item.type === 'url'} class:selector={item.type === 'selector'}>
@@ -202,45 +194,20 @@
 
   .err { color: #DC2626; font-size: 12px; margin: 8px 0 0; }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 2px; margin-bottom: 16px; }
-  .tabs button {
-    padding: 8px 18px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 13px;
-    font-family: inherit;
-    color: #6B7280;
-    font-weight: 500;
-    border-radius: 6px;
-    transition: all 0.12s;
-  }
-  .tabs button:hover { background: #F3F4F6; color: #1D1D1F; }
-  .tabs button.active { background: #059669; color: #fff; }
-
   /* Empty */
   .empty { text-align: center; padding: 40px 16px; color: #9CA3AF; font-size: 14px; }
 
   /* Table scroll */
-  table { width: 100%; display: block; }
+
   thead, tbody { display: block; }
   thead { width: 100%; }
   tbody {
     display: block;
     max-height: 400px;
-    overflow-y: auto;
+    overflow-y: scroll;
   }
   thead tr, tbody tr { display: table; width: 100%; table-layout: fixed; }
-  table { width: 100%; display: block; }
-  thead, tbody { display: block; }
-  thead { width: 100%; }
-  tbody {
-    display: block;
-    max-height: 400px;
-    overflow-y: auto;
-  }
-  thead tr, tbody tr { display: table; width: 100%; table-layout: fixed; }
+
   th {
     text-align: left;
     font-size: 11px;
