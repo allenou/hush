@@ -119,7 +119,7 @@
   <!-- ===== Footer ===== -->
   <footer>
     <button class="settings-btn" onclick={openOptions} aria-label="打开设置">
-      <span>⚙</span>
+      <span>⚙️</span>
     </button>
     <span class="version">v1.0</span>
   </footer>
