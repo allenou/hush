@@ -366,16 +366,18 @@ export default defineContentScript({
         document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
           el.removeAttribute('data-srb-processed');
           el.removeAttribute('data-srb-ad-scanned');
+      document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
         });
         return;
       }
 
       applyBlockedSelectors();
-      // 清除旧标记重新扫描
+      // 清除旧标记和已有徽章，确保重新扫描完全生效
       document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
         el.removeAttribute('data-srb-processed');
         el.removeAttribute('data-srb-ad-scanned');
       });
+      document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
       if (currentEngine) {
         scanResults(currentEngine);
       } else {
