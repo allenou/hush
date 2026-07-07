@@ -1,4 +1,5 @@
 import type { SearchEngineConfig } from './search-engines';
+import { BUILT_IN_ENGINES } from './search-engines';
 
 export interface ExtensionStorage {
   urls: string[];
@@ -124,6 +125,11 @@ export async function removeBlockedSelector(index: number): Promise<void> {
 }
 
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {
+  // 禁止添加已在内置列表中的搜索引擎
+  if (BUILT_IN_ENGINES.some((e) => e.hostname === config.hostname)) {
+    console.log('[SRB] Reject: cannot add built-in engine', config.hostname);
+    return;
+  }
   const { customEngines } = await get();
   const existing = customEngines.findIndex((e) => e.hostname === config.hostname);
   if (existing >= 0) {

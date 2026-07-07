@@ -62,11 +62,17 @@ export default defineContentScript({
 
     /** 判断搜索结果项是否包含广告标记 */
     function isAdItem(item: Element): boolean {
-      const text = (item.textContent ?? '').toLowerCase();
-      if (text.includes('广告') || text.includes('推广')) return true;
+      if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i]')) return true;
       const cls = (item.className as string).toLowerCase();
       if (/\b(?:ad|sponsor)\b/.test(cls)) return true;
-      if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i]')) return true;
+      // 只在明确的小元素范围内搜索广告文本，避免命中结果正文
+      const badgeTexts = ['广告', '推广'];
+      const miniEls = item.querySelectorAll('span, small, label, em, b, i');
+      for (const el of miniEls) {
+        if (el.children.length > 2) continue;
+        const t = (el.textContent ?? '').trim();
+        if (t.length > 0 && t.length < 20 && badgeTexts.includes(t)) return true;
+      }
       return false;
     }
 
@@ -209,21 +215,28 @@ export default defineContentScript({
         if (!isAdLabel) return;
         badge.setAttribute('data-srb-ad-badge', 'true');
 
-        // 从 badge 向上找到最外层的父级结果项（优先 li/section/article/tr，不卡在内层 div）
+        // 从 badge 向上找到贴紧的父级结果项
         let best: HTMLElement | null = null;
         let cur: HTMLElement | null = badge.parentElement;
         let depth = 0;
-        while (cur && cur !== document.body && depth < 8) {
+        while (cur && cur !== document.body && depth < 6) {
           const tag = cur.tagName.toLowerCase();
           if (cur.querySelector('a[href]') && cur.children.length >= 2) {
             if (['li', 'section', 'article', 'tr'].includes(tag)) {
               best = cur;
-              break; // 找到明确的结果项容器，停下
+              break;
             }
-            if (tag === 'div') best = cur; // 先记着，继续找更好的
+            // div 只取遇到的第一个，不继续覆盖为更大的容器
+            if (tag === 'div' && !best) best = cur;
           }
           cur = cur.parentElement;
           depth++;
+        }
+        // 尺寸防护：如果标中的容器超过视口 60%，说明找错了
+        if (best) {
+          const r = best.getBoundingClientRect();
+          const vpArea = window.innerWidth * window.innerHeight;
+          if (r.width * r.height > vpArea * 0.6) best = null;
         }
         if (best && !best.hasAttribute('data-srb-ad-scanned')) {
           best.setAttribute('data-srb-ad-scanned', 'true');
@@ -254,16 +267,21 @@ export default defineContentScript({
         setTimeout(() => tryAutoDetect(), 3000);
         return;
       }
-      const { customEngines } = await get();
+      const hostname = getHostname();
+      const isBuiltIn = BUILT_IN_ENGINES.some((e) => e.hostname === hostname);
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {
         setTimeout(() => tryAutoDetect(), 3000);
         return;
       }
-      const existing = customEngines.findIndex((e) => e.hostname === detected.hostname);
-      if (existing >= 0) customEngines[existing] = detected;
-      else customEngines.push(detected);
-      await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
+      // 内置引擎不持久化到 customEngines，只在内存中使用
+      if (!isBuiltIn) {
+        const { customEngines } = await get();
+        const existing = customEngines.findIndex((e) => e.hostname === detected.hostname);
+        if (existing >= 0) customEngines[existing] = detected;
+        else customEngines.push(detected);
+        await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
+      }
       currentEngine = detected;
       injectCollapseBar(detected.containerSelector);
       scanResults(detected);
@@ -294,6 +312,8 @@ export default defineContentScript({
           // 翻页后内容异步加载，延迟再扫一次兜底
           if (isEnabled && blockAds) setTimeout(scanForAds, 1500);
           if (isEnabled && currentEngine) setTimeout(() => scanResults(currentEngine!), 1500);
+          // SPA 翻页可能清空 DOM，延迟重新注入样式和浮动按钮
+          setTimeout(() => { injectStyles(); injectFloatingBtn(); }, 1500);
         }, 300)
       );
       selectorObs.observe(document.body, { childList: true, subtree: true });

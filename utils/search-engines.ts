@@ -17,7 +17,6 @@ export const BUILT_IN_ENGINES: EngineInfo[] = [
   { name: 'Google', hostname: 'google.com', linkSelector: 'a[href]' },
   { name: 'Baidu', hostname: 'baidu.com', linkSelector: 'a[href]' },
   { name: 'Bing', hostname: 'bing.com', linkSelector: 'a[href]' },
-  { name: 'DuckDuckGo', hostname: 'duckduckgo.com', linkSelector: 'a[href]' },
   { name: '360搜索', hostname: 'so.com', linkSelector: 'a[href]' },
 ];
 

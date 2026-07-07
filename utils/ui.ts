@@ -5,15 +5,22 @@ let floatingBtnInjected = false;
 
 /** 浮动 🛡 屏蔽按钮（页面右下角） */
 export function injectFloatingBtn(): void {
-  if (floatingBtnInjected) return;
+  // SPA 翻页后 DOM 可能被清空重建，检测并重新注入
+  if (floatingBtnInjected) {
+    if (!document.getElementById('srb-float-btn')) {
+      floatingBtnInjected = false;
+    } else {
+      return;
+    }
+  }
   floatingBtnInjected = true;
 
-  const btn = document.createElement('div');
+  const btn = document.createElement('button');
   btn.id = 'srb-float-btn';
   btn.className = 'srb-float-btn';
   btn.innerHTML = '🛡';
-  btn.title = '屏蔽此网站';
-  btn.onmouseenter = () => { btn.style.transform = 'scale(1.1)'; };
+  btn.title = '搜索结果屏蔽工具';
+  btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
   btn.onmouseleave = () => { btn.style.transform = ''; };
 
   const popup = document.createElement('div');
