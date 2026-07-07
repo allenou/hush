@@ -13,7 +13,6 @@
   let filter: 'all' | 'domain' | 'url' | 'selector' = 'all';
   let inputValue = '';
   let errorMsg = '';
-  let totalBlockCount = 0;
   let blockAds = false;
 
   $: filteredItems = filter === 'all' ? blockedItems : blockedItems.filter((i) => i.type === filter);
@@ -26,7 +25,6 @@
   async function loadData() {
     const storage = await get();
     blockedItems = await getAllBlocked();
-    totalBlockCount = storage.blockCount;
     blockAds = storage.blockAds ?? false;
   }
 
@@ -73,7 +71,6 @@
     <div class="header-content">
       <span class="header-icon">🛡</span>
       <span class="header-title">屏蔽管理</span>
-      <span class="header-meta">共 {totalBlockCount} 次拦截</span>
     </div>
   </header>
 
@@ -175,7 +172,6 @@
   }
   .header-icon { font-size: 24px; }
   .header-title { font-size: 18px; font-weight: 700; }
-  .header-meta { font-size: 13px; opacity: 0.7; margin-left: auto; }
 
   /* Section - flush, no card */
   .section {
