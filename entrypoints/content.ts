@@ -283,12 +283,17 @@ export default defineContentScript({
       injectStyles();
       injectFloatingBtn();
 
-      // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽和广告检测
+      // 持久监听 DOM 变化，确保无限加载的新内容也能应用选择器屏蔽、广告检测和域名屏蔽
       const selectorObs = new MutationObserver(
         debounce(() => {
-          if (isEnabled) { applyBlockedSelectors(); scanForAds(); }
+          if (isEnabled) {
+            applyBlockedSelectors();
+            scanForAds();
+            if (currentEngine) scanResults(currentEngine);
+          }
           // 翻页后内容异步加载，延迟再扫一次兜底
           if (isEnabled && blockAds) setTimeout(scanForAds, 1500);
+          if (isEnabled && currentEngine) setTimeout(() => scanResults(currentEngine!), 1500);
         }, 300)
       );
       selectorObs.observe(document.body, { childList: true, subtree: true });
