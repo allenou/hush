@@ -66,13 +66,6 @@
 </script>
 
 <main>
-  <!-- Header - Full width -->
-  <header>
-    <div class="header-content">
-      <span class="header-icon">🛡</span>
-      <span class="header-title">屏蔽管理</span>
-    </div>
-  </header>
 
   <!-- Add bar -->
   <section class="section">
@@ -158,20 +151,6 @@
 
 
   /* Header - full width green bar */
-  header {
-    background: linear-gradient(135deg, #059669, #047857);
-    color: #fff;
-    padding: 20px 24px;
-  }
-  .header-content {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .header-icon { font-size: 24px; }
-  .header-title { font-size: 18px; font-weight: 700; }
 
   /* Section - flush, no card */
   .section {
