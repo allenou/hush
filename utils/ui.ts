@@ -43,10 +43,16 @@ export function injectFloatingBtn(): void {
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
-  popup.innerHTML =
-    '<button class="srb-fopt" data-action="domain">🌐 屏蔽此域名</button>' +
-    '<button class="srb-fopt" data-action="url">🔗 屏蔽此链接</button>' +
-    '<button class="srb-fopt" data-action="pick">✂️ 选取屏蔽</button>';
+  if (isSearchEngine(window.location.href)) {
+    popup.innerHTML =
+      '<button class="srb-fopt" data-action="pick">✂️ 选取屏蔽</button>' +
+      '<button class="srb-fopt" data-action="settings">⚙️</button>';
+  } else {
+    popup.innerHTML =
+      '<button class="srb-fopt" data-action="domain">🌐 屏蔽此域名</button>' +
+      '<button class="srb-fopt" data-action="url">🔗 屏蔽此链接</button>' +
+      '<button class="srb-fopt" data-action="settings">⚙️</button>';
+  }
 
   // ===== 位置初始化 =====
   const BTN_SIZE = 40;
@@ -121,8 +127,8 @@ export function injectFloatingBtn(): void {
   btn.addEventListener('pointerup', (e) => {
     const dx = Math.abs(e.clientX - pointerDownPos.x);
     const dy = Math.abs(e.clientY - pointerDownPos.y);
-    // 如果拖动距离很小(<5px)，视为点击
     if (dx < 5 && dy < 5) {
+      e.stopPropagation();
       popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
     }
   });
@@ -143,6 +149,11 @@ export function injectFloatingBtn(): void {
       document.dispatchEvent(new CustomEvent('srb-start-picker'));
       return;
     }
+    if (action === 'settings') {
+      popup.style.display = 'none';
+      chrome.runtime.openOptionsPage?.();
+      return;
+    }
     if (action === 'domain') await addDomain(getHostname());
     else await addBlockedUrl(window.location.href);
     await recordBlock();
@@ -151,7 +162,10 @@ export function injectFloatingBtn(): void {
     setTimeout(() => { btn.style.opacity = '1'; }, 1200);
   };
 
-  document.addEventListener('click', () => { popup.style.display = 'none'; }, true);
+  document.addEventListener('click', (e) => {
+    const t = e.target as Node;
+    if (!btn.contains(t) && !popup.contains(t)) popup.style.display = 'none';
+  });
 
   initPos().then(() => {
     document.body.appendChild(btn);
