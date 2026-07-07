@@ -27,7 +27,7 @@ export default defineContentScript({
     let blockedUrls: string[] = [];
     let blockedSelectors: string[] = [];
     let isEnabled = true;
-    let blockAds = true;
+    let blockAds = false;
     let currentEngine: SearchEngineConfig | null = null;
 
     // ========== 选择器规则应用 ==========
@@ -358,7 +358,7 @@ export default defineContentScript({
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? true;
+      blockAds = storage.blockAds ?? false;
 
       if (!isEnabled) {
         restoreBlockedSelectors();
@@ -388,7 +388,7 @@ export default defineContentScript({
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? true;
+      blockAds = storage.blockAds ?? false;
       init();
       checkSavedSelectors();
     });

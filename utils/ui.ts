@@ -18,7 +18,7 @@ export function injectFloatingBtn(): void {
   const btn = document.createElement('button');
   btn.id = 'srb-float-btn';
   btn.className = 'srb-float-btn';
-  btn.innerHTML = '🛡';
+  btn.innerHTML = '✕';
   btn.title = '搜索结果屏蔽工具';
   btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
   btn.onmouseleave = () => { btn.style.transform = ''; };
@@ -29,14 +29,8 @@ export function injectFloatingBtn(): void {
   popup.innerHTML =
     '<button class="srb-fopt" data-action="domain">🌐 屏蔽此域名</button>' +
     '<button class="srb-fopt" data-action="url">🔗 屏蔽此链接</button>' +
-    '<button class="srb-fopt" data-action="ads">📢 广告屏蔽</button>' +
     '<button class="srb-fopt" data-action="pick">✂️ 选取屏蔽</button>';
 
-  // 广告屏蔽状态同步
-  get().then((s) => {
-    const adBtn = popup.querySelector<HTMLElement>('[data-action="ads"]');
-    if (adBtn) adBtn.textContent = '📢 广告屏蔽 ' + (s.blockAds ? '✅' : '❌');
-  });
 
   btn.onclick = (e) => { e.stopPropagation(); popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex'; };
 
@@ -49,20 +43,13 @@ export function injectFloatingBtn(): void {
       document.dispatchEvent(new CustomEvent('srb-start-picker'));
       return;
     }
-    if (action === 'ads') {
-      const { blockAds } = await get();
-      await setBlockAds(!blockAds);
-      t.textContent = '📢 广告屏蔽 ' + (!blockAds ? '✅' : '❌');
-      popup.style.display = 'none';
-      return;
-    }
     if (action === 'domain') await addDomain(getHostname());
     else await addBlockedUrl(window.location.href);
     await recordBlock();
     popup.style.display = 'none';
-    btn.innerHTML = '✅';
-    btn.style.background = '#28a745';
-    setTimeout(() => { btn.innerHTML = '🛡'; btn.style.background = '#007bff'; }, 1500);
+    btn.innerHTML = '✓';
+    btn.style.background = '#1F2937';
+    setTimeout(() => { btn.innerHTML = '✕'; btn.style.background = '#1F2937'; }, 1500);
   };
 
   document.addEventListener('click', () => { popup.style.display = 'none'; }, true);

@@ -34,20 +34,28 @@ const CSS = `
   bottom: 24px;
   right: 24px;
   z-index: 999999;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 50%;
-  background: var(--srb-accent);
+  background: #1F2937;
   color: #fff;
-  font-size: 20px;
+  font-size: 16px;
+  font-weight: 300;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--srb-shadow-lg);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
   user-select: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.srb-float-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+}
+.srb-float-btn:active {
+  transform: scale(0.95);
 }
 .srb-float-btn:hover {
   transform: scale(1.08);

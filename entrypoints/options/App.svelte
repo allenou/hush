@@ -21,17 +21,23 @@
   let errorMsg = '';
   let customEngines: SearchEngineConfig[] = [];
   let totalBlockCount = 0;
+  let blockAds = false;
 
   $: filteredItems = filter === 'all' ? blockedItems : blockedItems.filter((i) => i.type === filter);
 
   let enginesOpen = false;
   function toggleEngines() { enginesOpen = !enginesOpen; }
+async function toggleAdBlock() {
+    blockAds = !blockAds;
+    await setBlockAds(blockAds);
+  }
 
   async function loadData() {
     const storage = await get();
     blockedItems = await getAllBlocked();
     customEngines = storage.customEngines ?? [];
     totalBlockCount = storage.blockCount;
+    blockAds = storage.blockAds ?? false;
   }
 
   async function handleAdd() {
@@ -147,6 +153,22 @@
   </section>
 
   <!-- Engines -->
+  <!-- Ad Block -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="ad-toggle">
+        <span>📢 广告屏蔽</span>
+        <label class="toggle" aria-label="切换广告屏蔽">
+          <input type="checkbox" checked={blockAds} onchange={toggleAdBlock} />
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+      </div>
+      <p class="ad-hint">开启后自动标记搜索结果中的广告链接</p>
+    </div>
+  </section>
+
   <section class="section">
     <div class="section-inner">
       <div class="engines-header" onclick={toggleEngines} onkeydown={(e) => e.key === 'Enter' && toggleEngines()}
@@ -371,5 +393,55 @@
     border-radius: 999px;
     background: #F3F4F6;
     color: #6B7280;
+  }
+
+  .ad-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 2px 0;
+  }
+  .ad-hint {
+    font-size: 12px;
+    color: #9CA3AF;
+    margin: 6px 0 0;
+  }
+  .toggle {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  .toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-track {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    background: #D1D5DB;
+    border-radius: 9999px;
+    transition: background 0.2s;
+  }
+  .toggle input:checked + .toggle-track {
+    background: #059669;
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(16px);
   }
 </style>
