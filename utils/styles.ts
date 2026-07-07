@@ -31,8 +31,6 @@ const CSS = `
 /* ===== Floating Action Button ===== */
 .srb-float-btn {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
   z-index: 999999;
   width: 40px;
   height: 40px;
@@ -195,7 +193,7 @@ const CSS = `
   background: #D1FAE5;
 }
 
-/* ===== Blocked Badge (stamp effect) ===== */
+/* ===== Blocked Badge (redacted-document style) ===== */
 .srb-mask {
   position: absolute;
   inset: 0;
@@ -227,19 +225,24 @@ const CSS = `
   border: 1px solid rgba(220, 38, 38, 0.25);
   letter-spacing: 0.02em;
   transition: background 0.12s;
-  backdrop-filter: blur(2px);
 }
 .srb-blocked-badge:hover {
   background: #FEE2E2;
 }
 
-/* ===== Ad Badge ===== */
+/* ===== Ad Badge — 样式与域名屏蔽一致，仅 badge 文字区分 ===== */
 .srb-ad-mask {
   position: absolute;
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: rgba(255,251,235,0.8);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(220, 38, 38, 0.06),
+    rgba(220, 38, 38, 0.06) 6px,
+    rgba(220, 38, 38, 0.03) 6px,
+    rgba(220, 38, 38, 0.03) 12px
+  );
 }
 
 .srb-ad-badge {
@@ -249,19 +252,19 @@ const CSS = `
   z-index: 9999;
   padding: 3px 10px;
   border-radius: 4px;
-  background: var(--srb-amber-light);
-  color: var(--srb-amber);
+  background: var(--srb-danger-light);
+  color: var(--srb-danger);
   font-size: 11px;
   font-weight: 600;
   font-family: var(--srb-font);
   cursor: pointer;
   user-select: none;
-  border: 1px solid rgba(217,119,6,0.25);
+  border: 1px solid rgba(220, 38, 38, 0.25);
   letter-spacing: 0.02em;
   transition: background 0.12s;
 }
 .srb-ad-badge:hover {
-  background: #FDE68A;
+  background: #FEE2E2;
 }
 
 /* ===== Collapse Bar ===== */

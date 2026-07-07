@@ -3,9 +3,23 @@ import { getHostname } from './url';
 
 let floatingBtnInjected = false;
 
-/** 浮动 🛡 屏蔽按钮（页面右下角） */
+const STORAGE_KEY = 'srb_float_pos';
+
+interface FloatPos { x: number; y: number; }
+
+async function loadPos(): Promise<FloatPos | null> {
+  try {
+    const data = await chrome.storage.local.get(STORAGE_KEY);
+    return (data as any)[STORAGE_KEY] ?? null;
+  } catch { return null; }
+}
+
+async function savePos(x: number, y: number): Promise<void> {
+  try { await chrome.storage.local.set({ [STORAGE_KEY]: { x, y } }); } catch {}
+}
+
+/** 浮动 🛡 屏蔽按钮（页面右下角），支持拖动 */
 export function injectFloatingBtn(): void {
-  // SPA 翻页后 DOM 可能被清空重建，检测并重新注入
   if (floatingBtnInjected) {
     if (!document.getElementById('srb-float-btn')) {
       floatingBtnInjected = false;
@@ -25,8 +39,6 @@ export function injectFloatingBtn(): void {
   img.alt = '';
   btn.appendChild(img);
   btn.title = '搜索结果屏蔽工具';
-  btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
-  btn.onmouseleave = () => { btn.style.transform = ''; };
 
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
@@ -36,8 +48,91 @@ export function injectFloatingBtn(): void {
     '<button class="srb-fopt" data-action="url">🔗 屏蔽此链接</button>' +
     '<button class="srb-fopt" data-action="pick">✂️ 选取屏蔽</button>';
 
+  // ===== 位置初始化 =====
+  const BTN_SIZE = 40;
+  const MARGIN = 24;
 
-  btn.onclick = (e) => { e.stopPropagation(); popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex'; };
+  async function initPos(): Promise<void> {
+    const saved = await loadPos();
+    if (saved) {
+      btn.style.left = saved.x + 'px';
+      btn.style.top = saved.y + 'px';
+    } else {
+      btn.style.left = (window.innerWidth - BTN_SIZE - MARGIN) + 'px';
+      btn.style.top = (window.innerHeight - BTN_SIZE - MARGIN) + 'px';
+    }
+  }
+
+  // ===== 拖动逻辑 =====
+  let dragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let origX = 0, origY = 0;
+
+  function onDown(e: MouseEvent | TouchEvent): void {
+    // 如果点击目标是弹窗内的按钮，不触发拖动
+    const t = e.target as HTMLElement;
+    if (t.closest('.srb-fopt') || t.closest('.srb-float-popup')) return;
+
+    dragging = true;
+    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartX = cx;
+    dragStartY = cy;
+    origX = btn.offsetLeft;
+    origY = btn.offsetTop;
+    btn.style.transition = 'none';
+    btn.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function onMove(e: MouseEvent | TouchEvent): void {
+    if (!dragging) return;
+    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const dx = cx - dragStartX;
+    const dy = cy - dragStartY;
+    let nx = Math.max(0, Math.min(window.innerWidth - BTN_SIZE, origX + dx));
+    let ny = Math.max(0, Math.min(window.innerHeight - BTN_SIZE, origY + dy));
+    btn.style.left = nx + 'px';
+    btn.style.top = ny + 'px';
+  }
+
+  function onUp(): void {
+    if (!dragging) return;
+    dragging = false;
+    btn.style.cursor = '';
+    // 靠向最近的边
+    const cx = btn.offsetLeft + BTN_SIZE / 2;
+    const snapLeft = cx < window.innerWidth / 2;
+    btn.style.transition = 'left 0.25s ease';
+    const snapX = snapLeft ? MARGIN : window.innerWidth - BTN_SIZE - MARGIN;
+    btn.style.left = snapX + 'px';
+    setTimeout(() => { btn.style.transition = ''; }, 300);
+    savePos(snapX, btn.offsetTop);
+  }
+
+  // 切换 click / drag 区分
+  let pointerDownPos = { x: 0, y: 0 };
+  btn.addEventListener('pointerdown', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest('.srb-fopt') || t.closest('.srb-float-popup')) return;
+    pointerDownPos = { x: e.clientX, y: e.clientY };
+  });
+  btn.addEventListener('pointerup', (e) => {
+    const dx = Math.abs(e.clientX - pointerDownPos.x);
+    const dy = Math.abs(e.clientY - pointerDownPos.y);
+    // 如果拖动距离很小(<5px)，视为点击
+    if (dx < 5 && dy < 5) {
+      popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+    }
+  });
+
+  btn.addEventListener('mousedown', onDown);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  btn.addEventListener('touchstart', onDown, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onUp);
 
   popup.onclick = async (e) => {
     const t = e.target as HTMLElement;
@@ -57,8 +152,11 @@ export function injectFloatingBtn(): void {
   };
 
   document.addEventListener('click', () => { popup.style.display = 'none'; }, true);
-  document.body.appendChild(btn);
-  document.body.appendChild(popup);
+
+  initPos().then(() => {
+    document.body.appendChild(btn);
+    document.body.appendChild(popup);
+  });
 }
 
 /** 折叠提示条 */
