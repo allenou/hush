@@ -3,24 +3,51 @@ const STYLE_ID = 'srb-styles';
 const CSS = `
 /* ===== Design Tokens ===== */
 :root {
+  --srb-primary: #0a5532;
+  --srb-primary-hover: #087654;
+  --srb-primary-active: #066244;
+  --srb-primary-action: #0a7a55;
   --srb-accent: #059669;
   --srb-accent-hover: #047857;
-  --srb-accent-light: #ECFDF5;
-  --srb-accent-ring: #6EE7B7;
-  --srb-danger: #DC2626;
-  --srb-danger-light: #FEF2F2;
-  --srb-danger-ring: #FCA5A5;
-  --srb-amber: #D97706;
-  --srb-amber-light: #FFFBEB;
-  --srb-success: #10B981;
-  --srb-text: #1A1A2E;
-  --srb-text-secondary: #6B7280;
-  --srb-surface: #FFFFFF;
-  --srb-bg: #F8F8FA;
-  --srb-border: #E5E7EB;
-  --srb-shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-  --srb-shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-  --srb-shadow-lg: 0 8px 24px rgba(0,0,0,0.14);
+  --srb-accent-light: #ecfdf5;
+  --srb-accent-mid: #d1fae5;
+  --srb-accent-ring: #6ee7b7;
+  --srb-on-primary: #ffffff;
+  --srb-surface: #ffffff;
+  --srb-bg: #f4f7f5;
+  --srb-text: #18211d;
+  --srb-text-strong: #1a1a2e;
+  --srb-text-secondary: #566861;
+  --srb-text-muted: #9aa8a1;
+  --srb-border: #dde6e1;
+  --srb-border-light: #e2e9e4;
+  --srb-danger: #c43d3d;
+  --srb-danger-strong: #991b1b;
+  --srb-danger-light: #fef2f2;
+  --srb-danger-hover: #fee2e2;
+  --srb-danger-ring: #fca5a5;
+  --srb-danger-border: rgba(220, 38, 38, 0.25);
+  --srb-warning: #92400e;
+  --srb-warning-light: #fffbeb;
+  --srb-success: #10b981;
+  --srb-accent-border: rgba(5, 150, 105, 0.3);
+  --srb-accent-border-soft: rgba(5, 150, 105, 0.12);
+  --srb-accent-highlight: rgba(5, 150, 105, 0.06);
+  --srb-overlay-soft: rgba(0, 0, 0, 0.25);
+  --srb-on-dark-border: rgba(255, 255, 255, 0.3);
+  --srb-on-dark-hover-bg: rgba(255, 255, 255, 0.1);
+  --srb-shadow-xs: 0 1px 3px rgba(24, 33, 29, 0.06);
+  --srb-shadow-sm: 0 1px 4px rgba(24, 33, 29, 0.08);
+  --srb-shadow-md: 0 4px 16px rgba(24, 33, 29, 0.12);
+  --srb-shadow-lg: 0 8px 24px rgba(24, 33, 29, 0.14);
+  --srb-shadow-accent: 0 10px 28px rgba(5, 150, 105, 0.25);
+  --srb-mask-danger: repeating-linear-gradient(
+    -45deg,
+    rgba(220, 38, 38, 0.06),
+    rgba(220, 38, 38, 0.06) 6px,
+    rgba(220, 38, 38, 0.03) 6px,
+    rgba(220, 38, 38, 0.03) 12px
+  );
   --srb-radius-sm: 6px;
   --srb-radius-md: 10px;
   --srb-radius-lg: 14px;
@@ -37,42 +64,42 @@ const CSS = `
   right: 24px;
   width: 40px;
   height: 40px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--srb-border-light);
   border-radius: 50%;
-  background: #fff;
+  background: var(--srb-surface);
   font-size: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: var(--srb-shadow-sm);
   user-select: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .srb-float-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  box-shadow: var(--srb-shadow-md);
 }
 .srb-float-btn:active {
   transform: scale(0.95);
 }
 .srb-float-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  box-shadow: var(--srb-shadow-md);
 }
 .srb-float-btn:active {
   transform: scale(0.95);
 }
 .srb-float-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  box-shadow: var(--srb-shadow-lg);
 }
 .srb-float-btn:active {
   transform: scale(0.95);
 }
 .srb-float-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 10px 28px rgba(5,150,105,0.25);
+  box-shadow: var(--srb-shadow-accent);
 }
 .srb-float-btn:active {
   transform: scale(0.95);
@@ -129,7 +156,7 @@ const CSS = `
   color: var(--srb-accent);
 }
 .srb-fopt:active {
-  background: #D1FAE5;
+  background: var(--srb-accent-mid);
 }
 
 /* ===== Block Button (on each result item) ===== */
@@ -158,7 +185,7 @@ const CSS = `
 .srb-block-btn:hover {
   border-color: var(--srb-accent);
   color: var(--srb-accent);
-  box-shadow: 0 2px 6px rgba(5,150,105,0.15);
+  box-shadow: var(--srb-shadow-accent);
 }
 
 /* Block action popup */
@@ -197,7 +224,7 @@ const CSS = `
   color: var(--srb-accent);
 }
 .srb-opt:active {
-  background: #D1FAE5;
+  background: var(--srb-accent-mid);
 }
 
 /* ===== Blocked Badge (redacted-document style) ===== */
@@ -206,13 +233,7 @@ const CSS = `
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(220, 38, 38, 0.06),
-    rgba(220, 38, 38, 0.06) 6px,
-    rgba(220, 38, 38, 0.03) 6px,
-    rgba(220, 38, 38, 0.03) 12px
-  );
+  background: var(--srb-mask-danger);
 }
 
 .srb-blocked-badge {
@@ -229,12 +250,12 @@ const CSS = `
   font-family: var(--srb-font);
   cursor: pointer;
   user-select: none;
-  border: 1px solid rgba(220, 38, 38, 0.25);
+  border: 1px solid var(--srb-danger-border);
   letter-spacing: 0.02em;
   transition: background 0.12s;
 }
 .srb-blocked-badge:hover {
-  background: #FEE2E2;
+  background: var(--srb-danger-hover);
 }
 
 /* ===== Cancel Badge (hover 显示在 badge 上方) ===== */
@@ -253,13 +274,13 @@ const CSS = `
   letter-spacing: 0.02em;
   cursor: pointer;
   user-select: none;
-  border: 1px solid rgba(5, 150, 105, 0.3);
+  border: 1px solid var(--srb-accent-border);
   background: var(--srb-accent-light);
   color: var(--srb-accent);
   transition: background 0.12s;
 }
 .srb-cancel-badge:hover {
-  background: #D1FAE5;
+  background: var(--srb-accent-mid);
 }
 
 /* ===== Ad Badge — 样式与域名屏蔽一致，仅 badge 文字区分 ===== */
@@ -268,13 +289,7 @@ const CSS = `
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(220, 38, 38, 0.06),
-    rgba(220, 38, 38, 0.06) 6px,
-    rgba(220, 38, 38, 0.03) 6px,
-    rgba(220, 38, 38, 0.03) 12px
-  );
+  background: var(--srb-mask-danger);
 }
 
 .srb-ad-badge {
@@ -291,12 +306,12 @@ const CSS = `
   font-family: var(--srb-font);
   cursor: pointer;
   user-select: none;
-  border: 1px solid rgba(220, 38, 38, 0.25);
+  border: 1px solid var(--srb-danger-border);
   letter-spacing: 0.02em;
   transition: background 0.12s;
 }
 .srb-ad-badge:hover {
-  background: #FEE2E2;
+  background: var(--srb-danger-hover);
 }
 
 /* ===== Collapse Bar ===== */
@@ -310,7 +325,7 @@ const CSS = `
   border-radius: var(--srb-radius-sm);
   display: none;
   font-weight: 500;
-  border: 1px solid rgba(5,150,105,0.12);
+  border: 1px solid var(--srb-accent-border-soft);
 }
 
 /* ===== Picker Tooltip ===== */
@@ -322,7 +337,7 @@ const CSS = `
   z-index: 999999;
   padding: 10px 16px;
   background: var(--srb-accent);
-  color: #fff;
+  color: var(--srb-on-primary);
   font-size: 15px;
   font-family: var(--srb-font);
   text-align: center;
@@ -336,7 +351,7 @@ const CSS = `
   z-index: 999998;
   pointer-events: none;
   border: 2px solid var(--srb-accent);
-  background: rgba(5,150,105,0.06);
+  background: var(--srb-accent-highlight);
   border-radius: var(--srb-radius-sm);
   transition: all 0.06s ease;
   display: none;
@@ -350,7 +365,7 @@ const CSS = `
   position: fixed;
   bottom: 24px;
   right: 24px;
-  background: rgba(0,0,0,0.25);
+  background: var(--srb-overlay-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -407,7 +422,7 @@ const CSS = `
   border: none;
   border-radius: var(--srb-radius-sm);
   background: var(--srb-accent);
-  color: #fff;
+  color: var(--srb-on-primary);
   cursor: pointer;
   font-size: 15px;
   font-family: var(--srb-font);
@@ -429,7 +444,7 @@ const CSS = `
   bottom: 24px;
   right: 24px;
   background: var(--srb-text);
-  color: #fff;
+  color: var(--srb-on-primary);
   padding: 10px 20px;
   border-radius: var(--srb-radius-sm);
   font-size: 15px;
@@ -441,17 +456,17 @@ const CSS = `
 }
 .srb-undo-btn {
   padding: 4px 14px;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid var(--srb-on-dark-border);
   border-radius: 4px;
   background: transparent;
-  color: #fff;
+  color: var(--srb-on-primary);
   cursor: pointer;
   font-size: 12px;
   font-family: var(--srb-font);
   transition: background 0.1s;
 }
 .srb-undo-btn:hover {
-  background: rgba(255,255,255,0.1);
+  background: var(--srb-on-dark-hover-bg);
 }
 
 /* Picker 激活时屏蔽 badge 指针事件，避免干扰选取 */

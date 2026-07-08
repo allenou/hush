@@ -111,37 +111,37 @@
 
 <style>
   .method-card {
-    max-width: 600px;
+    max-width: var(--srb-settings-width);
     margin: 0 auto;
-    padding: 24px;
-    border: 1px solid #dde6e1;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 1px 4px rgba(24,33,29,0.04);
+    padding: var(--srb-space-2xl);
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-card);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-xs);
   }
   .method-card + .method-card {
-    margin-top: 16px;
+    margin-top: var(--srb-space-lg);
   }
   .method-heading {
-    margin-bottom: 16px;
+    margin-bottom: var(--srb-space-lg);
   }
 
   .card-title {
     margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: var(--srb-font-size-title);
+    font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
-    line-height: 1.2;
+    line-height: var(--srb-line-height-tight);
   }
   .card-desc {
     margin: 4px 0 0;
-    color: #6d7f77;
-    font-size: 13px;
-    line-height: 1.45;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
 
   .toggle-list {
-    border-top: 1px solid #ecf1ee;
+    border-top: 1px solid var(--srb-divider);
   }
   .toggle-item {
     display: flex;
@@ -149,7 +149,7 @@
     align-items: center;
     gap: 14px;
     padding: 14px 0;
-    border-bottom: 1px solid #ecf1ee;
+    border-bottom: 1px solid var(--srb-divider);
   }
   .toggle-item:last-child {
     border-bottom: none;
@@ -161,9 +161,9 @@
   }
   .toggle-copy p {
     margin: 0;
-    color: #6d7f77;
-    font-size: 13px;
-    line-height: 1.45;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
   .toggle {
     display: flex;
@@ -179,24 +179,24 @@
   }
   .toggle-track {
     position: relative;
-    width: 44px;
-    height: 26px;
-    border-radius: 999px;
-    background: #cfd8d3;
+    width: var(--srb-toggle-width);
+    height: var(--srb-toggle-height);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-toggle-off);
     transition: background 0.2s;
   }
   .toggle input:checked + .toggle-track {
-    background: #0d8f66;
+    background: var(--srb-engine-google);
   }
   .toggle-thumb {
     position: absolute;
     top: 3px;
     left: 3px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    width: var(--srb-toggle-thumb-size);
+    height: var(--srb-toggle-thumb-size);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-sm);
     transition: transform 0.2s;
   }
   .toggle input:checked + .toggle-track .toggle-thumb {
@@ -205,29 +205,29 @@
 
   .locale-selector {
     display: flex;
-    gap: 8px;
+    gap: var(--srb-space-sm);
     margin-top: 4px;
   }
   .locale-btn {
     flex: 1;
     padding: 10px 16px;
-    border: 2px solid #dde6e1;
-    border-radius: 10px;
-    background: #fff;
-    color: #18211d;
+    border: 2px solid var(--srb-border);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    color: var(--srb-text);
     font: inherit;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-semibold);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all var(--srb-transition-base);
   }
   .locale-btn:hover {
-    border-color: #0d8f66;
-    background: #f0fdf4;
+    border-color: var(--srb-engine-google);
+    background: var(--srb-success-light);
   }
   .locale-btn.active {
-    border-color: #0d8f66;
-    background: #0d8f66;
-    color: #fff;
+    border-color: var(--srb-engine-google);
+    background: var(--srb-engine-google);
+    color: var(--srb-on-primary);
   }
 </style>

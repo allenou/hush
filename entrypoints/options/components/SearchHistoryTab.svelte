@@ -92,53 +92,53 @@
 
 <style>
   .search-section {
-    border: 1px solid #dde6e1;
-    border-radius: 16px;
-    background: #fff;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(24,33,29,0.04);
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-card);
+    background: var(--srb-surface);
+    padding: var(--srb-space-xl);
+    box-shadow: var(--srb-shadow-xs);
   }
   .search-section-heading {
     margin-bottom: 16px;
   }
   .card-title {
     margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: var(--srb-font-size-title);
+    font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
-    line-height: 1.2;
+    line-height: var(--srb-line-height-tight);
   }
   .card-desc {
     margin: 4px 0 0;
-    color: #6d7f77;
-    font-size: 13px;
-    line-height: 1.45;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
 
   .empty {
-    padding: 48px 24px;
-    border: 1px dashed #d3dcd7;
-    border-radius: 14px;
-    background: #fafbfb;
+    padding: var(--srb-space-4xl) var(--srb-space-2xl);
+    border: 1px dashed var(--srb-dashed-border);
+    border-radius: var(--srb-radius-xl);
+    background: var(--srb-empty-bg);
     text-align: center;
   }
   .empty-icon {
-    color: #b7c6be;
-    margin-bottom: 12px;
+    color: var(--srb-segment-other);
+    margin-bottom: var(--srb-space-md);
   }
   .empty h3 {
     margin: 0 0 6px;
     font-size: 17px;
-    font-weight: 700;
+    font-weight: var(--srb-weight-bold);
   }
   .empty p {
     margin: 0;
-    color: #6d7f77;
-    font-size: 14px;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-body);
   }
 
   .search-table {
-    border: 1px solid #e2e9e4;
+    border: 1px solid var(--srb-border-light);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -148,11 +148,11 @@
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
-    background: #f5f8f6;
-    color: #677a71;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    background: var(--srb-table-head);
+    color: var(--srb-text-secondary);
+    font-size: var(--srb-font-size-xs);
+    font-weight: var(--srb-weight-bold);
+    letter-spacing: var(--srb-tracking-caps);
     text-transform: uppercase;
   }
   .search-table-row {
@@ -161,54 +161,54 @@
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
-    border-top: 1px solid #edf2ef;
-    transition: background 0.12s;
+    border-top: 1px solid var(--srb-row-divider);
+    transition: background var(--srb-transition-fast);
   }
-  .search-table-row:hover { background: #fafcfb; }
+  .search-table-row:hover { background: var(--srb-row-hover); }
   .search-table-query {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #18211d;
+    gap: var(--srb-space-sm);
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-semibold);
+    color: var(--srb-text);
   }
-  .search-table-query .search-icon { color: #9aa8a1; flex-shrink: 0; }
+  .search-table-query .search-icon { color: var(--srb-text-muted); flex-shrink: 0; }
   .search-engine-tag {
     padding: 2px 7px;
-    border-radius: 999px;
-    background: #eaf7f1;
-    color: #0a7a55;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-accent-soft);
+    color: var(--srb-domain-text);
+    font-size: var(--srb-font-size-2xs);
+    font-weight: var(--srb-weight-bold);
+    letter-spacing: var(--srb-tracking-label);
   }
   .search-table-time {
-    font-size: 13px;
-    color: #6d7f77;
+    font-size: var(--srb-font-size-sm);
+    color: var(--srb-text-subtle);
   }
   .search-table-actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--srb-space-2xs);
   }
   .search-table-actions .btn-ghost {
     padding: 4px 10px;
-    font-size: 12px;
+    font-size: var(--srb-font-size-xs);
   }
   .btn-ghost {
     padding: 6px 10px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--srb-radius-md);
     background: transparent;
-    color: #6d7e76;
+    color: var(--srb-text-subtle);
     font: inherit;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-bold);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
   }
-  .btn-ghost:hover { background: #fef1f1; color: #c43d3d; }
+  .btn-ghost:hover { background: var(--srb-danger-soft-bg); color: var(--srb-danger); }
 
   .search-switch-wrapper {
     position: relative;
@@ -221,48 +221,48 @@
     width: 20px;
     height: 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--srb-radius-xs);
     background: transparent;
-    color: #9aa8a1;
+    color: var(--srb-text-muted);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
   }
-  .search-switch-btn:hover { background: #e2e9e4; color: #18211d; }
+  .search-switch-btn:hover { background: var(--srb-border-light); color: var(--srb-text); }
   .search-engine-menu {
     position: absolute;
     top: 100%;
     right: 0;
-    z-index: 20;
+    z-index: var(--srb-z-dropdown);
     min-width: 130px;
     padding: 4px;
-    border: 1px solid #dde6e1;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 4px 16px rgba(24,33,29,0.12);
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-md);
     margin-top: 4px;
   }
   .search-engine-opt {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--srb-space-sm);
     width: 100%;
     padding: 8px 12px;
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: #18211d;
+    color: var(--srb-text);
     font: inherit;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-medium);
     cursor: pointer;
     text-align: left;
-    transition: background 0.12s;
+    transition: background var(--srb-transition-fast);
   }
-  .search-engine-opt:hover { background: #f0f5f2; }
+  .search-engine-opt:hover { background: var(--srb-menu-hover-bg); }
   .se-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: var(--srb-radius-full);
     flex-shrink: 0;
   }
 </style>

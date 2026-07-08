@@ -1,0 +1,190 @@
+/*
+ * SearchKit design variables.
+ *
+ * Plain CSS custom properties for the current Svelte + WXT project.
+ * This file intentionally avoids Tailwind-specific syntax.
+ */
+
+:root {
+  /* Brand */
+  --srb-primary: #0a5532;
+  --srb-primary-hover: #087654;
+  --srb-primary-active: #066244;
+  --srb-primary-action: #0a7a55;
+  --srb-accent: #059669;
+  --srb-accent-hover: #047857;
+  --srb-accent-light: #ecfdf5;
+  --srb-accent-soft: #eaf7f1;
+  --srb-accent-mid: #d1fae5;
+  --srb-accent-ring: #6ee7b7;
+  --srb-on-primary: #ffffff;
+  --srb-on-primary-muted: rgba(255, 255, 255, 0.65);
+  --srb-on-primary-soft: rgba(255, 255, 255, 0.85);
+  --srb-on-primary-hover-bg: rgba(255, 255, 255, 0.08);
+  --srb-on-primary-active-bg: rgba(255, 255, 255, 0.12);
+  --srb-on-primary-badge-bg: rgba(255, 255, 255, 0.13);
+
+  /* Surfaces */
+  --srb-surface: #ffffff;
+  --srb-bg: #f4f7f5;
+  --srb-popup-bg: #f8f8fa;
+  --srb-table-head: #f5f8f6;
+  --srb-row-hover: #fafcfb;
+  --srb-empty-bg: #fafbfb;
+  --srb-control-hover-bg: #f3f4f6;
+  --srb-menu-hover-bg: #f0f5f2;
+  --srb-breakdown-bg: #eef2f0;
+  --srb-hero-border: #c2ddd1;
+
+  /* Text */
+  --srb-text: #18211d;
+  --srb-text-strong: #1a1a2e;
+  --srb-text-code: #1d2a24;
+  --srb-text-secondary: #566861;
+  --srb-text-subtle: #6d7f77;
+  --srb-text-soft: #64756d;
+  --srb-text-muted: #9aa8a1;
+  --srb-text-neutral: #374151;
+
+  /* Borders */
+  --srb-border: #dde6e1;
+  --srb-border-strong: #ccd7d2;
+  --srb-border-light: #e2e9e4;
+  --srb-border-muted: #d1d5db;
+  --srb-divider: #ecf1ee;
+  --srb-row-divider: #edf2ef;
+  --srb-dashed-border: #d3dcd7;
+
+  /* States */
+  --srb-danger: #c43d3d;
+  --srb-danger-strong: #991b1b;
+  --srb-danger-light: #fef2f2;
+  --srb-danger-hover: #fee2e2;
+  --srb-danger-ring: #fca5a5;
+  --srb-danger-border: rgba(220, 38, 38, 0.25);
+  --srb-warning: #92400e;
+  --srb-warning-light: #fffbeb;
+  --srb-success: #10b981;
+  --srb-success-dot: #4ade80;
+  --srb-success-dot-ring: rgba(74, 222, 128, 0.25);
+  --srb-success-light: #f0fdf4;
+  --srb-success-text: #166534;
+  --srb-toggle-off: #cfd8d3;
+  --srb-danger-soft-bg: #fef1f1;
+  --srb-selector-bg: #f0f3f1;
+  --srb-url-bg: #edf5f0;
+  --srb-url-text: #155f46;
+  --srb-domain-bg: #e8f6ef;
+  --srb-domain-text: #0a7a55;
+  --srb-segment-other: #b7c6be;
+  --srb-accent-border: rgba(5, 150, 105, 0.3);
+  --srb-accent-border-soft: rgba(5, 150, 105, 0.12);
+  --srb-accent-highlight: rgba(5, 150, 105, 0.06);
+  --srb-on-dark-border: rgba(255, 255, 255, 0.3);
+  --srb-on-dark-hover-bg: rgba(255, 255, 255, 0.1);
+
+  /* Search engine accents */
+  --srb-engine-google: #0d8f66;
+  --srb-engine-bing: #0078d4;
+  --srb-engine-baidu: #2932e1;
+  --srb-engine-so: #ff6600;
+
+  /* Typography */
+  --srb-font: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;
+  --srb-mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --srb-font-size-display: 42px;
+  --srb-font-size-stat: 26px;
+  --srb-font-size-title: 18px;
+  --srb-font-size-body: 14px;
+  --srb-font-size-sm: 13px;
+  --srb-font-size-xs: 12px;
+  --srb-font-size-2xs: 10px;
+  --srb-line-height-tight: 1.2;
+  --srb-line-height-body: 1.45;
+  --srb-line-height-code: 1.5;
+  --srb-weight-regular: 400;
+  --srb-weight-medium: 500;
+  --srb-weight-semibold: 600;
+  --srb-weight-bold: 700;
+  --srb-weight-heavy: 800;
+  --srb-tracking-none: 0;
+  --srb-tracking-label: 0.02em;
+  --srb-tracking-caps: 0.06em;
+
+  /* Spacing */
+  --srb-space-2xs: 4px;
+  --srb-space-xs: 6px;
+  --srb-space-sm: 8px;
+  --srb-space-md: 12px;
+  --srb-space-lg: 16px;
+  --srb-space-xl: 20px;
+  --srb-space-2xl: 24px;
+  --srb-space-3xl: 32px;
+  --srb-space-4xl: 48px;
+
+  /* Radius */
+  --srb-radius-none: 0;
+  --srb-radius-xs: 4px;
+  --srb-radius-sm: 6px;
+  --srb-radius-md: 8px;
+  --srb-radius-lg: 10px;
+  --srb-radius-xl: 14px;
+  --srb-radius-card: 16px;
+  --srb-radius-dialog: 18px;
+  --srb-radius-full: 999px;
+
+  /* Shadows */
+  --srb-shadow-xs: 0 1px 3px rgba(24, 33, 29, 0.06);
+  --srb-shadow-sm: 0 1px 4px rgba(24, 33, 29, 0.08);
+  --srb-shadow-md: 0 4px 16px rgba(24, 33, 29, 0.12);
+  --srb-shadow-lg: 0 8px 24px rgba(24, 33, 29, 0.14);
+  --srb-shadow-dialog: 0 12px 40px rgba(24, 33, 29, 0.15);
+  --srb-shadow-accent: 0 10px 28px rgba(5, 150, 105, 0.25);
+  --srb-focus-ring: 0 0 0 3px rgba(13, 143, 102, 0.12);
+
+  /* Component sizes */
+  --srb-options-min-width: 1024px;
+  --srb-options-max-width: 1280px;
+  --srb-nav-height: 56px;
+  --srb-popup-width: 290px;
+  --srb-input-height: 42px;
+  --srb-input-height-compact: 36px;
+  --srb-button-height: 42px;
+  --srb-button-height-compact: 34px;
+  --srb-icon-button-size: 32px;
+  --srb-floating-button-size: 40px;
+  --srb-inline-button-size: 24px;
+  --srb-toggle-width: 44px;
+  --srb-toggle-height: 26px;
+  --srb-toggle-thumb-size: 20px;
+  --srb-popup-toggle-width: 38px;
+  --srb-popup-toggle-height: 22px;
+  --srb-popup-toggle-thumb-size: 18px;
+  --srb-dialog-width: 460px;
+  --srb-settings-width: 600px;
+
+  /* Layering */
+  --srb-z-nav: 50;
+  --srb-z-dialog: 100;
+  --srb-z-dropdown: 20;
+  --srb-z-page-injection: 9999;
+  --srb-z-page-overlay: 999999;
+
+  /* Effects */
+  --srb-transition-fast: 0.12s ease;
+  --srb-transition-base: 0.15s ease;
+  --srb-transition-slow: 0.3s ease;
+  --srb-overlay: rgba(24, 33, 29, 0.35);
+  --srb-overlay-soft: rgba(0, 0, 0, 0.25);
+  --srb-mask-danger: repeating-linear-gradient(
+    -45deg,
+    rgba(220, 38, 38, 0.06),
+    rgba(220, 38, 38, 0.06) 6px,
+    rgba(220, 38, 38, 0.03) 6px,
+    rgba(220, 38, 38, 0.03) 12px
+  );
+
+  /* Common gradients */
+  --srb-hero-gradient: linear-gradient(135deg, #f6fcf9 0%, #e6f3ed 100%);
+  --srb-chart-gradient: linear-gradient(180deg, #0d8f66, #6ee7b7);
+}

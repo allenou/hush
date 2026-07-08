@@ -44,63 +44,63 @@
 
 <style>
   .nav {
-    background: #0a5532;
-    padding: 0 24px;
+    background: var(--srb-primary);
+    padding: 0 var(--srb-space-2xl);
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: var(--srb-z-nav);
   }
   .nav-inner {
-    max-width: 1280px;
+    max-width: var(--srb-options-max-width);
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 56px;
+    height: var(--srb-nav-height);
   }
   .nav-left { display: flex; align-items: center; gap: 32px; }
   .nav-brand {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #fff;
+    gap: var(--srb-space-sm);
+    color: var(--srb-on-primary);
     font-size: 15px;
-    font-weight: 700;
+    font-weight: var(--srb-weight-bold);
     letter-spacing: -0.01em;
   }
   .brand-label { white-space: nowrap; }
-  .nav-links { display: flex; gap: 4px; }
+  .nav-links { display: flex; gap: var(--srb-space-2xs); }
   .nav-link {
     padding: 8px 16px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--srb-radius-md);
     background: transparent;
-    color: rgba(255,255,255,0.65);
+    color: var(--srb-on-primary-muted);
     font: inherit;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-semibold);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--srb-transition-base), color var(--srb-transition-base);
   }
-  .nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
-  .nav-link.active { color: #fff; background: rgba(255,255,255,0.12); }
+  .nav-link:hover { color: var(--srb-on-primary); background: var(--srb-on-primary-hover-bg); }
+  .nav-link.active { color: var(--srb-on-primary); background: var(--srb-on-primary-active-bg); }
   .nav-right { display: flex; align-items: center; gap: 12px; }
   .rule-badge {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--srb-space-xs);
     padding: 6px 14px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.13);
-    color: rgba(255,255,255,0.85);
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-on-primary-badge-bg);
+    color: var(--srb-on-primary-soft);
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
   }
   .badge-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background: #4ade80;
-    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.25);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-success-dot);
+    box-shadow: 0 0 0 2px var(--srb-success-dot-ring);
   }
 </style>

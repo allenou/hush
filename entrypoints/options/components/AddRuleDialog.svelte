@@ -73,113 +73,113 @@
   .overlay {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: var(--srb-z-dialog);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(24, 33, 29, 0.35);
+    background: var(--srb-overlay);
     backdrop-filter: blur(2px);
   }
   .dialog {
-    width: 460px;
-    padding: 24px;
-    border-radius: 18px;
-    background: #fff;
-    box-shadow: 0 12px 40px rgba(24, 33, 29, 0.15);
+    width: var(--srb-dialog-width);
+    padding: var(--srb-space-2xl);
+    border-radius: var(--srb-radius-dialog);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-dialog);
   }
   .dialog-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--srb-space-md);
     margin-bottom: 18px;
   }
   .dialog-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: var(--srb-icon-button-size);
+    height: var(--srb-icon-button-size);
     flex-shrink: 0;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--srb-radius-md);
     background: transparent;
-    color: #6d7f77;
+    color: var(--srb-text-subtle);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
   }
   .dialog-close:hover {
-    background: #f4f7f5;
-    color: #18211d;
+    background: var(--srb-bg);
+    color: var(--srb-text);
   }
 
   .card-title {
     margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: var(--srb-font-size-title);
+    font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
-    line-height: 1.2;
+    line-height: var(--srb-line-height-tight);
   }
   .card-desc {
     margin: 4px 0 0;
-    color: #6d7f77;
-    font-size: 13px;
-    line-height: 1.45;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
 
   .add-row {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 8px;
+    gap: var(--srb-space-sm);
   }
   .add-row input {
     width: 100%;
-    height: 42px;
+    height: var(--srb-input-height);
     padding: 0 14px;
-    border: 1px solid #ccd7d2;
-    border-radius: 10px;
-    background: #fff;
-    color: #18211d;
+    border: 1px solid var(--srb-border-strong);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    color: var(--srb-text);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--srb-font-size-body);
     outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color var(--srb-transition-base), box-shadow var(--srb-transition-base);
   }
   .add-row input:focus {
-    border-color: #0d8f66;
-    box-shadow: 0 0 0 3px rgba(13, 143, 102, 0.12);
+    border-color: var(--srb-engine-google);
+    box-shadow: var(--srb-focus-ring);
   }
   .btn-primary {
-    height: 42px;
+    height: var(--srb-button-height);
     padding: 0 22px;
     border: none;
-    border-radius: 10px;
-    background: #0c8d65;
-    color: #fff;
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-primary-action);
+    color: var(--srb-on-primary);
     font: inherit;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-bold);
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s;
+    transition: background var(--srb-transition-base);
   }
   .btn-primary:hover {
-    background: #087654;
+    background: var(--srb-primary-hover);
   }
   .btn-primary:active {
-    background: #066244;
+    background: var(--srb-primary-active);
   }
 
   .feedback {
     margin: 10px 0 0;
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
   .feedback.hint {
-    color: #6d7f77;
+    color: var(--srb-text-subtle);
   }
   .feedback.error {
-    color: #c43d3d;
-    font-weight: 600;
+    color: var(--srb-danger);
+    font-weight: var(--srb-weight-semibold);
   }
 </style>

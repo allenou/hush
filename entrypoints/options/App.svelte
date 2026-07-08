@@ -226,18 +226,18 @@
 <style>
   :global(body) {
     margin: 0;
-    min-width: 1024px;
-    background: #f4f7f5;
-    color: #18211d;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', sans-serif;
+    min-width: var(--srb-options-min-width);
+    background: var(--srb-bg);
+    color: var(--srb-text);
+    font-family: var(--srb-font);
     -webkit-font-smoothing: antialiased;
   }
   :global(*) { box-sizing: border-box; }
 
   .main {
-    max-width: 1280px;
+    max-width: var(--srb-options-max-width);
     margin: 0 auto;
-    padding: 24px;
+    padding: var(--srb-space-2xl);
   }
 
   @media (max-width: 1100px) {

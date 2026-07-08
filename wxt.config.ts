@@ -2,6 +2,18 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
+  imports: {
+    dirsScanOptions: {
+      fileFilter(file) {
+        const normalized = file.replaceAll('\\', '/');
+        return ![
+          'utils/i18n.ts',
+          'utils/locale.ts',
+          'utils/locale-store.svelte.ts',
+        ].some((path) => normalized.endsWith(path));
+      },
+    },
+  },
   manifest: {
     name: 'SearchKit',
     description: 'Search result management — block, mark ads, track search history',
