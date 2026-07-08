@@ -1,11 +1,12 @@
 <script lang="ts">
-  import {
+import {
     getAllBlocked,
     removeBlockedItem,
     addDomain,
     addBlockedUrl,
     get,
     subscribe,
+    setBlockAds,
   } from '../../utils/storage';
   import { onMount } from 'svelte';
 
