@@ -169,23 +169,23 @@ describe('removeBlockedItem', () => {
 
 describe('addCustomEngine', () => {
   it('adds a custom engine', async () => {
-    await addCustomEngine({ name: 'My', hostname: 'my.com', containerSelector: '#r', itemSelector: '.i' });
+    await addCustomEngine({ name: 'My', hostname: 'my.com', containerSelector: '#r', itemSelector: '.i', linkSelector: 'a[href]' });
     expect((await get()).customEngines).toHaveLength(1);
   });
 
   it('rejects built-in hostname', async () => {
-    await addCustomEngine({ name: 'G', hostname: 'google.com', containerSelector: '#r', itemSelector: '.i' });
+    await addCustomEngine({ name: 'G', hostname: 'google.com', containerSelector: '#r', itemSelector: '.i', linkSelector: 'a[href]' });
     expect((await get()).customEngines).toEqual([]);
   });
 
   it('updates existing engine with same hostname', async () => {
-    await addCustomEngine({ name: 'M', hostname: 'm.com', containerSelector: '#a', itemSelector: '.a' });
-    await addCustomEngine({ name: 'M', hostname: 'm.com', containerSelector: '#b', itemSelector: '.b' });
+    await addCustomEngine({ name: 'M', hostname: 'm.com', containerSelector: '#a', itemSelector: '.a', linkSelector: 'a[href]' });
+    await addCustomEngine({ name: 'M', hostname: 'm.com', containerSelector: '#b', itemSelector: '.b', linkSelector: 'a[href]' });
     expect((await get()).customEngines[0].containerSelector).toBe('#b');
   });
 
   it('removes by index', async () => {
-    await addCustomEngine({ name: 'E', hostname: 'e.com', containerSelector: '#r', itemSelector: '.i' });
+    await addCustomEngine({ name: 'E', hostname: 'e.com', containerSelector: '#r', itemSelector: '.i', linkSelector: 'a[href]' });
     await removeCustomEngine(0);
     expect((await get()).customEngines).toEqual([]);
   });

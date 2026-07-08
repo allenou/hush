@@ -203,6 +203,7 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
     container = container.parentElement;
   }
   if (!container || container === document.body) container = el.parentElement;
+  if (!container) return null;
 
   const tag = el.tagName.toLowerCase();
   const cls = (el.className as string).trim();

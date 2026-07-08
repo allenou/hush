@@ -35,7 +35,7 @@ function generateSelector(el: Element): string {
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur !== document.body && cur !== document.documentElement) {
-    const parent = cur.parentElement;
+    const parent: Element | null = cur.parentElement;
     if (!parent) break;
     const siblings = Array.from(parent.children);
     if (siblings.length === 1) {

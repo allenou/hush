@@ -1,5 +1,6 @@
 import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '../utils/storage';
 import { getHostname } from '../utils/url';
+import { isSearchEngine } from './search-engines';
 
 let floatingBtnInjected = false;
 

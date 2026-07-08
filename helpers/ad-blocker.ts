@@ -97,7 +97,8 @@ export function injectBlockButton(item: Element, href: string): void {
 
   item.addEventListener('mouseenter', () => { btn.style.display = 'flex'; });
   item.addEventListener('mouseleave', (e) => {
-    if (!popup.contains(e.relatedTarget as Node) && e.relatedTarget !== btn) {
+    const me = e as MouseEvent;
+    if (!popup.contains(me.relatedTarget as Node) && me.relatedTarget !== btn) {
       btn.style.display = 'none';
       popup.style.display = 'none';
     }

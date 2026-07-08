@@ -1,12 +1,6 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
-    "types": ["wxt/client"]
-  },
-  "include": ["entrypoints/**/*", "utils/**/*"]
+    "verbatimModuleSyntax": true
+  }
 }
