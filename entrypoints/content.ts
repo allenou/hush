@@ -27,7 +27,7 @@ export default defineContentScript({
     let blockedUrls: string[] = [];
     let blockedSelectors: string[] = [];
     let isEnabled = true;
-    let blockAds = false;
+    let blockAds = true;
     let currentEngine: SearchEngineConfig | null = null;
 
     // ========== 选择器规则应用 ==========
@@ -88,19 +88,38 @@ function applyBlockedSelectors(): void {
     // ========== 搜索结果处理 ==========
 
     /** 判断搜索结果项是否包含广告标记 */
-    function isAdItem(item: Element): boolean {
-      if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i]')) return true;
+        function isAdItem(item: Element): boolean {
+      if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i], [class*="tuiguang" i], [class*="e-pc-li-131-1" i]')) return true;
       const cls = (item.className as string).toLowerCase();
-      if (/\b(?:ad|sponsor)\b/.test(cls)) return true;
-      // 只在明确的小元素范围内搜索广告文本，避免命中结果正文
-      const badgeTexts = ['广告', '推广'];
-      const miniEls = item.querySelectorAll('span, small, label, em, b, i');
-      for (const el of miniEls) {
-        if (el.children.length > 2) continue;
+      if (/\b(?:ad|sponsor)\b/.test(cls) || /tuiguang/i.test(cls) || cls.includes('e-pc-li-131-1')) return true;
+      // 搜索子元素中的短文本广告关键词
+      for (const el of item.querySelectorAll('span, small, label, em, b, i, div, a, strong, p')) {
+        if (el.children.length > 3) continue;
         const t = (el.textContent ?? '').trim();
-        if (t.length > 0 && t.length < 20 && badgeTexts.includes(t)) return true;
+        if (t.length === 0 || t.length > 20) continue;
+        const lower = t.toLowerCase();
+        if (lower.includes('广告') || lower.includes('推广') || lower === 'ad' || lower === 'sponsored') { console.log('[SRB] isAdItem MATCH:', lower, el); return true; }
       }
       return false;
+    }
+
+    /** 从搜索结果项向上查找完整广告容器（而非单行），找不到则返回 null */
+    function findAdContainer(item: Element): Element | null {
+      let cur: HTMLElement | null = item.parentElement;
+      let depth = 0;
+      while (cur && cur !== document.body && depth < 10) {
+        const tag = cur.tagName.toLowerCase();
+        const children = cur.children.length;
+        const hasLink = cur.querySelector('a[href]');
+        // 多个子容器 + 含链接 = 可能是完整结果容器
+        if (hasLink && children >= 2 && (tag === 'div' || tag === 'li' || tag === 'article' || tag === 'section')) {
+          return cur;
+        }
+        if (cur.hasAttribute('data-srcid')) { return cur; }
+        cur = cur.parentElement;
+        depth++;
+      }
+      return null;
     }
 
     function processItem(item: Element): void {
@@ -113,7 +132,13 @@ function applyBlockedSelectors(): void {
       if (di >= 0) console.log('[SRB] BADGE match:', href, 'domain in', blockedDomains);
       const urlMatch = blockedUrls.includes(href);
       if (di >= 0 || urlMatch) injectBadge(item, di >= 0, urlMatch, href);
-      else if (blockAds && isAdItem(item)) injectAdBadge(item, href);
+      else if (blockAds && isAdItem(item)) {
+        console.log('[SRB] isAdItem true for', href);
+        // 向上查找完整广告容器，避免只遮住单行
+        const adContainer = findAdContainer(item);
+        if (adContainer) { injectAdBadge(adContainer, href); }
+        else { injectAdBadge(item, href); }
+      }
       else injectBlockButton(item, href);
     }
 
@@ -219,47 +244,70 @@ function applyBlockedSelectors(): void {
       updateCollapseBar();
     }
 
-    /** 广告扫描 — 从广告标记 badge（短文本）向上找父级结果项，屏蔽结果项而非 badge */
+    /** 广告扫描 — 优先从上层容器特征找广告，回退从文字标签向上找 */
     function scanForAds(): void {
       if (!blockAds || !isEnabled) return;
 
-      // 找页面上所有短文本广告标记（span / small / label / a / 带 ad 类的元素）
-      const badges = document.querySelectorAll<HTMLElement>(
+      // === 策略 1（从上往下）：百度广告容器有 display:block !important;visibility:visible !important; ===
+      document.querySelectorAll<HTMLElement>(
+        'div[style*="display:block"][style*="visibility:visible"], ' +
+        'li[style*="display:block"][style*="visibility:visible"], ' +
+        'section[style*="display:block"][style*="visibility:visible"], ' +
+        'table[style*="display:block"][style*="visibility:visible"]'
+      ).forEach((el) => {
+        if (el.hasAttribute('data-srb-ad-scanned')) return;
+        // 容器里必须含广告标记文字或 tuiguang 类
+        if (!el.querySelector('.ec-tuiguang') &&
+            !el.textContent?.includes('广告') &&
+            !el.textContent?.includes('推广')) return;
+        el.setAttribute('data-srb-ad-scanned', 'true');
+        injectAdBadge(el, '');
+      });
+
+      // === 策略 2：360 搜索 — e-pc-li-131-1 类名的 li 都是广告 ===
+      document.querySelectorAll<HTMLElement>('.e-pc-li-131-1').forEach((el) => {
+        if (el.hasAttribute('data-srb-ad-scanned')) return;
+        el.setAttribute('data-srb-ad-scanned', 'true');
+        injectAdBadge(el, '');
+      });
+
+      // === 策略 3（从下往上）：通过"广告"短文本标签向上找容器（Google/Bing 等）===
+      document.querySelectorAll<HTMLElement>(
         'span, small, label, em, i, b, strong, a, ' +
         '[class*="ad-label"], [class*="ad-badge"], [class*="badge"]',
-      );
-
-      badges.forEach((badge) => {
+      ).forEach((badge) => {
         if (badge.hasAttribute('data-srb-ad-badge')) return;
         const t = (badge.textContent ?? '').trim();
-        // 只有短文本（<20 字符）才有可能是个 badge 标记，不是正文
         if (t.length === 0 || t.length > 20) return;
-        if (badge.children.length > 3) return; // 子元素太多不可能是 badge
+        if (badge.children.length > 3) return;
 
         const lower = t.toLowerCase();
         const isAdLabel = t === '广告' || t === '推广' || lower === 'ad' || lower === 'sponsored';
-
         if (!isAdLabel) return;
+        // 如果 badge 已经在策略 1 标记过的容器内，跳过避免叠两层
+        if (badge.closest('[data-srb-ad-scanned]')) return;
         badge.setAttribute('data-srb-ad-badge', 'true');
 
-        // 从 badge 向上找到贴紧的父级结果项
         let best: HTMLElement | null = null;
         let cur: HTMLElement | null = badge.parentElement;
         let depth = 0;
-        while (cur && cur !== document.body && depth < 6) {
+        while (cur && cur !== document.body && depth < 10) {
           const tag = cur.tagName.toLowerCase();
           if (cur.querySelector('a[href]') && cur.children.length >= 2) {
-            if (['li', 'section', 'article', 'tr'].includes(tag)) {
-              best = cur;
-              break;
-            }
-            // div 只取遇到的第一个，不继续覆盖为更大的容器
+            if (['li', 'section', 'article', 'tr'].includes(tag)) { best = cur; break; }
             if (tag === 'div' && !best) best = cur;
           }
           cur = cur.parentElement;
           depth++;
         }
-        // 尺寸防护：如果标中的容器超过视口 60%，说明找错了
+        // 回退：查找带 data-srcid 的父元素（百度结果容器标记）
+        if (!best) {
+          let fallback: HTMLElement | null = badge.parentElement;
+          while (fallback && fallback !== document.body) {
+            if (fallback.hasAttribute('data-srcid')) { best = fallback; break; }
+            fallback = fallback.parentElement;
+          }
+        }
         if (best) {
           const r = best.getBoundingClientRect();
           const vpArea = window.innerWidth * window.innerHeight;
@@ -389,32 +437,29 @@ function applyBlockedSelectors(): void {
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? false;
+      blockAds = storage.blockAds ?? true;
 
       if (!isEnabled) {
         restoreBlockedSelectors();
-        document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge').forEach((el) => el.remove());
+        document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
         document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
           el.removeAttribute('data-srb-processed');
           el.removeAttribute('data-srb-ad-scanned');
-      document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
         });
         return;
       }
 
-      scanForAds();
-            if (currentEngine) scanResults(currentEngine);
-            applyBlockedSelectors();
-      // 清除旧标记和已有徽章，确保重新扫描完全生效
+      // 清除旧标记后全新扫描
       document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
         el.removeAttribute('data-srb-processed');
         el.removeAttribute('data-srb-ad-scanned');
       });
       document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
+
+      if (blockAds) scanForAds();
       if (currentEngine) {
         scanResults(currentEngine);
-      } else {
-        scanForAds();
+        applyBlockedSelectors();
       }
     });
 
@@ -423,7 +468,7 @@ function applyBlockedSelectors(): void {
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? false;
+      blockAds = storage.blockAds ?? true;
       init();
       checkSavedSelectors();
     });

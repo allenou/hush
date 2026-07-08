@@ -28,7 +28,7 @@ const DEFAULT: ExtensionStorage = {
   blockedUrls: [],
   blockCount: 0,
   enabled: true,
-  blockAds: false,
+  blockAds: true,
   customEngines: [],
   blockedSelectors: [],
   stats: [],

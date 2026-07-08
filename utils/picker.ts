@@ -56,13 +56,14 @@ function generateSelector(el: Element): string {
 
 // ========== Block Target Detection ==========
 
-/** 从最里层向上找合适的"块"元素，太大太小都不行 */
+/** 从最里层向上找合适的"块"元素，优先 display:block/flex/grid 和全宽元素 */
 function findBlockTarget(el: Element): Element | null {
   const vpW = window.innerWidth;
   const vpH = window.innerHeight;
   const tooLarge = vpW * vpH * 0.45;
 
   let best: Element | null = null;
+  let bestScore = 0;
   let cur: Element | null = el;
   let depth = 0;
 
@@ -73,15 +74,39 @@ function findBlockTarget(el: Element): Element | null {
     const children = cur.children.length;
     const hasLink = cur.querySelector('a[href]');
 
-    if (area > tooLarge) break;
+    if (area > tooLarge) { /* 太大就停下来，但已找到的 best 仍可用 */ break; }
     if (area < 8000 || children < 2 || !hasLink) {
       cur = cur.parentElement;
       depth++;
       continue;
     }
-    if (['div', 'li', 'article', 'section', 'tr', 'ul', 'ol'].includes(tag)) {
-      best = cur;
+    if (!['div', 'li', 'article', 'section', 'tr', 'ul', 'ol'].includes(tag)) {
+      cur = cur.parentElement;
+      depth++;
+      continue;
     }
+
+    // 超过视口 25% 的元素太大，不可能是独立区块
+    if (area > vpW * vpH * 0.25) { cur = cur.parentElement; if (depth === 0) best = null; depth++; continue; }
+
+    // 评分：分越高越像可屏蔽的内容块
+    let score = 1;
+    const style = window.getComputedStyle(cur);
+    const display = style.display;
+    if (display === 'block' || display === 'flex' || display === 'grid') score += 3;
+
+    // 全宽加分：宽度接近父容器或视口
+    const parentW = cur.parentElement?.clientWidth ?? vpW;
+    if (parentW > 0 && rect.width / parentW > 0.85) score += 2;
+    if (rect.width > vpW * 0.5) score += 1;
+
+    // 有 margin 说明是独立区块
+    const mt = parseFloat(style.marginTop);
+    const mb = parseFloat(style.marginBottom);
+    if (mt > 4 || mb > 4) score += 1;
+
+    if (score > bestScore) { best = cur; bestScore = score; }
+
     cur = cur.parentElement;
     depth++;
   }
@@ -157,6 +182,7 @@ export function isPickerActive(): boolean {
 
 export function deactivatePicker(): void {
   active = false;
+  document.body.classList.remove('srb-picker-active');
   document.body.style.cursor = '';
   highlight?.remove();
   highlight = null;
@@ -173,6 +199,7 @@ export function deactivatePicker(): void {
 export function activatePicker(getHostnameFn: () => string): void {
   if (active) deactivatePicker();
   active = true;
+  document.body.classList.add('srb-picker-active');
   document.body.style.cursor = 'crosshair';
 
   tooltip = document.createElement('div');
@@ -193,7 +220,7 @@ export function activatePicker(getHostnameFn: () => string): void {
       return;
     }
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast, .srb-mask, .srb-blocked-badge')) {
+    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) {
       highlight.style.display = 'none';
       document.body.style.cursor = 'not-allowed';
       return;
@@ -215,7 +242,7 @@ export function activatePicker(getHostnameFn: () => string): void {
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     if (!el || el === document.body || el === document.documentElement) return;
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast, .srb-mask, .srb-blocked-badge')) return;
+    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) return;
 
     const selector = generateSelector(target);
     deactivatePicker();

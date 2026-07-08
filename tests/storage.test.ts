@@ -57,7 +57,7 @@ describe('get / set defaults', () => {
     expect(s.blockedUrls).toEqual([]);
     expect(s.blockCount).toBe(0);
     expect(s.enabled).toBe(true);
-    expect(s.blockAds).toBe(false);
+    expect(s.blockAds).toBe(true);
     expect(s.customEngines).toEqual([]);
     expect(s.blockedSelectors).toEqual([]);
     expect(s.stats).toEqual([]);

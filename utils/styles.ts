@@ -32,6 +32,9 @@ const CSS = `
 .srb-float-btn {
   position: fixed;
   z-index: 999999;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   width: 40px;
   height: 40px;
   border: 1px solid #E5E7EB;
@@ -76,10 +79,11 @@ const CSS = `
 }
 
 .srb-float-popup {
-  position: fixed;
-  bottom: 76px;
-  right: 28px;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: -2px;
   z-index: 999999;
+  position: fixed;
   background: var(--srb-surface);
   border: 1px solid var(--srb-border);
   border-radius: var(--srb-radius-md);
@@ -94,7 +98,7 @@ const CSS = `
   content: '';
   position: absolute;
   bottom: -6px;
-  right: 14px;
+  right: 12px;
   width: 10px;
   height: 10px;
   background: var(--srb-surface);
@@ -210,7 +214,7 @@ const CSS = `
 
 .srb-blocked-badge {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   right: 6px;
   z-index: 9999;
   padding: 3px 10px;
@@ -247,7 +251,7 @@ const CSS = `
 
 .srb-ad-badge {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   right: 6px;
   z-index: 9999;
   padding: 3px 10px;
@@ -315,6 +319,9 @@ const CSS = `
   position: fixed;
   inset: 0;
   z-index: 999999;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   background: rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
@@ -390,6 +397,9 @@ const CSS = `
   left: 50%;
   transform: translateX(-50%);
   z-index: 999999;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   background: var(--srb-text);
   color: #fff;
   padding: 10px 20px;
@@ -415,6 +425,12 @@ const CSS = `
 .srb-undo-btn:hover {
   background: rgba(255,255,255,0.1);
 }
+
+/* Picker 激活时屏蔽 badge 指针事件，避免干扰选取 */
+.srb-picker-active .srb-blocked-badge,
+.srb-picker-active .srb-ad-badge {
+  pointer-events: none;
+}
 `;
 
 export function injectStyles(): void {
@@ -424,3 +440,4 @@ export function injectStyles(): void {
   style.textContent = CSS;
   document.head.appendChild(style);
 }
+

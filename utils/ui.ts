@@ -36,6 +36,7 @@ export function injectFloatingBtn(): void {
   img.src = chrome.runtime.getURL('icons/icon-32.png');
   img.style.width = '22px';
   img.style.height = '22px';
+  img.style.pointerEvents = 'none';
   img.alt = '';
   btn.appendChild(img);
   btn.title = '搜索结果屏蔽工具';
@@ -66,76 +67,35 @@ export function injectFloatingBtn(): void {
     }
   }
 
-  // ===== 拖动逻辑 =====
-  let dragging = false;
-  let dragStartX = 0, dragStartY = 0;
-  let origX = 0, origY = 0;
-
-  function onDown(e: MouseEvent | TouchEvent): void {
-    // 如果点击目标是弹窗内的按钮，不触发拖动
-    const t = e.target as HTMLElement;
-    if (t.closest('.srb-fopt') || t.closest('.srb-float-popup')) return;
-
-    dragging = true;
-    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    dragStartX = cx;
-    dragStartY = cy;
-    origX = btn.offsetLeft;
-    origY = btn.offsetTop;
-    btn.style.transition = 'none';
+  // ===== 拖动 =====
+  let dragData = { startX: 0, startY: 0, origX: 0, origY: 0, dist: 0 };
+  btn.addEventListener('mousedown', (e) => {
+    dragData = { startX: e.clientX, startY: e.clientY, origX: btn.offsetLeft, origY: btn.offsetTop, dist: 0 };
     btn.style.cursor = 'grabbing';
-    e.preventDefault();
-  }
-
-  function onMove(e: MouseEvent | TouchEvent): void {
-    if (!dragging) return;
-    const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const dx = cx - dragStartX;
-    const dy = cy - dragStartY;
-    let nx = Math.max(0, Math.min(window.innerWidth - BTN_SIZE, origX + dx));
-    let ny = Math.max(0, Math.min(window.innerHeight - BTN_SIZE, origY + dy));
-    btn.style.left = nx + 'px';
-    btn.style.top = ny + 'px';
-  }
-
-  function onUp(): void {
-    if (!dragging) return;
-    dragging = false;
-    btn.style.cursor = '';
-    // 靠向最近的边
-    const cx = btn.offsetLeft + BTN_SIZE / 2;
-    const snapLeft = cx < window.innerWidth / 2;
-    btn.style.transition = 'left 0.25s ease';
-    const snapX = snapLeft ? MARGIN : window.innerWidth - BTN_SIZE - MARGIN;
-    btn.style.left = snapX + 'px';
-    setTimeout(() => { btn.style.transition = ''; }, 300);
-    savePos(snapX, btn.offsetTop);
-  }
-
-  // 切换 click / drag 区分
-  let pointerDownPos = { x: 0, y: 0 };
-  btn.addEventListener('pointerdown', (e) => {
-    const t = e.target as HTMLElement;
-    if (t.closest('.srb-fopt') || t.closest('.srb-float-popup')) return;
-    pointerDownPos = { x: e.clientX, y: e.clientY };
   });
-  btn.addEventListener('pointerup', (e) => {
-    const dx = Math.abs(e.clientX - pointerDownPos.x);
-    const dy = Math.abs(e.clientY - pointerDownPos.y);
-    if (dx < 5 && dy < 5) {
-      e.stopPropagation();
-      popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+  document.addEventListener('mousemove', (e) => {
+    if (btn.style.cursor !== 'grabbing') return;
+    const dx = e.clientX - dragData.startX, dy = e.clientY - dragData.startY;
+    dragData.dist = Math.max(dragData.dist, Math.abs(dx), Math.abs(dy));
+    btn.style.left = Math.max(0, Math.min(window.innerWidth - 40, dragData.origX + dx)) + 'px';
+    btn.style.top = Math.max(0, Math.min(window.innerHeight - 40, dragData.origY + dy)) + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (btn.style.cursor !== 'grabbing') return;
+    btn.style.cursor = '';
+    if (dragData.dist > 5) {
+      const cx = btn.offsetLeft + 20, sn = cx < window.innerWidth / 2;
+      btn.style.transition = 'left 0.25s ease';
+      btn.style.left = (sn ? 24 : window.innerWidth - 40 - 24) + 'px';
+      setTimeout(() => btn.style.transition = '', 300);
     }
   });
 
-  btn.addEventListener('mousedown', onDown);
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-  btn.addEventListener('touchstart', onDown, { passive: false });
-  document.addEventListener('touchmove', onMove, { passive: false });
-  document.addEventListener('touchend', onUp);
+  // 点击切换弹窗（拖动超过 5px 不触发）
+  btn.addEventListener('click', (e) => {
+    if (dragData.dist > 5) return;
+    popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+  });
 
   popup.onclick = async (e) => {
     const target = (e.target as HTMLElement).closest('.srb-fopt') as HTMLElement | null;
@@ -155,14 +115,14 @@ export function injectFloatingBtn(): void {
     setTimeout(() => { btn.style.opacity = '1'; }, 1200);
   };
 
+  // 点击按钮外区域关闭弹窗
   document.addEventListener('click', (e) => {
-    const t = e.target as Node;
-    if (!btn.contains(t) && !popup.contains(t)) popup.style.display = 'none';
+    if (!btn.contains(e.target as Node) && !popup.contains(e.target as Node)) popup.style.display = 'none';
   });
 
   initPos().then(() => {
+    btn.appendChild(popup);
     document.body.appendChild(btn);
-    document.body.appendChild(popup);
   });
 }
 
@@ -176,10 +136,20 @@ export function injectCollapseBar(containerSelector: string): void {
   (c ?? document.body).parentNode?.insertBefore(bar, c ?? null);
 }
 
+let _lastCollapseCount = -1;
+let _lastCollapseDisplay = '';
+
 export function updateCollapseBar(): void {
   const bar = document.getElementById('srb-collapse-bar');
   if (!bar) return;
   const count = document.querySelectorAll('.srb-blocked-badge').length;
+  // 值没变就不动 DOM，避免触发 MutationObserver 循环
+  if (count === _lastCollapseCount) return;
+  _lastCollapseCount = count;
+  const display = count > 0 ? 'block' : 'none';
+  if (display !== _lastCollapseDisplay) {
+    bar.style.display = display;
+    _lastCollapseDisplay = display;
+  }
   bar.textContent = '🚫 已屏蔽 ' + count + ' 个低质结果';
-  bar.style.display = count > 0 ? 'block' : 'none';
 }
