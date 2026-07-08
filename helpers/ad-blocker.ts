@@ -48,9 +48,9 @@ function matchBlockedDomain(href: string, domains: string[]): number {
 
 /** 判断搜索结果项是否包含广告标记 */
 export function isAdItem(item: Element): boolean {
-  if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i], [class*="tuiguang" i], [class*="e-pc-li-131-1" i]')) return true;
+  if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i], [class*="tuiguang" i], [class*="e-pc-li-131-1" i], [class*="ad-results" i]')) return true;
   const cls = (item.className as string).toLowerCase();
-  if (/\b(?:ad|sponsor)\b/.test(cls) || /tuiguang/i.test(cls) || cls.includes('e-pc-li-131-1')) return true;
+  if (/\b(?:ad|sponsor)\b/.test(cls) || /tuiguang/i.test(cls) || cls.includes('e-pc-li-131-1') || cls.includes('ad-results')) return true;
   for (const el of item.querySelectorAll('span, small, label, em, b, i, div, a, strong, p')) {
     if (el.children.length > 3) continue;
     const t = (el.textContent ?? '').trim();
@@ -207,27 +207,40 @@ export function scanResults(engine: SearchEngineConfig): void {
 export function scanForAds(): void {
   if (!_state.blockAds || !_state.isEnabled) return;
 
-  // === 策略 1（从上往下）：百度广告容器有 display:block !important;visibility:visible !important; ===
-  document.querySelectorAll<HTMLElement>(
-    'div[style*="display:block"][style*="visibility:visible"], ' +
-    'li[style*="display:block"][style*="visibility:visible"], ' +
-    'section[style*="display:block"][style*="visibility:visible"], ' +
-    'table[style*="display:block"][style*="visibility:visible"]'
-  ).forEach((el) => {
-    if (el.hasAttribute('data-srb-ad-scanned')) return;
-    if (!el.querySelector('.ec-tuiguang') &&
-        !el.textContent?.includes('广告') &&
-        !el.textContent?.includes('推广')) return;
-    el.setAttribute('data-srb-ad-scanned', 'true');
-    injectAdBadge(el, '');
-  });
+  const host = _getHostname();
 
-  // === 策略 2：360 搜索 — e-pc-li-131-1 类名的 li 都是广告 ===
-  document.querySelectorAll<HTMLElement>('.e-pc-li-131-1').forEach((el) => {
-    if (el.hasAttribute('data-srb-ad-scanned')) return;
-    el.setAttribute('data-srb-ad-scanned', 'true');
-    injectAdBadge(el, '');
-  });
+  // === 策略 1（从上往下）：百度广告容器有 display:block !important;visibility:visible !important; ===
+  if (host === 'baidu.com') {
+    document.querySelectorAll<HTMLElement>(
+      'div[style*="display:block"][style*="visibility:visible"], ' +
+      'li[style*="display:block"][style*="visibility:visible"], ' +
+      'section[style*="display:block"][style*="visibility:visible"], ' +
+      'table[style*="display:block"][style*="visibility:visible"]'
+    ).forEach((el) => {
+      if (el.hasAttribute('data-srb-ad-scanned')) return;
+      if (!el.querySelector('.ec-tuiguang') &&
+          !el.textContent?.includes('广告') &&
+          !el.textContent?.includes('推广')) return;
+      el.setAttribute('data-srb-ad-scanned', 'true');
+      injectAdBadge(el, '');
+    });
+  }
+
+  // === 策略 2：搜索引擎特色类名直接命中 ===
+  if (host === 'so.com') {
+    document.querySelectorAll<HTMLElement>('.e-pc-li-131-1').forEach((el) => {
+      if (el.hasAttribute('data-srb-ad-scanned')) return;
+      el.setAttribute('data-srb-ad-scanned', 'true');
+      injectAdBadge(el, '');
+    });
+  }
+  if (host === 'sogou.com') {
+    document.querySelectorAll<HTMLElement>('.ad-results').forEach((el) => {
+      if (el.hasAttribute('data-srb-ad-scanned')) return;
+      el.setAttribute('data-srb-ad-scanned', 'true');
+      injectAdBadge(el, '');
+    });
+  }
 
   // === 策略 3（从下往上）：通过"广告"短文本标签向上找容器（Google/Bing 等）===
   document.querySelectorAll<HTMLElement>(
