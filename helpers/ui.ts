@@ -1,12 +1,17 @@
 import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '../utils/storage';
 import { getHostname } from '../utils/url';
-import { isSearchEngine } from './search-engines';
 
 let floatingBtnInjected = false;
 
 const STORAGE_KEY = 'srb_float_pos';
+const BTN_SIZE = 40;
+const MARGIN = 24;
+const POPUP_GAP = 12;
 
-interface FloatPos { x: number; y: number; }
+interface FloatPos { x: number; y: number; side?: FloatSide; vertical?: FloatVertical; }
+
+type FloatSide = 'left' | 'right';
+type FloatVertical = 'top' | 'bottom';
 
 async function loadPos(): Promise<FloatPos | null> {
   try {
@@ -15,8 +20,42 @@ async function loadPos(): Promise<FloatPos | null> {
   } catch { return null; }
 }
 
-async function savePos(x: number, y: number): Promise<void> {
-  try { await chrome.storage.local.set({ [STORAGE_KEY]: { x, y } }); } catch {}
+async function savePos(x: number, y: number, side: FloatSide, vertical: FloatVertical): Promise<void> {
+  try { await chrome.storage.local.set({ [STORAGE_KEY]: { x, y, side, vertical } }); } catch {}
+}
+
+function getViewportRect(): { width: number; height: number; offsetLeft: number; offsetTop: number } {
+  const vv = window.visualViewport;
+  if (vv) {
+    return {
+      width: vv.width,
+      height: vv.height,
+      offsetLeft: vv.offsetLeft,
+      offsetTop: vv.offsetTop,
+    };
+  }
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    offsetLeft: 0,
+    offsetTop: 0,
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getAnchoredSide(x: number): FloatSide {
+  const viewport = getViewportRect();
+  const centerX = x + BTN_SIZE / 2;
+  return centerX < viewport.offsetLeft + viewport.width / 2 ? 'left' : 'right';
+}
+
+function getAnchoredVertical(y: number): FloatVertical {
+  const viewport = getViewportRect();
+  const centerY = y + BTN_SIZE / 2;
+  return centerY < viewport.offsetTop + viewport.height / 2 ? 'top' : 'bottom';
 }
 
 /** 浮动 🛡 屏蔽按钮（页面右下角），支持拖动 */
@@ -45,35 +84,101 @@ export function injectFloatingBtn(): void {
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
-  if (isSearchEngine(window.location.href)) {
-    popup.innerHTML = '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取标记</button>';
-  } else {
-    popup.innerHTML =
-      '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 标记此域名</button>' +
-      '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 标记此链接</button>';
+  popup.innerHTML =
+    '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取标记</button>' +
+    '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 标记此域名</button>' +
+    '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 标记此链接</button>';
+  let anchoredSide: FloatSide = 'right';
+  let anchoredVertical: FloatVertical = 'bottom';
+
+  function applyBtnPosition(x: number, y: number): void {
+    btn.style.left = x + 'px';
+    btn.style.top = y + 'px';
   }
 
-  // ===== 位置初始化 =====
-  const BTN_SIZE = 40;
-  const MARGIN = 24;
+  function getClampedPos(x: number, y: number): FloatPos {
+    const viewport = getViewportRect();
+    return {
+      x: clamp(x, viewport.offsetLeft + MARGIN, viewport.offsetLeft + viewport.width - BTN_SIZE - MARGIN),
+      y: clamp(y, viewport.offsetTop + MARGIN, viewport.offsetTop + viewport.height - BTN_SIZE - MARGIN),
+    };
+  }
+
+  function syncPopupPosition(): void {
+    if (popup.style.display !== 'flex') return;
+    const viewport = getViewportRect();
+    const btnRect = btn.getBoundingClientRect();
+    const btnCenterX = btnRect.left + btnRect.width / 2;
+    const popupWidth = popup.offsetWidth || 170;
+    const popupHeight = popup.offsetHeight || 132;
+    const openRight = btnCenterX < viewport.width / 2;
+
+    popup.dataset.side = openRight ? 'right' : 'left';
+
+    const left = openRight
+      ? btnRect.right + POPUP_GAP
+      : btnRect.left - popupWidth - POPUP_GAP;
+    const top = clamp(
+      btnRect.top + btnRect.height / 2 - popupHeight / 2,
+      viewport.offsetTop + MARGIN,
+      viewport.offsetTop + viewport.height - popupHeight - MARGIN,
+    );
+
+    popup.style.left = clamp(
+      left,
+      viewport.offsetLeft + MARGIN,
+      viewport.offsetLeft + viewport.width - popupWidth - MARGIN,
+    ) + 'px';
+    popup.style.top = top + 'px';
+  }
 
   async function initPos(): Promise<void> {
     const saved = await loadPos();
+    const viewport = getViewportRect();
     if (saved) {
-      btn.style.left = saved.x + 'px';
-      btn.style.top = saved.y + 'px';
+      anchoredSide = saved.side ?? getAnchoredSide(saved.x);
+      anchoredVertical = saved.vertical ?? getAnchoredVertical(saved.y);
+      const pos = getClampedPos(saved.x, saved.y);
+      applyBtnPosition(pos.x, pos.y);
     } else {
-      btn.style.left = (window.innerWidth - BTN_SIZE - MARGIN) + 'px';
-      btn.style.top = (window.innerHeight - BTN_SIZE - MARGIN) + 'px';
+      anchoredSide = 'right';
+      anchoredVertical = 'bottom';
+      applyBtnPosition(
+        viewport.offsetLeft + viewport.width - BTN_SIZE - MARGIN,
+        viewport.offsetTop + viewport.height - BTN_SIZE - MARGIN,
+      );
     }
   }
 
+  function getAnchoredPos(side: FloatSide, vertical: FloatVertical, x: number, y: number): FloatPos {
+    const viewport = getViewportRect();
+    return getClampedPos(
+      side === 'left'
+        ? viewport.offsetLeft + MARGIN
+        : viewport.offsetLeft + viewport.width - BTN_SIZE - MARGIN,
+      vertical === 'top'
+        ? viewport.offsetTop + MARGIN
+        : viewport.offsetTop + viewport.height - BTN_SIZE - MARGIN,
+    );
+  }
+
   // ===== 贴边 =====
-  function snapToEdge(): void {
-    const cx = btn.offsetLeft + BTN_SIZE / 2, sn = cx < window.innerWidth / 2;
+  function snapToEdge(save = false): void {
+    anchoredSide = getAnchoredSide(btn.offsetLeft);
+    anchoredVertical = getAnchoredVertical(btn.offsetTop);
+    const next = getAnchoredPos(anchoredSide, anchoredVertical, btn.offsetLeft, btn.offsetTop);
     btn.style.transition = 'left 0.25s ease';
-    btn.style.left = (sn ? MARGIN : window.innerWidth - BTN_SIZE - MARGIN) + 'px';
+    applyBtnPosition(next.x, next.y);
+    syncPopupPosition();
+    if (save) void savePos(next.x, next.y, anchoredSide, anchoredVertical);
     setTimeout(() => btn.style.transition = '', 300);
+  }
+
+  function adjustToViewport(save = false): void {
+    const pos = getAnchoredPos(anchoredSide, anchoredVertical, btn.offsetLeft, btn.offsetTop);
+    applyBtnPosition(pos.x, pos.y);
+    syncPopupPosition();
+    if (save) void savePos(pos.x, pos.y, anchoredSide, anchoredVertical);
   }
 
   // ===== 拖动 =====
@@ -86,19 +191,21 @@ export function injectFloatingBtn(): void {
     if (btn.style.cursor !== 'grabbing') return;
     const dx = e.clientX - dragData.startX, dy = e.clientY - dragData.startY;
     dragData.dist = Math.max(dragData.dist, Math.abs(dx), Math.abs(dy));
-    btn.style.left = Math.max(0, Math.min(window.innerWidth - BTN_SIZE, dragData.origX + dx)) + 'px';
-    btn.style.top = Math.max(0, Math.min(window.innerHeight - BTN_SIZE, dragData.origY + dy)) + 'px';
+    const pos = getClampedPos(dragData.origX + dx, dragData.origY + dy);
+    applyBtnPosition(pos.x, pos.y);
+    syncPopupPosition();
   });
   document.addEventListener('mouseup', () => {
     if (btn.style.cursor !== 'grabbing') return;
     btn.style.cursor = '';
-    if (dragData.dist > 5) snapToEdge();
+    if (dragData.dist > 5) snapToEdge(true);
   });
 
   // 点击切换弹窗（拖动超过 5px 不触发）
   btn.addEventListener('click', (e) => {
     if (dragData.dist > 5) return;
     popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+    if (popup.style.display === 'flex') syncPopupPosition();
   });
 
   popup.onclick = async (e) => {
@@ -125,19 +232,21 @@ export function injectFloatingBtn(): void {
   });
 
   initPos().then(() => {
-    btn.appendChild(popup);
+    document.body.appendChild(popup);
     document.body.appendChild(btn);
-    // 可视区域改变后自动贴边
-    let resizeTimer: ReturnType<typeof setTimeout>;
-    window.addEventListener('resize', () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
+
+    let viewportFrame = 0;
+    const handleViewportChange = () => {
+      if (viewportFrame) cancelAnimationFrame(viewportFrame);
+      viewportFrame = requestAnimationFrame(() => {
+        viewportFrame = 0;
         if (!document.getElementById('srb-float-btn')) return;
-        snapToEdge();
-        const left = parseInt(btn.style.left, 10);
-        if (!isNaN(left)) savePos(left, btn.offsetTop);
-      }, 200);
-    });
+        adjustToViewport(true);
+      });
+    };
+    window.addEventListener('resize', handleViewportChange);
+    window.visualViewport?.addEventListener('resize', handleViewportChange);
+    window.visualViewport?.addEventListener('scroll', handleViewportChange);
   });
 }
 

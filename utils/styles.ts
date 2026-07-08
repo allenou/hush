@@ -79,9 +79,6 @@ const CSS = `
 }
 
 .srb-float-popup {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  right: -2px;
   z-index: 999999;
   position: fixed;
   background: var(--srb-surface);
@@ -97,14 +94,20 @@ const CSS = `
 .srb-float-popup::after {
   content: '';
   position: absolute;
-  bottom: -6px;
-  right: 12px;
+  top: 50%;
   width: 10px;
   height: 10px;
   background: var(--srb-surface);
   border-right: 1px solid var(--srb-border);
   border-bottom: 1px solid var(--srb-border);
-  transform: rotate(45deg);
+  transform: translateY(-50%) rotate(45deg);
+}
+.srb-float-popup[data-side="left"]::after {
+  right: -6px;
+}
+.srb-float-popup[data-side="right"]::after {
+  left: -6px;
+  transform: translateY(-50%) rotate(225deg);
 }
 .srb-fopt {
   padding: 12px 16px;
@@ -465,4 +468,3 @@ export function injectStyles(): void {
   style.textContent = CSS;
   document.head.appendChild(style);
 }
-
