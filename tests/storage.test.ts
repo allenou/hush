@@ -43,7 +43,7 @@ import {
   addBlockedUrl, removeBlockedUrl,
   addBlockedSelector, removeBlockedSelector,
   getAllBlocked, removeBlockedItem,
-  addCustomEngine, removeCustomEngine,
+  addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
   recordBlock, incrementBlockCount,
   setEnabled, subscribe,
 } from '../utils/storage';
@@ -184,10 +184,41 @@ describe('addCustomEngine', () => {
     expect((await get()).customEngines[0].containerSelector).toBe('#b');
   });
 
+  it('keeps multiple templates for same hostname', async () => {
+    await addCustomEngine({ name: 'M', hostname: 'm.com', pathnamePattern: '/search', containerSelector: '#a', itemSelector: '.a', linkSelector: 'a[href]' });
+    await addCustomEngine({ name: 'M', hostname: 'm.com', pathnamePattern: '/news', containerSelector: '#b', itemSelector: '.b', linkSelector: 'a[href]' });
+    expect((await get()).customEngines).toHaveLength(2);
+  });
+
   it('removes by index', async () => {
     await addCustomEngine({ name: 'E', hostname: 'e.com', containerSelector: '#r', itemSelector: '.i', linkSelector: 'a[href]' });
     await removeCustomEngine(0);
     expect((await get()).customEngines).toEqual([]);
+  });
+});
+
+describe('findMatchingCustomEngine', () => {
+  it('prefers pathname-specific config over hostname fallback', () => {
+    const exact = {
+      name: 'M',
+      hostname: 'm.com',
+      pathnamePattern: '/search',
+      containerSelector: '#search',
+      itemSelector: '.item',
+      linkSelector: 'a[href]',
+    };
+    const fallback = {
+      name: 'M',
+      hostname: 'm.com',
+      containerSelector: '#fallback',
+      itemSelector: '.fallback',
+      linkSelector: 'a[href]',
+    };
+    const found = findMatchingCustomEngine([fallback, exact], {
+      hostname: 'www.m.com',
+      pathname: '/search',
+    });
+    expect(found).toEqual(exact);
   });
 });
 

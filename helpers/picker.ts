@@ -15,23 +15,36 @@ let handlers: {
 
 /** 为元素生成稳定的 CSS 选择器 */
 function generateSelector(el: Element): string {
-  if (el.id && !/^[a-z]*[0-9a-f]{8,}/i.test(el.id)) {
-    return '#' + CSS.escape(el.id);
+  if (el.id && isStableToken(el.id)) {
+    const idSelector = '#' + CSS.escape(el.id);
+    if (isReasonableSelector(idSelector, el)) return idSelector;
   }
-  const stableClasses = Array.from(el.classList)
-    .filter((c) => !/^[a-z]*[0-9a-f]{5,}/i.test(c) && !/^_/.test(c) && !/^css-/.test(c) && c.length > 2)
-    .slice(0, 2);
+
+  const stableClasses = getStableClasses(el);
+  const tag = el.tagName.toLowerCase();
+  const selectorCandidates: string[] = [];
+
   if (stableClasses.length > 0) {
-    const base = el.tagName.toLowerCase() + '.' + stableClasses.map((c) => CSS.escape(c)).join('.');
-    // 加上 nth-child 避免命中同 class 的所有元素
-    const parent = el.parentElement;
-    if (parent) {
-      const siblings = Array.from(parent.children);
-      const idx = siblings.indexOf(el) + 1;
-      return base + ':nth-child(' + idx + ')';
-    }
-    return base;
+    selectorCandidates.push(tag + '.' + stableClasses.slice(0, 2).map((c) => CSS.escape(c)).join('.'));
+    selectorCandidates.push(tag + '.' + CSS.escape(stableClasses[0]));
   }
+
+  const parent = el.parentElement;
+  if (parent) {
+    const parentSelector = getScopedParentSelector(parent);
+    if (parentSelector && stableClasses.length > 0) {
+      selectorCandidates.push(parentSelector + ' > ' + tag + '.' + CSS.escape(stableClasses[0]));
+      selectorCandidates.push(parentSelector + ' ' + tag + '.' + CSS.escape(stableClasses[0]));
+    }
+  }
+
+  for (const candidate of selectorCandidates) {
+    if (isReasonableSelector(candidate, el)) return candidate;
+  }
+
+  const nthChildSelector = buildNthChildFallback(el);
+  if (isReasonableSelector(nthChildSelector, el, 3)) return nthChildSelector;
+
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur !== document.body && cur !== document.documentElement) {
@@ -52,6 +65,57 @@ function generateSelector(el: Element): string {
     if (parts.length > 4) break;
   }
   return parts.join(' > ');
+}
+
+function getStableClasses(el: Element): string[] {
+  return Array.from(el.classList)
+    .filter((c) => isStableToken(c) && c.length > 2)
+    .filter((c) => !/^(active|selected|hover|focus|open|close|show|hide)$/i.test(c))
+    .slice(0, 3);
+}
+
+function isStableToken(token: string): boolean {
+  return !/^[a-z]*[0-9a-f]{5,}$/i.test(token)
+    && !/^_/.test(token)
+    && !/^css-/.test(token)
+    && !/(^|[_-])[a-z0-9]{8,}([_-]|$)/i.test(token);
+}
+
+function getScopedParentSelector(parent: Element): string | null {
+  if (parent.id && isStableToken(parent.id)) {
+    return '#' + CSS.escape(parent.id);
+  }
+  const stableClasses = getStableClasses(parent);
+  if (stableClasses.length > 0) {
+    return parent.tagName.toLowerCase() + '.' + CSS.escape(stableClasses[0]);
+  }
+  return null;
+}
+
+function buildNthChildFallback(el: Element): string {
+  const stableClasses = getStableClasses(el);
+  const tag = el.tagName.toLowerCase();
+  const parent = el.parentElement;
+  const base = stableClasses.length > 0
+    ? tag + '.' + stableClasses.slice(0, 2).map((c) => CSS.escape(c)).join('.')
+    : tag;
+  if (!parent) return base;
+  const siblings = Array.from(parent.children);
+  const idx = siblings.indexOf(el) + 1;
+  const parentSelector = getScopedParentSelector(parent);
+  if (parentSelector) {
+    return parentSelector + ' > ' + base + ':nth-child(' + idx + ')';
+  }
+  return base + ':nth-child(' + idx + ')';
+}
+
+function isReasonableSelector(selector: string, el: Element, maxMatches = 2): boolean {
+  try {
+    const matches = Array.from(document.querySelectorAll(selector));
+    return matches.length >= 1 && matches.length <= maxMatches && matches.includes(el);
+  } catch {
+    return false;
+  }
 }
 
 // ========== Block Target Detection ==========

@@ -1,4 +1,5 @@
 import type { SearchEngineConfig } from './search-engines';
+import { buildPathnamePattern, normalizeHostname } from './search-engines';
 
 /** 自动分析 DOM 中重复出现的结构模式，检测搜索结果列表 */
 export function autoDetectSearchResults(getHostname: () => string): SearchEngineConfig | null {
@@ -9,14 +10,19 @@ export function autoDetectSearchResults(getHostname: () => string): SearchEngine
   return config;
 }
 
-// ========== 核心检测：基于重复 class 模式 ==========
-
 interface ClassPattern {
   key: string;
   count: number;
   sample: Element;
   linkCount: number;
   childTextLen: number;
+  score?: number;
+}
+
+interface LinkQualityStats {
+  validCount: number;
+  richLinkCount: number;
+  longTextCount: number;
 }
 
 function detectByClassPattern(getHostname: () => string): SearchEngineConfig | null {
@@ -26,7 +32,6 @@ function detectByClassPattern(getHostname: () => string): SearchEngineConfig | n
   const candidates = scorePatterns(patternMap);
   if (candidates.length === 0) { console.log('[SRB] No scored candidates'); return null; }
 
-  // 试 Top-5 候选，选第一个能生成有效配置的
   for (const candidate of candidates.slice(0, 5)) {
     const config = buildConfig(candidate, getHostname);
     if (config && validateConfig(config)) {
@@ -39,7 +44,6 @@ function detectByClassPattern(getHostname: () => string): SearchEngineConfig | n
 /** 扫描 DOM，收集所有带 class 的重复元素模式 */
 function scanDomPatterns(): Map<string, ClassPattern> {
   const map = new Map<string, ClassPattern>();
-  // 用 XPath 或 querySelectorAll 扫描，限制深度避免过慢
   const all = document.querySelectorAll('li, div, tr, section, article, dl, ol, .result, [class*="result"], [class*="item"], [class*="hit"]');
   console.log('[SRB] Scanning', all.length, 'candidate elements');
 
@@ -54,17 +58,15 @@ function scanDomPatterns(): Map<string, ClassPattern> {
       key, count: 0, sample: el, linkCount: 0, childTextLen: 0,
     };
     entry.count++;
-    // 取第一个样本的链接数和文本长度
     if (entry.count === 1) {
-      entry.linkCount = el.querySelectorAll('a[href]').length;
-      entry.childTextLen = Array.from(el.children).reduce((sum, c) => sum + (c.textContent?.length ?? 0), 0);
+      entry.linkCount = getMeaningfulLinks(el).length;
+      entry.childTextLen = getNodeTextLength(el);
     }
     map.set(key, entry);
   }
 
   console.log('[SRB] Found', map.size, 'unique patterns');
 
-  // Debug: 按出现次数排序，列出前 20
   const byCount = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
   console.log('[SRB] Top 20 by count:');
   byCount.slice(0, 20).forEach(([key, p]) => {
@@ -80,210 +82,374 @@ function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
   let filteredCount = 0, filteredNoLinks = 0, filteredExclude = 0;
 
   outer:
-  for (const [, p] of map) {
-    if (p.count < 3) { filteredCount++; continue; }
-    if (p.linkCount === 0) { filteredNoLinks++; continue; }
+  for (const [, pattern] of map) {
+    if (pattern.count < 4) { filteredCount++; continue; }
+    if (pattern.linkCount === 0) { filteredNoLinks++; continue; }
+    if (isExcludedPattern(pattern.sample)) { filteredExclude++; continue; }
 
-    const cls = (p.sample.className as string).toLowerCase();
-
-    // 排除导航/工具条类元素
-    const blockWords = ['nav', 'menu', 'header', 'overflow', 'toolbar',
-      'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor', 'rank'];
-    for (const w of blockWords) { if (cls.includes(w)) { filteredExclude++; continue outer; } }
-
-    // 排除在 nav/header/footer 内的元素
-    let parent = p.sample.parentElement;
-    while (parent && parent !== document.body) {
-      const pt = parent.tagName.toLowerCase();
-      const pc = (parent.className as string).toLowerCase();
-      if (pt === 'nav' || pt === 'header' || pt === 'footer') { filteredExclude++; continue outer; }
-      for (const w of blockWords) {
-        if (pc.includes(w)) {
-          console.log('[SRB] Excluded by parent:', p.key, 'parent has "' + w + '" in class "' + pc + '"');
-          filteredExclude++; continue outer;
-        }
-      }
-      parent = parent.parentElement;
-    }
-
-    // === 评分策略 ===
-    let score = 0;
-
-    // 1. 出现次数（降低权重，避免 UI 元素碾压）
-    score += Math.min(p.count, 30) * 10; // 上限 300 分
-
-    // 2. 每个链接含文本内容越多越像搜索结果（而非图标/标签）
-    score += p.linkCount * 12;
-
-    // 3. class 关键词加分（通用搜索结果特征）
-    const resultHints = ['result', 'hit', 'search', 'algo', 'card', 'entry', 'listing', 'list-item'];
-    for (const hint of resultHints) {
-      if (cls.includes(hint)) { score += 150; break; }
-    }
-    // 额外：res- / res_ 前缀也加分（如 res-list, res-item, res_list）
-    if (/^res[-_]/.test(cls) || cls.includes('-res-') || cls.includes('_res-')) score += 100;
-
-    // 4. 减分：UI 类关键词（ellipsis, tag, nav 等非结果特征）
-    const uiWords = ['ellipsis', '-tag', 'spread', 'advert'];
-    for (const w of uiWords) { if (cls.includes(w)) score -= 150; }
-
-    // 5. 链接数过多（>5）说明可能是广告容器而非搜索结果项
-    if (p.linkCount > 5) score -= 100 * Math.floor(p.linkCount / 5);
-    if (p.linkCount === 1 && p.count > 15) score -= 30; // 只有 1 个链接且大量重复 → UI 元素
-
-    // 6. 链接文本和描述文本越长越像搜索结果
-    if (p.childTextLen > 60) score += 30;
-
-    // 6. 减分：class 含随机 hash（如 _1MWDu, _2X7ZC）
-    const hashes = cls.match(/_[a-zA-Z0-9]{5,}/g);
-    if (hashes) score -= 15 * hashes.length;
-
-    // 7. 减分：class 太短（div.a x3 这种一般是图标或简单的列表）
-    if (cls.split(/\s+/).length <= 2 && p.count >= 20) score -= 100;
-
-    // 8. 区域加分
-    let pc = p.sample.parentElement;
-    let inSidebar = false;
-    while (pc && pc !== document.body) {
-      const pcls = (pc.className as string).toLowerCase();
-      if (pcls.includes('content_left')) score += 150;
-      if (pcls.includes('content_right') || pcls.includes('sidebar') || pcls.includes('aside') || pcls.includes('secondary')) {
-        score -= 200;
-        inSidebar = true;
-      }
-      pc = pc.parentElement;
-    }
-    // 不在侧边栏也不算在 header/footer → 默认给个小加分
-    if (!inSidebar) score += 20;
-
-    // 9. 页面位置加分：搜索结果通常在页面中间区域
-    const rect = p.sample.getBoundingClientRect();
-    const vpW = window.innerWidth;
-    const vpCx = vpW / 2;
-    const elCx = rect.left + rect.width / 2;
-    const distFromCenter = Math.abs(elCx - vpCx) / vpW;
-    if (distFromCenter < 0.15) score += 80;
-    else if (distFromCenter < 0.3) score += 30;
-    else score -= 60;
-
-    result.push(p);
-    // 保留评分信息用于排序
-    (p as any).__score = score;
+    pattern.score = scorePatternCandidate(pattern);
+    if (pattern.score <= 0) continue;
+    result.push(pattern);
   }
 
-  console.log('[SRB] Filter: total=' + map.size + ' count<3=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
+  console.log('[SRB] Filter: total=' + map.size + ' count<4=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
   if (result.length === 0) {
-    // 把 count>=3 && links>0 的被排除项打印出来
     for (const [, p] of map) {
-      if (p.count >= 3 && p.linkCount > 0) {
+      if (p.count >= 4 && p.linkCount > 0) {
         console.log('[SRB] Excluded candidate:', p.key, 'x' + p.count, 'links:', p.linkCount);
       }
     }
   }
 
-  result.sort((a, b) => ((b as any).__score ?? 0) - ((a as any).__score ?? 0));
+  result.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   console.log('[SRB] Top candidates:');
-  result.slice(0, 5).forEach((p) => console.log('  ', p.key, 'score:', (p as any).__score, 'x' + p.count, 'links:', p.linkCount, 'el:', p.sample));
+  result.slice(0, 5).forEach((p) => console.log('  ', p.key, 'score:', p.score, 'x' + p.count, 'links:', p.linkCount, 'el:', p.sample));
 
   return result;
 }
 
+function scorePatternCandidate(pattern: ClassPattern): number {
+  const sample = pattern.sample;
+  const cls = (sample.className as string).toLowerCase();
+  const rect = sample.getBoundingClientRect();
+  const textLength = Math.max(pattern.childTextLen, getNodeTextLength(sample));
+  const links = getMeaningfulLinks(sample);
+
+  let score = 0;
+
+  score += Math.min(pattern.count, 12) * 8;
+  score += Math.min(textLength, 240) / 3;
+
+  if (links.length >= 1 && links.length <= 3) score += 80;
+  else if (links.length > 6) score -= 140;
+
+  const resultHints = ['result', 'results', 'search', 'algo', 'entry', 'listing', 'article', 'content', 'item'];
+  if (resultHints.some((hint) => cls.includes(hint))) score += 120;
+  if (/^res[-_]/.test(cls) || cls.includes('-res-') || cls.includes('_res_')) score += 80;
+
+  const badHints = ['related', 'recommend', 'suggest', 'widget', 'module', 'toolbar', 'menu', 'hot', 'rank', 'nav', 'footer', 'header'];
+  if (badHints.some((hint) => cls.includes(hint))) score -= 220;
+
+  if (hasUnstableClassToken(cls)) score -= 40;
+  if (cls.split(/\s+/).length <= 2 && pattern.count >= 20) score -= 60;
+
+  score += scoreByLayout(rect);
+  score += scoreByAncestors(sample);
+
+  const parent = sample.parentElement;
+  if (parent) {
+    const siblingMatches = Array.from(parent.children).filter(
+      (child) => child.tagName === sample.tagName && child.className === sample.className,
+    ).length;
+    if (siblingMatches >= Math.max(4, Math.floor(pattern.count * 0.5))) score += 70;
+  }
+
+  return score;
+}
+
 /** 从最佳候选生成配置 */
 function buildConfig(candidate: ClassPattern, getHostname: () => string): SearchEngineConfig | null {
-  const { sample: el, count } = candidate;
+  const el = candidate.sample;
+  const itemSelector = buildStableItemSelector(el);
+  if (!itemSelector) return null;
 
-  // 找到包含所有同类型元素的容器
-  let container = el.parentElement;
-  while (container && container !== document.body) {
-    const similar = Array.from(container.children).filter(
-      (c) => c.tagName === el.tagName && (c.className as string) === (el.className as string),
-    );
-    if (similar.length >= count * 0.6) break;
-    container = container.parentElement;
-  }
-  if (!container || container === document.body) container = el.parentElement;
+  const container = findBestContainer(el, candidate.count);
   if (!container) return null;
 
-  const tag = el.tagName.toLowerCase();
-  const cls = (el.className as string).trim();
-  const itemSelector = cls ? cls.split(/\s+/).map((c) => '.' + CSS.escape(c)).join('') : tag;
+  const containerSelector = buildStableContainerSelector(container, itemSelector);
+  if (!containerSelector) return null;
 
-  // 生成容器选择器（尽量简短，优先用 id）
-  const parts: string[] = [];
-  let cur: Element | null = container;
-
-  // 如果能用 id 精确定位，只用 id
-  if (container.id) {
-    // 但 id 太长或有特殊字符时也用路径
-    const escapedId = CSS.escape(container.id);
-    if (container.id.length < 30 && !container.id.includes('\\')) {
-      parts.push(container.tagName.toLowerCase() + '#' + escapedId);
-    } else {
-      cur = container;
-      while (cur && cur !== document.body && cur !== document.documentElement) {
-        const t = cur.tagName.toLowerCase();
-        const id = cur.id ? '#' + CSS.escape(cur.id) : '';
-        const c2 = Array.from(cur.classList).slice(0, 2).map((cl) => '.' + CSS.escape(cl)).join('');
-        parts.unshift(t + id + c2);
-        cur = cur.parentElement;
-        if (parts.length >= 3) break;
-      }
-    }
-  } else {
-    while (cur && cur !== document.body && cur !== document.documentElement) {
-      const t = cur.tagName.toLowerCase();
-      const id = cur.id ? '#' + CSS.escape(cur.id) : '';
-      const c2 = Array.from(cur.classList).slice(0, 2).map((cl) => '.' + CSS.escape(cl)).join('');
-      parts.unshift(t + id + c2);
-      cur = cur.parentElement;
-      if (cur?.id || parts.length >= 4) break;
-    }
-  }
-
-  // 如果生成的选择器太长，回退到只用父标签
-  const fullSelector = parts.join(' ');
-  if (fullSelector.length > 80) {
-    const fallback = container.tagName.toLowerCase() + itemSelector;
-    const fallbackEl = document.querySelector(fallback);
-    if (fallbackEl && fallbackEl.querySelectorAll(itemSelector).length >= 2) {
-      return {
-        name: getHostname(),
-        hostname: getHostname(),
-        containerSelector: container.tagName.toLowerCase(),
-        itemSelector,
-        linkSelector: 'a[href]',
-      };
-    }
+  const containerEl = document.querySelector(containerSelector);
+  const itemCount = containerEl?.querySelectorAll(itemSelector).length ?? 0;
+  if (!containerEl || itemCount < 4 || itemCount > 80) {
+    console.log('[SRB] Config build rejected:', containerSelector, itemSelector, 'count=', itemCount);
+    return null;
   }
 
   return {
-    name: getHostname(),
-    hostname: getHostname(),
-    containerSelector: parts.join(' ') || 'body',
+    name: normalizeHostname(getHostname()),
+    hostname: normalizeHostname(getHostname()),
+    pathnamePattern: buildPathnamePattern(window.location.pathname),
+    containerSelector,
     itemSelector,
     linkSelector: 'a[href]',
   };
 }
 
-/** 验证配置：容器能找到、有 2+ 匹配项、且多数项含有效链接 */
+/** 验证配置：容器能找到、列表像主结果区、且多数项含有效链接 */
 function validateConfig(config: SearchEngineConfig): boolean {
   const containerEl = document.querySelector(config.containerSelector);
   if (!containerEl) { console.log('[SRB] Config invalid: container not found'); return false; }
-  const items = containerEl.querySelectorAll(config.itemSelector);
-  if (items.length < 2) { console.log('[SRB] Config invalid: only', items.length, 'items'); return false; }
 
-  // 验证多数项含有效链接（非空 href）
-  let validCount = 0;
-  items.forEach((item) => {
-    const link = item.querySelector<HTMLAnchorElement>(config.linkSelector);
-    if (link?.href && !link.href.startsWith('javascript:')) validCount++;
-  });
-  if (validCount < Math.max(2, items.length / 2)) {
-    console.log('[SRB] Config invalid: only', validCount, 'of', items.length, 'have valid links');
+  const items = Array.from(containerEl.querySelectorAll(config.itemSelector));
+  if (items.length < 4) { console.log('[SRB] Config invalid: only', items.length, 'items'); return false; }
+
+  const rects = items
+    .map((item) => item.getBoundingClientRect())
+    .filter((rect) => rect.width > 120 && rect.height > 24);
+  if (rects.length < 4) { console.log('[SRB] Config invalid: not enough visible items'); return false; }
+
+  if (!isMainColumn(containerEl.getBoundingClientRect())) {
+    console.log('[SRB] Config invalid: container not in main column');
     return false;
   }
 
-  console.log('[SRB] Config valid:', items.length, 'items,', validCount, 'with links');
+  if (!isMostlyVerticalList(rects)) {
+    console.log('[SRB] Config invalid: items are not vertically aligned');
+    return false;
+  }
+
+  if (!hasConsistentWidths(rects)) {
+    console.log('[SRB] Config invalid: item widths are inconsistent');
+    return false;
+  }
+
+  const linkStats = getLinkQualityStats(items, config.linkSelector);
+  if (linkStats.validCount < Math.max(4, Math.floor(items.length * 0.7))) {
+    console.log('[SRB] Config invalid: only', linkStats.validCount, 'of', items.length, 'have valid links');
+    return false;
+  }
+  if (linkStats.richLinkCount < Math.max(3, Math.floor(items.length * 0.5))) {
+    console.log('[SRB] Config invalid: rich links too few', linkStats.richLinkCount, '/', items.length);
+    return false;
+  }
+  if (linkStats.longTextCount < Math.max(3, Math.floor(items.length * 0.5))) {
+    console.log('[SRB] Config invalid: text too short', linkStats.longTextCount, '/', items.length);
+    return false;
+  }
+
+  console.log('[SRB] Config valid:', items.length, 'items,', linkStats.validCount, 'with links');
   return true;
+}
+
+function findBestContainer(el: Element, expectedCount: number): Element | null {
+  let best: Element | null = null;
+  let bestScore = -1;
+  let cur = el.parentElement;
+
+  while (cur && cur !== document.body && cur !== document.documentElement) {
+    const siblings = Array.from(cur.children).filter(
+      (child) => child.tagName === el.tagName && child.className === el.className,
+    ).length;
+    const itemCount = cur.querySelectorAll(buildStableItemSelector(el) ?? el.tagName.toLowerCase()).length;
+    let score = 0;
+    if (siblings >= Math.max(3, Math.floor(expectedCount * 0.5))) score += 100;
+    if (itemCount >= 4 && itemCount <= 60) score += 80;
+    if (cur.id) score += 40;
+    score += scoreByLayout(cur.getBoundingClientRect());
+    score += scoreByAncestors(cur);
+    if (score > bestScore) {
+      best = cur;
+      bestScore = score;
+    }
+    cur = cur.parentElement;
+  }
+
+  return best ?? el.parentElement;
+}
+
+function buildStableItemSelector(el: Element): string | null {
+  const tag = el.tagName.toLowerCase();
+  const stableClasses = getStableClasses(el);
+
+  const candidates = [
+    stableClasses.slice(0, 2),
+    stableClasses.slice(0, 1),
+    [],
+  ];
+
+  for (const classes of candidates) {
+    const selector = classes.length > 0
+      ? tag + classes.map((cls) => '.' + CSS.escape(cls)).join('')
+      : tag;
+    const count = document.querySelectorAll(selector).length;
+    if (count >= 4 && count <= 120) return selector;
+  }
+
+  return null;
+}
+
+function buildStableContainerSelector(container: Element, itemSelector: string): string | null {
+  const candidates: string[] = [];
+  const tag = container.tagName.toLowerCase();
+
+  if (container.id && isStableId(container.id)) {
+    candidates.push('#' + CSS.escape(container.id));
+    candidates.push(tag + '#' + CSS.escape(container.id));
+  }
+
+  const stableClasses = getStableClasses(container);
+  if (stableClasses.length > 0) {
+    candidates.push(tag + stableClasses.slice(0, 2).map((cls) => '.' + CSS.escape(cls)).join(''));
+    candidates.push(tag + '.' + CSS.escape(stableClasses[0]));
+  }
+
+  const pathSelector = buildShortPathSelector(container);
+  if (pathSelector) candidates.push(pathSelector);
+  candidates.push(tag);
+
+  for (const selector of dedupe(candidates)) {
+    if (selector.length > 90) continue;
+    const found = document.querySelector(selector);
+    const count = found?.querySelectorAll(itemSelector).length ?? 0;
+    if (found && count >= 4 && count <= 80 && isMainColumn(found.getBoundingClientRect())) {
+      return selector;
+    }
+  }
+
+  return null;
+}
+
+function buildShortPathSelector(el: Element): string {
+  const parts: string[] = [];
+  let cur: Element | null = el;
+
+  while (cur && cur !== document.body && cur !== document.documentElement && parts.length < 4) {
+    const tag = cur.tagName.toLowerCase();
+    if (cur.id && isStableId(cur.id)) {
+      parts.unshift('#' + CSS.escape(cur.id));
+      break;
+    }
+    const stableClasses = getStableClasses(cur);
+    const cls = stableClasses.length > 0
+      ? '.' + CSS.escape(stableClasses[0])
+      : '';
+    parts.unshift(tag + cls);
+    cur = cur.parentElement;
+  }
+
+  return parts.join(' > ');
+}
+
+function getStableClasses(el: Element): string[] {
+  return Array.from(el.classList)
+    .filter((cls) => cls.length > 2)
+    .filter((cls) => !hasUnstableClassToken(cls))
+    .filter((cls) => !/^(active|selected|hover|focus|open|close|show|hide)$/i.test(cls))
+    .slice(0, 3);
+}
+
+function hasUnstableClassToken(value: string): boolean {
+  return /(^|[_-])[a-z0-9]{8,}([_-]|$)/i.test(value) || /^css-/.test(value) || /^_/.test(value);
+}
+
+function isStableId(id: string): boolean {
+  return id.length <= 32 && !hasUnstableClassToken(id);
+}
+
+function getMeaningfulLinks(el: Element): HTMLAnchorElement[] {
+  return Array.from(el.querySelectorAll<HTMLAnchorElement>('a[href]'))
+    .filter((link) => isMeaningfulHref(link.href))
+    .filter((link) => (link.textContent ?? '').trim().length >= 6);
+}
+
+function isMeaningfulHref(href: string): boolean {
+  return Boolean(href)
+    && !href.startsWith('javascript:')
+    && !href.startsWith('#')
+    && !href.startsWith('about:blank');
+}
+
+function getNodeTextLength(el: Element): number {
+  return (el.textContent ?? '').replace(/\s+/g, ' ').trim().length;
+}
+
+function isExcludedPattern(sample: Element): boolean {
+  const blockWords = ['nav', 'menu', 'header', 'overflow', 'toolbar', 'breadcrumb', 'pagination', 'sidebar', 'toplist', 'advert', 'sponsor', 'rank', 'related', 'recommend', 'suggest', 'widget', 'module', 'panel'];
+  const cls = (sample.className as string).toLowerCase();
+  if (blockWords.some((word) => cls.includes(word))) return true;
+
+  let parent = sample.parentElement;
+  while (parent && parent !== document.body) {
+    const tag = parent.tagName.toLowerCase();
+    const parentCls = (parent.className as string).toLowerCase();
+    if (tag === 'nav' || tag === 'header' || tag === 'footer' || tag === 'aside') return true;
+    if (blockWords.some((word) => parentCls.includes(word))) return true;
+    parent = parent.parentElement;
+  }
+
+  return false;
+}
+
+function scoreByLayout(rect: DOMRect): number {
+  const vpW = Math.max(window.innerWidth, 1);
+  const vpH = Math.max(window.innerHeight, 1);
+  const centerX = rect.left + rect.width / 2;
+  const normalizedDistance = Math.abs(centerX - vpW / 2) / vpW;
+  let score = 0;
+
+  if (normalizedDistance < 0.12) score += 80;
+  else if (normalizedDistance < 0.22) score += 35;
+  else if (centerX > vpW * 0.72) score -= 120;
+
+  if (rect.width > vpW * 0.35) score += 50;
+  if (rect.width > vpW * 0.6) score += 30;
+  if (rect.height > 40 && rect.height < vpH * 0.4) score += 20;
+
+  return score;
+}
+
+function scoreByAncestors(el: Element): number {
+  let score = 0;
+  let cur = el.parentElement;
+
+  while (cur && cur !== document.body) {
+    const cls = (cur.className as string).toLowerCase();
+    if (cls.includes('content') || cls.includes('main') || cls.includes('result')) score += 40;
+    if (cls.includes('content_left')) score += 90;
+    if (cls.includes('content_right') || cls.includes('sidebar') || cls.includes('secondary') || cls.includes('aside')) score -= 160;
+    cur = cur.parentElement;
+  }
+
+  return score;
+}
+
+function isMainColumn(rect: DOMRect): boolean {
+  const vpW = Math.max(window.innerWidth, 1);
+  const centerX = rect.left + rect.width / 2;
+  return rect.width >= vpW * 0.28 && centerX <= vpW * 0.72;
+}
+
+function isMostlyVerticalList(rects: DOMRect[]): boolean {
+  let aligned = 0;
+  for (let i = 1; i < rects.length; i++) {
+    const prev = rects[i - 1];
+    const cur = rects[i];
+    if (cur.top >= prev.top && Math.abs(cur.left - prev.left) <= Math.max(48, prev.width * 0.15)) {
+      aligned++;
+    }
+  }
+  return aligned >= Math.max(3, Math.floor((rects.length - 1) * 0.7));
+}
+
+function hasConsistentWidths(rects: DOMRect[]): boolean {
+  const widths = rects.map((rect) => rect.width).sort((a, b) => a - b);
+  const median = widths[Math.floor(widths.length / 2)] ?? 0;
+  if (median <= 0) return false;
+  const consistent = widths.filter((width) => width >= median * 0.7 && width <= median * 1.3).length;
+  return consistent >= Math.max(3, Math.floor(widths.length * 0.7));
+}
+
+function getLinkQualityStats(items: Element[], linkSelector: string): LinkQualityStats {
+  let validCount = 0;
+  let richLinkCount = 0;
+  let longTextCount = 0;
+
+  for (const item of items) {
+    const links = Array.from(item.querySelectorAll<HTMLAnchorElement>(linkSelector))
+      .filter((link) => isMeaningfulHref(link.href));
+    const mainLink = links.find((link) => (link.textContent ?? '').trim().length >= 6);
+    if (mainLink) {
+      validCount++;
+      if ((mainLink.textContent ?? '').trim().length >= 10) richLinkCount++;
+    }
+    if (getNodeTextLength(item) >= 30) longTextCount++;
+  }
+
+  return { validCount, richLinkCount, longTextCount };
+}
+
+function dedupe(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
 }

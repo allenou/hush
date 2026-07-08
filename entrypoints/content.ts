@@ -1,7 +1,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { BUILT_IN_ENGINES } from '../helpers/search-engines';
+import { BUILT_IN_ENGINES, normalizeHostname } from '../helpers/search-engines';
 import type { SearchEngineConfig } from '../helpers/search-engines';
-import { get, subscribe } from '../utils/storage';
+import { addCustomEngine, findMatchingCustomEngine, get, subscribe } from '../utils/storage';
 import { injectStyles } from '../utils/styles';
 import { activatePicker, deactivatePicker } from '../helpers/picker';
 import { getHostname, extractResultUrl } from '../utils/url';
@@ -55,13 +55,9 @@ export default defineContentScript({
         return;
       }
       const hostname = getHostname();
-      const isBuiltIn = BUILT_IN_ENGINES.some((e) => e.hostname === hostname);
+      const isBuiltIn = BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname));
       if (!isBuiltIn) {
-        const { customEngines } = await get();
-        const existing = customEngines.findIndex((e) => e.hostname === detected.hostname);
-        if (existing >= 0) customEngines[existing] = detected;
-        else customEngines.push(detected);
-        await chrome.storage.local.set({ blocker: { ...(await get()), customEngines } });
+        await addCustomEngine(detected);
       }
       currentEngine = detected;
       pushState();
@@ -84,11 +80,14 @@ export default defineContentScript({
 
       // 尝试从已存自定义引擎加载
       const { customEngines } = await get();
-      currentEngine = customEngines.find((e) => e.hostname === hostname) ?? null;
+      currentEngine = findMatchingCustomEngine(customEngines, {
+        hostname,
+        pathname: window.location.pathname,
+      });
       if (currentEngine) {
         const testContainer = document.querySelector(currentEngine.containerSelector);
         const testItems = testContainer ? testContainer.querySelectorAll(currentEngine.itemSelector) : [];
-        if (testContainer && testItems.length >= 2) {
+        if (testContainer && testItems.length >= 4) {
           pushState();
           injectCollapseBar(currentEngine.containerSelector);
           scanResults(currentEngine);
@@ -101,7 +100,7 @@ export default defineContentScript({
       }
 
       // 引擎检测
-      if (BUILT_IN_ENGINES.some((e) => e.hostname === hostname)) {
+      if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname))) {
         await tryAutoDetect();
       } else {
         setTimeout(() => tryAutoDetect(), 2000);

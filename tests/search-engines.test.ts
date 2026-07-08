@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { detectSearchEngine, isSearchEngine, BUILT_IN_ENGINES } from '../helpers/search-engines';
+import {
+  buildPathnamePattern,
+  BUILT_IN_ENGINES,
+  detectSearchEngine,
+  isSearchEngine,
+  matchEngineConfig,
+} from '../helpers/search-engines';
 
 describe('detectSearchEngine', () => {
   it('detects Google from www URL', () => {
@@ -121,5 +127,40 @@ describe('BUILT_IN_ENGINES', () => {
       expect(engine.hostname).toBeTruthy();
       expect(engine.linkSelector).toBe('a[href]');
     }
+  });
+});
+
+describe('buildPathnamePattern', () => {
+  it('normalizes numeric and long token segments', () => {
+    expect(buildPathnamePattern('/search/123456/abcdefabcdefabcdef')).toBe('/search/:num/:id');
+  });
+});
+
+describe('matchEngineConfig', () => {
+  it('matches hostname-only config', () => {
+    expect(matchEngineConfig({
+      name: 'Any',
+      hostname: 'example.com',
+      containerSelector: '#r',
+      itemSelector: '.i',
+      linkSelector: 'a[href]',
+    }, {
+      hostname: 'www.example.com',
+      pathname: '/anything',
+    })).toBe(true);
+  });
+
+  it('matches pathname-specific config after normalization', () => {
+    expect(matchEngineConfig({
+      name: 'Search',
+      hostname: 'example.com',
+      pathnamePattern: '/search/:num',
+      containerSelector: '#r',
+      itemSelector: '.i',
+      linkSelector: 'a[href]',
+    }, {
+      hostname: 'example.com',
+      pathname: '/search/42',
+    })).toBe(true);
   });
 });

@@ -1,5 +1,10 @@
 import type { SearchEngineConfig } from '../helpers/search-engines';
-import { BUILT_IN_ENGINES } from '../helpers/search-engines';
+import {
+  BUILT_IN_ENGINES,
+  matchEngineConfig,
+  normalizeHostname,
+  rankEngineConfigMatch,
+} from '../helpers/search-engines';
 
 export interface ExtensionStorage {
   urls: string[];
@@ -139,18 +144,47 @@ export async function removeBlockedSelector(index: number): Promise<void> {
 
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {
   // 禁止添加已在内置列表中的搜索引擎
-  if (BUILT_IN_ENGINES.some((e) => e.hostname === config.hostname)) {
+  if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(config.hostname))) {
     console.log('[SRB] Reject: cannot add built-in engine', config.hostname);
     return;
   }
   const { customEngines } = await get();
-  const existing = customEngines.findIndex((e) => e.hostname === config.hostname);
+  const existing = customEngines.findIndex((e) =>
+    normalizeHostname(e.hostname) === normalizeHostname(config.hostname)
+      && (e.pathnamePattern ?? '') === (config.pathnamePattern ?? ''),
+  );
   if (existing >= 0) {
     customEngines[existing] = config;
     await set({ customEngines });
   } else {
     await set({ customEngines: [...customEngines, config] });
   }
+}
+
+export function findMatchingCustomEngine(
+  customEngines: SearchEngineConfig[],
+  target: { hostname: string; pathname: string },
+): SearchEngineConfig | null {
+  let best: SearchEngineConfig | null = null;
+  let bestRank = -1;
+  for (const engine of customEngines) {
+    const rank = rankEngineConfigMatch(engine, target);
+    if (rank > bestRank) {
+      best = engine;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
+export function hasExactCustomEngine(
+  customEngines: SearchEngineConfig[],
+  target: { hostname: string; pathname: string },
+): boolean {
+  return customEngines.some((engine) =>
+    matchEngineConfig(engine, target)
+    && Boolean(engine.pathnamePattern),
+  );
 }
 
 export async function removeCustomEngine(index: number): Promise<void> {
