@@ -68,6 +68,14 @@ export function injectFloatingBtn(): void {
     }
   }
 
+  // ===== 贴边 =====
+  function snapToEdge(): void {
+    const cx = btn.offsetLeft + BTN_SIZE / 2, sn = cx < window.innerWidth / 2;
+    btn.style.transition = 'left 0.25s ease';
+    btn.style.left = (sn ? MARGIN : window.innerWidth - BTN_SIZE - MARGIN) + 'px';
+    setTimeout(() => btn.style.transition = '', 300);
+  }
+
   // ===== 拖动 =====
   let dragData = { startX: 0, startY: 0, origX: 0, origY: 0, dist: 0 };
   btn.addEventListener('mousedown', (e) => {
@@ -78,18 +86,13 @@ export function injectFloatingBtn(): void {
     if (btn.style.cursor !== 'grabbing') return;
     const dx = e.clientX - dragData.startX, dy = e.clientY - dragData.startY;
     dragData.dist = Math.max(dragData.dist, Math.abs(dx), Math.abs(dy));
-    btn.style.left = Math.max(0, Math.min(window.innerWidth - 40, dragData.origX + dx)) + 'px';
-    btn.style.top = Math.max(0, Math.min(window.innerHeight - 40, dragData.origY + dy)) + 'px';
+    btn.style.left = Math.max(0, Math.min(window.innerWidth - BTN_SIZE, dragData.origX + dx)) + 'px';
+    btn.style.top = Math.max(0, Math.min(window.innerHeight - BTN_SIZE, dragData.origY + dy)) + 'px';
   });
   document.addEventListener('mouseup', () => {
     if (btn.style.cursor !== 'grabbing') return;
     btn.style.cursor = '';
-    if (dragData.dist > 5) {
-      const cx = btn.offsetLeft + 20, sn = cx < window.innerWidth / 2;
-      btn.style.transition = 'left 0.25s ease';
-      btn.style.left = (sn ? 24 : window.innerWidth - 40 - 24) + 'px';
-      setTimeout(() => btn.style.transition = '', 300);
-    }
+    if (dragData.dist > 5) snapToEdge();
   });
 
   // 点击切换弹窗（拖动超过 5px 不触发）
@@ -124,6 +127,17 @@ export function injectFloatingBtn(): void {
   initPos().then(() => {
     btn.appendChild(popup);
     document.body.appendChild(btn);
+    // 可视区域改变后自动贴边
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (!document.getElementById('srb-float-btn')) return;
+        snapToEdge();
+        const left = parseInt(btn.style.left, 10);
+        if (!isNaN(left)) savePos(left, btn.offsetTop);
+      }, 200);
+    });
   });
 }
 
