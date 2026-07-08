@@ -124,7 +124,7 @@ export function injectBlockButton(item: Element, href: string): void {
     const isDomain = t.getAttribute('data-action') === 'domain';
     if (isDomain) await addDomain(domain);
     else await addBlockedUrl(href);
-    await recordBlock();
+    await recordBlock('ad', domain);
     popup.remove();
     btn.remove();
     injectBadge(item, isDomain, !isDomain, href);

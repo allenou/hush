@@ -10,6 +10,9 @@ export interface ExtensionStorage {
   urls: string[];
   blockedUrls: string[];
   blockCount: number;
+  adBlockCount: number;
+  domainBlockCount: number;
+  blockedDomainStats: { domain: string; count: number }[];
   enabled: boolean;
   blockAds: boolean;
   blockSubdomains: boolean;
@@ -29,10 +32,15 @@ export interface BlockStats {
   count: number;
 }
 
+export type BlockRecordType = 'ad' | 'domain' | 'url' | 'selector';
+
 const DEFAULT: ExtensionStorage = {
   urls: [],
   blockedUrls: [],
   blockCount: 0,
+  adBlockCount: 0,
+  domainBlockCount: 0,
+  blockedDomainStats: [],
   enabled: true,
   blockAds: true,
   blockSubdomains: true,
@@ -62,6 +70,7 @@ function freshDefaults(): ExtensionStorage {
     blockedSelectors: [...DEFAULT.blockedSelectors],
     customEngines: [...DEFAULT.customEngines],
     stats: [...DEFAULT.stats],
+    blockedDomainStats: [...DEFAULT.blockedDomainStats],
   };
 }
 
@@ -193,8 +202,8 @@ export async function removeCustomEngine(index: number): Promise<void> {
   await set({ customEngines });
 }
 
-export async function recordBlock(): Promise<void> {
-  const { blockCount, stats } = await get();
+export async function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
+  const { blockCount, adBlockCount, domainBlockCount, stats, blockedDomainStats } = await get();
   const today = new Date().toISOString().slice(0, 10);
   const existing = stats.find((s) => s.date === today);
   if (existing) {
@@ -203,7 +212,31 @@ export async function recordBlock(): Promise<void> {
     stats.push({ date: today, count: 1 });
   }
   const pruned = stats.slice(-30);
-  await set({ blockCount: blockCount + 1, stats: pruned });
+
+  const patch: Partial<ExtensionStorage> = {
+    blockCount: blockCount + 1,
+    stats: pruned,
+  };
+
+  if (type === 'ad') {
+    patch.adBlockCount = (adBlockCount ?? 0) + 1;
+  } else if (type === 'domain') {
+    patch.domainBlockCount = (domainBlockCount ?? 0) + 1;
+  }
+
+  if (domain) {
+    const list = blockedDomainStats ?? [];
+    const existingDomain = list.find((d) => d.domain === domain);
+    if (existingDomain) {
+      existingDomain.count++;
+    } else {
+      list.push({ domain, count: 1 });
+    }
+    list.sort((a, b) => b.count - a.count);
+    patch.blockedDomainStats = list.slice(0, 10);
+  }
+
+  await set(patch);
 }
 
 export async function incrementBlockCount(): Promise<void> {

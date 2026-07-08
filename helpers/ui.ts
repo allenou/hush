@@ -218,9 +218,10 @@ export function injectFloatingBtn(): void {
       return;
     }
 
-    if (action === 'domain') await addDomain(getHostname());
+    const hostname = getHostname();
+    if (action === 'domain') await addDomain(hostname);
     else await addBlockedUrl(window.location.href);
-    await recordBlock();
+    await recordBlock(action === 'domain' ? 'domain' : 'url', hostname);
     popup.style.display = 'none';
     btn.style.opacity = '0.6';
     setTimeout(() => { btn.style.opacity = '1'; }, 1200);

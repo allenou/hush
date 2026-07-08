@@ -43,7 +43,7 @@
   }
 
   function openOptions() {
-    chrome.runtime.openOptionsPage?.();
+    chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
   }
 
   function dayLabel(dateStr: string): string {
@@ -150,7 +150,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
-    background: linear-gradient(135deg, #059669, #047857);
+    background: #0a5532;
     color: #fff;
   }
   .brand {

@@ -7,6 +7,13 @@ export interface SearchEngineConfig {
   linkSelector: string;
 }
 
+export interface SearchRecord {
+  query: string;
+  engineName: string;
+  engineHostname: string;
+  timestamp: number;
+}
+
 export interface EngineInfo {
   name: string;
   hostname: string;
@@ -64,4 +71,28 @@ export function detectSearchEngine(url: string): EngineInfo | null {
 
 export function isSearchEngine(url: string): boolean {
   return detectSearchEngine(url) !== null;
+}
+
+/** 从 URL 中提取搜索关键词 */
+export function extractSearchQuery(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const params = u.searchParams;
+    // Google: q=xxx, Bing: q=xxx, Baidu: wd=xxx or word=xxx, 360: q=xxx
+    return params.get('q') || params.get('wd') || params.get('word') || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 根据搜索引擎和关键词构建搜索 URL */
+export function getSearchUrl(engineHostname: string, query: string): string {
+  const host = normalizeHostname(engineHostname);
+  const q = encodeURIComponent(query);
+  if (host.includes('google')) return `https://www.google.com/search?q=${q}`;
+  if (host.includes('bing')) return `https://www.bing.com/search?q=${q}`;
+  if (host.includes('baidu')) return `https://www.baidu.com/s?wd=${q}`;
+  if (host.includes('so.com')) return `https://www.so.com/s?q=${q}`;
+  // fallback: assume Google-style
+  return `https://www.google.com/search?q=${q}`;
 }
