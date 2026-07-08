@@ -1,5 +1,5 @@
-import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from './storage';
-import { getHostname } from './url';
+import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '../utils/storage';
+import { getHostname } from '../utils/url';
 
 let floatingBtnInjected = false;
 

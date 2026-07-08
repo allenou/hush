@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectSearchEngine, isSearchEngine, BUILT_IN_ENGINES } from '../utils/search-engines';
+import { detectSearchEngine, isSearchEngine, BUILT_IN_ENGINES } from '../helpers/search-engines';
 
 describe('detectSearchEngine', () => {
   it('detects Google from www URL', () => {

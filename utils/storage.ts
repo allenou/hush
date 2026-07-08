@@ -1,5 +1,5 @@
-import type { SearchEngineConfig } from './search-engines';
-import { BUILT_IN_ENGINES } from './search-engines';
+import type { SearchEngineConfig } from '../helpers/search-engines';
+import { BUILT_IN_ENGINES } from '../helpers/search-engines';
 
 export interface ExtensionStorage {
   urls: string[];

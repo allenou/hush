@@ -1,4 +1,4 @@
-import { addBlockedSelector, removeBlockedSelector, recordBlock, get } from './storage';
+import { addBlockedSelector, removeBlockedSelector, recordBlock, get } from '../utils/storage';
 
 // ========== Module State ==========
 
