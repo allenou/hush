@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { t } from '@/utils/locale-store.svelte';
 
   let {
     show = false,
@@ -40,10 +41,10 @@
     <div class="dialog" role="dialog" aria-labelledby="dialog-title">
       <div class="dialog-header">
         <div>
-          <h2 id="dialog-title" class="card-title">新增规则</h2>
-          <p class="card-desc">输入域名或完整链接地址</p>
+          <h2 id="dialog-title" class="card-title">{t('newRule')}</h2>
+          <p class="card-desc">{t('addRuleDesc')}</p>
         </div>
-        <button class="dialog-close" onclick={() => onClose?.()} aria-label="关闭">
+        <button class="dialog-close" onclick={() => onClose?.()} aria-label={t('close')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M18 6 6 18M6 6l12 12"/>
           </svg>
@@ -55,14 +56,14 @@
           type="text"
           bind:value={localInput}
           onkeydown={handleKeydown}
-          placeholder="输入 example.com 或 https://…"
+          placeholder={t('placeholderDomain')}
         />
-        <button class="btn-primary" onclick={handleAdd}>添加</button>
+        <button class="btn-primary" onclick={handleAdd}>{t('add')}</button>
       </div>
       {#if errorMsg}
         <p class="feedback error">{errorMsg}</p>
       {:else}
-        <p class="feedback hint">域名用于站点级拦截，完整链接用于处理单条固定结果</p>
+        <p class="feedback hint">{t('hintDomainUrl')}</p>
       {/if}
     </div>
   </div>

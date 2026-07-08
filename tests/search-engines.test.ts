@@ -5,7 +5,7 @@ import {
   detectSearchEngine,
   isSearchEngine,
   matchEngineConfig,
-} from '../helpers/search-engines';
+} from '@/helpers/search-engines';
 
 describe('detectSearchEngine', () => {
   it('detects Google from www URL', () => {

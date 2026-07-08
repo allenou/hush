@@ -1,5 +1,5 @@
 import { defineBackground } from 'wxt/utils/define-background';
-import { get } from '../utils/storage';
+import { get } from '@/utils/storage';
 
 async function updateBadge(): Promise<void> {
   const { blockCount } = await get();

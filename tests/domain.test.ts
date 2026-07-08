@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractDomain } from '../utils/domain';
+import { extractDomain } from '@/utils/domain';
 
 describe('extractDomain', () => {
   it('extracts domain from standard URL', () => {

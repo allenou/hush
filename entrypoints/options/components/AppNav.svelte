@@ -1,8 +1,16 @@
 <script lang="ts">
-  import { TABS } from '../../../constants';
-  import type { TabId } from '../../../constants';
+  import { TABS } from '@/constants';
+  import type { TabId } from '@/constants';
+  import { t } from '@/utils/locale-store.svelte';
 
   let { activeTab = 'dashboard' as TabId, onTabChange } = $props<{ activeTab: TabId; onTabChange?: (tab: TabId) => void }>();
+
+  let tabLabel = $derived<Record<TabId, string>>({
+    dashboard: t('tabDashboard'),
+    rules: t('tabRules'),
+    search: t('tabSearch'),
+    method: t('tabSettings'),
+  });
 
   function switchTab(tab: TabId) {
     onTabChange?.(tab);
@@ -20,15 +28,15 @@
         <span class="brand-label">SearchKit</span>
       </div>
       <div class="nav-links">
-        {#each TABS as { id, label }}
-          <button class="nav-link" class:active={activeTab === id} onclick={() => switchTab(id)}>{label}</button>
+        {#each TABS as id}
+          <button class="nav-link" class:active={activeTab === id} onclick={() => switchTab(id)}>{tabLabel[id]}</button>
         {/each}
       </div>
     </div>
     <div class="nav-right">
       <span class="rule-badge">
         <span class="badge-dot"></span>
-        已启用
+        {t('enabled')}
       </span>
     </div>
   </div>

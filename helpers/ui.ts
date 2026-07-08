@@ -1,5 +1,6 @@
-import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '../utils/storage';
-import { getHostname } from '../utils/url';
+import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '@/utils/storage';
+import { getHostname } from '@/utils/url';
+import { t } from '@/utils/i18n';
 
 let floatingBtnInjected = false;
 
@@ -79,15 +80,15 @@ export function injectFloatingBtn(): void {
   img.style.pointerEvents = 'none';
   img.alt = '';
   btn.appendChild(img);
-  btn.title = '搜索结果标记工具';
+  btn.title = t('floatBtnTitle');
 
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
   popup.innerHTML =
-    '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取标记</button>' +
-    '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 标记此域名</button>' +
-    '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 标记此链接</button>';
+    `<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> ${t('pickAction')}</button>` +
+    `<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> ${t('markDomainAction')}</button>` +
+    `<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> ${t('markUrlAction')}</button>`;
   let anchoredSide: FloatSide = 'right';
   let anchoredVertical: FloatVertical = 'bottom';
 
@@ -276,5 +277,5 @@ export function updateCollapseBar(): void {
     bar.style.display = display;
     _lastCollapseDisplay = display;
   }
-  bar.textContent = '🚫 已标记 ' + count + ' 个低质结果';
+  bar.textContent = '🚫 ' + t('markedResults', String(count));
 }

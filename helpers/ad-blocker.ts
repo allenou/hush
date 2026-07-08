@@ -1,6 +1,7 @@
 import type { SearchEngineConfig } from './search-engines';
-import { removeBlockedItem, addDomain, addBlockedUrl, recordBlock } from '../utils/storage';
+import { removeBlockedItem, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
 import { updateCollapseBar } from './ui';
+import { t } from '@/utils/i18n';
 
 // ========== Module State ==========
 
@@ -89,7 +90,7 @@ export function injectBlockButton(item: Element, href: string): void {
   const btn = document.createElement('button');
   btn.className = 'srb-block-btn';
   btn.textContent = '⊕';
-  btn.title = '标记此结果';
+  btn.title = t('markResult');
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
 
   const popup = document.createElement('div');
@@ -98,12 +99,12 @@ export function injectBlockButton(item: Element, href: string): void {
     const u = new URL(href);
     const isRoot = u.pathname === '/' && !u.hash && !u.search;
     popup.innerHTML = isRoot
-      ? '<button class="srb-opt" data-action="domain">🌐 屏蔽此域名</button>'
-      : '<button class="srb-opt" data-action="url">🔗 屏蔽此链接</button>';
+      ? `<button class="srb-opt" data-action="domain">🌐 ${t('blockDomain')}</button>`
+      : `<button class="srb-opt" data-action="url">🔗 ${t('blockUrl')}</button>`;
   } catch {
     popup.innerHTML =
-      '<button class="srb-opt" data-action="domain">🌐 标记此域名</button>' +
-      '<button class="srb-opt" data-action="url">🔗 标记此链接</button>';
+      `<button class="srb-opt" data-action="domain">🌐 ${t('markDomain')}</button>` +
+      `<button class="srb-opt" data-action="url">🔗 ${t('markUrl')}</button>`;
   }
 
   item.addEventListener('mouseenter', () => { btn.style.display = 'flex'; });
@@ -143,11 +144,11 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
   const badge = document.createElement('div');
   badge.className = 'srb-blocked-badge';
   if (domainMatch) {
-    badge.textContent = '🌐 域名命中';
-    badge.title = '此域名已被屏蔽';
+    badge.textContent = `🌐 ${t('domainHit')}`;
+    badge.title = t('domainBlocked');
   } else {
-    badge.textContent = '🔗 链接命中';
-    badge.title = '此链接已被屏蔽';
+    badge.textContent = `🔗 ${t('urlHit')}`;
+    badge.title = t('urlBlocked');
   }
 
   // Hover 时在 badge 正上方显示取消标记小 badge
@@ -168,7 +169,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
   }
 
   if (di >= 0) {
-    cancelBadges.push(makeCancelBadge('🌐 取消标记', async () => {
+    cancelBadges.push(makeCancelBadge(t('cancelDomain'), async () => {
       await removeBlockedItem('domain', di);
       mask.remove();
       badge.remove();
@@ -177,15 +178,15 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
     }));
   }
   if (ui >= 0) {
-    cancelBadges.push(makeCancelBadge('🔗 取消标记', async () => {
+    cancelBadges.push(makeCancelBadge(t('cancelUrl'), async () => {
       await removeBlockedItem('url', ui);
       if (di < 0) {
         mask.remove();
         badge.remove();
         cancelBadges.forEach((b) => b.remove());
       } else {
-        badge.textContent = '🌐 域名命中';
-        badge.title = '此域名已被屏蔽';
+        badge.textContent = `🌐 ${t('domainHit')}`;
+        badge.title = t('domainBlocked');
         // 移除对应的取消链接 badge
         cancelBadges.pop()?.remove();
       }
@@ -226,8 +227,8 @@ export function injectAdBadge(item: Element, href: string): void {
 
   const badge = document.createElement('div');
   badge.className = 'srb-ad-badge';
-  badge.textContent = '📢 广告';
-  badge.title = '点击取消屏蔽（临时）';
+  badge.textContent = `📢 ${t('adBadge')}`;
+  badge.title = t('adBadgeTitle');
   badge.addEventListener('click', () => {
     mask.remove();
     badge.remove();
@@ -387,8 +388,8 @@ export function applyBlockedSelectors(): void {
         el.appendChild(mask);
         const badge = document.createElement('div');
         badge.className = 'srb-blocked-badge';
-        badge.textContent = '🎯 元素命中';
-        badge.title = '此元素已被标记';
+        badge.textContent = `🎯 ${t('elementHit')}`;
+        badge.title = t('elementBlocked');
         badge.setAttribute('data-entry', entry);
         el.appendChild(badge);
       });

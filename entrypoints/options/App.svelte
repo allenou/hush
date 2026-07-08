@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { BlockItem, SearchRecord } from '../../utils/storage';
+  import type { BlockItem, SearchRecord } from '@/utils/storage';
   import {
     addBlockedUrl,
     addDomain,
@@ -11,9 +11,11 @@
     setBlockSubdomains,
     setRecordSearchHistory,
     subscribe,
-  } from '../../utils/storage';
-  import { getSearchUrl } from '../../helpers/search-engines';
-  import type { TabId, RuleFilter } from '../../constants';
+  } from '@/utils/storage';
+  import { getSearchUrl } from '@/helpers/search-engines';
+  import type { TabId, RuleFilter } from '@/constants';
+  import { t, initLocale, setLocale as setAppLocale, getLocale } from '@/utils/locale-store.svelte';
+  import { setStoredLocale } from '@/utils/storage';
 
   import AppNav from './components/AppNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
@@ -66,8 +68,18 @@
     if (e.key === 'Escape' && showAddDialog) closeAddDialog();
   }
 
+  async function handleLocaleChange(newLocale: string) {
+    await setAppLocale(newLocale);
+    await setStoredLocale(newLocale);
+  }
+
   async function loadData() {
     const storage = await get();
+    if (!storage.locale) {
+      await initLocale();
+    } else {
+      await initLocale(storage.locale);
+    }
     blockedItems = await getAllBlocked();
     blockAds = storage.blockAds ?? false;
     blockSubdomains = storage.blockSubdomains ?? true;
@@ -89,20 +101,20 @@
     try {
       const { urls, blockedUrls } = await get();
       if (value.startsWith('http') && new URL(value).pathname !== '/') {
-        if (blockedUrls.includes(value)) { errorMsg = '该链接已存在于规则中心'; return; }
+        if (blockedUrls.includes(value)) { errorMsg = t('errorDuplicateUrl'); return; }
         await addBlockedUrl(value);
       } else {
         const domain = value.startsWith('http')
           ? new URL(value).hostname.replace(/^www\./, '')
           : value.replace(/^www\./, '');
         new URL(domain.startsWith('http') ? domain : `https://${domain}`);
-        if (urls.includes(domain)) { errorMsg = '该域名已存在于规则中心'; return; }
+        if (urls.includes(domain)) { errorMsg = t('errorDuplicateDomain'); return; }
         await addDomain(domain);
       }
       await loadData();
       closeAddDialog();
     } catch {
-      errorMsg = '请输入有效的域名或完整 URL';
+      errorMsg = t('errorInvalidInput');
     }
   }
 
@@ -127,9 +139,9 @@
   }
 
   function formatTypeLabel(type: BlockItem['type']): string {
-    if (type === 'domain') return '域名';
-    if (type === 'url') return '链接';
-    return '选择器';
+    if (type === 'domain') return t('typeDomain');
+    if (type === 'url') return t('typeUrl');
+    return t('typeSelector');
   }
 
   function matchesQuery(item: BlockItem, query: string): boolean {
@@ -194,6 +206,8 @@
     {:else}
       <SettingsTab
         {blockAds} {blockSubdomains} {recordSearchHistory}
+        currentLocale={getLocale()}
+        onLocaleChange={handleLocaleChange}
         onToggleAdBlock={toggleAdBlock}
         onToggleSubdomain={toggleSubdomainBlock}
         onToggleRecordSearch={toggleRecordSearch}

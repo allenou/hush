@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractResultUrl, isSearchEngineRedirect } from '../utils/url';
+import { extractResultUrl, isSearchEngineRedirect } from '@/utils/url';
 
 /** Helper: mock window.location for tests */
 function mockLocation(href: string): void {

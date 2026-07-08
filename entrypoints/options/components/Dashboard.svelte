@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t, getLocale } from '@/utils/locale-store.svelte';
+
   let {
     totalBlockCount = 0,
     todayBlockCount = 0,
@@ -15,7 +17,7 @@
 
   function dayLabel(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('zh-CN', { weekday: 'short' });
+    return d.toLocaleDateString(getLocale(), { weekday: 'short' });
   }
 </script>
 
@@ -28,12 +30,12 @@
       </svg>
     </div>
     <div class="dash-hero-body">
-      <span class="dash-hero-label">累计拦截</span>
+      <span class="dash-hero-label">{t('totalBlocked')}</span>
       <strong class="dash-hero-number">{totalBlockCount}</strong>
       <span class="dash-hero-sub">
-        今日 <strong>{todayBlockCount}</strong> 次
+        {t('today')} <strong>{todayBlockCount}</strong> {t('times')}
         <span class="dash-hero-divider">·</span>
-        规则 <strong>{totalCount}</strong> 条
+        {t('rulesCount')} <strong>{totalCount}</strong>
       </span>
     </div>
   </section>
@@ -42,39 +44,39 @@
   <div class="dash-cols">
     <section class="dash-card">
       <div class="dash-card-heading">
-        <h2 class="card-title">拦截构成</h2>
-        <p class="card-desc">不同类型拦截占比</p>
+        <h2 class="card-title">{t('blockBreakdown')}</h2>
+        <p class="card-desc">{t('breakdownDesc')}</p>
       </div>
       <div class="breakdown-bar">
         {#if adPct > 0}
-          <div class="breakdown-segment ad" style="flex: {adPct}" title="广告 {adPct}%">
-            <span class="breakdown-seg-label">广告 {adPct}%</span>
+          <div class="breakdown-segment ad" style="flex: {adPct}" title="{t('adLabel')} {adPct}%">
+            <span class="breakdown-seg-label">{t('adLabel')} {adPct}%</span>
           </div>
         {/if}
         {#if domainPct > 0}
-          <div class="breakdown-segment domain" style="flex: {domainPct}" title="域名 {domainPct}%">
-            <span class="breakdown-seg-label">域名 {domainPct}%</span>
+          <div class="breakdown-segment domain" style="flex: {domainPct}" title="{t('domainLabel')} {domainPct}%">
+            <span class="breakdown-seg-label">{t('domainLabel')} {domainPct}%</span>
           </div>
         {/if}
         {#if otherPct > 0}
-          <div class="breakdown-segment other" style="flex: {otherPct}" title="其他 {otherPct}%"></div>
+          <div class="breakdown-segment other" style="flex: {otherPct}" title="{t('otherLabel')} {otherPct}%"></div>
         {/if}
       </div>
       <div class="breakdown-legend">
-        <span class="legend-item"><span class="legend-dot ad"></span>广告 {adBlockCount} 次</span>
-        <span class="legend-item"><span class="legend-dot domain"></span>域名 {domainBlockCount} 次</span>
-        <span class="legend-item"><span class="legend-dot other"></span>其他 {Math.max(0, totalBlockCount - adBlockCount - domainBlockCount)} 次</span>
+        <span class="legend-item"><span class="legend-dot ad"></span>{t('adLabel')} {adBlockCount} {t('times')}</span>
+        <span class="legend-item"><span class="legend-dot domain"></span>{t('domainLabel')} {domainBlockCount} {t('times')}</span>
+        <span class="legend-item"><span class="legend-dot other"></span>{t('otherLabel')} {Math.max(0, totalBlockCount - adBlockCount - domainBlockCount)} {t('times')}</span>
       </div>
     </section>
 
     <section class="dash-card">
       <div class="dash-card-heading">
-        <h2 class="card-title">近 7 天趋势</h2>
-        <p class="card-desc">每日拦截次数</p>
+        <h2 class="card-title">{t('weeklyTrend')}</h2>
+        <p class="card-desc">{t('dailyBlocks')}</p>
       </div>
       <div class="chart">
         {#each weekStats as day}
-          <div class="chart-bar-group" title="{day.date}: {day.count} 次">
+          <div class="chart-bar-group" title="{day.date}: {day.count} {t('times')}">
             <div class="chart-bar" style="height: {Math.max((day.count / maxCount) * 80, 3)}px;" class:zero={day.count === 0}></div>
             <span class="chart-bar-label">{dayLabel(day.date)}</span>
           </div>
@@ -86,11 +88,11 @@
   <!-- TOP DOMAINS -->
   <section class="dash-card">
     <div class="dash-card-heading">
-      <h2 class="card-title">被拦截最多的域名</h2>
-      <p class="card-desc">按拦截次数排序</p>
+      <h2 class="card-title">{t('topDomains')}</h2>
+      <p class="card-desc">{t('topDomainsDesc')}</p>
     </div>
     {#if topBlockedDomains.length === 0}
-      <div class="dash-empty">暂无数据</div>
+      <div class="dash-empty">{t('noData')}</div>
     {:else}
       <div class="dash-domain-list">
         {#each topBlockedDomains as item, i}

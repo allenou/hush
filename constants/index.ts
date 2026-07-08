@@ -1,28 +1,18 @@
 /** 页面 Tab 定义 */
 export type TabId = 'dashboard' | 'rules' | 'search' | 'method';
 
-export const TABS: { id: TabId; label: string }[] = [
-  { id: 'dashboard', label: '概览' },
-  { id: 'rules', label: '规则' },
-  { id: 'search', label: '搜索记录' },
-  { id: 'method', label: '设置' },
-];
+export const TABS: TabId[] = ['dashboard', 'rules', 'search', 'method'];
 
 /** 规则筛选类型 */
 export type RuleFilter = 'all' | 'domain' | 'url' | 'selector';
 
-export const RULE_FILTERS: { id: RuleFilter; label: string }[] = [
-  { id: 'all', label: '全部' },
-  { id: 'domain', label: '域名' },
-  { id: 'url', label: '链接' },
-  { id: 'selector', label: '选择器' },
-];
+export const RULE_FILTERS: RuleFilter[] = ['all', 'domain', 'url', 'selector'];
 
 export const RULE_FILTER_LABEL: Record<RuleFilter, string> = {
-  all: '全部',
-  domain: '域名',
-  url: '链接',
-  selector: '选择器',
+  all: 'filterAll',
+  domain: 'filterDomain',
+  url: 'filterUrl',
+  selector: 'filterSelector',
 };
 
 /** 搜索引擎选项（用于搜索记录下拉切换） */
@@ -41,4 +31,4 @@ export const SEARCH_ENGINES: EngineOption[] = [
 
 export const SEARCH_ENGINE_MAP = new Map(SEARCH_ENGINES.map((e) => [e.hostname, e]));
 
-export { formatRelativeTime, MINUTE_MS, HOUR_MS, DAY_MS } from '../utils/time';
+export { formatRelativeTime, MINUTE_MS, HOUR_MS, DAY_MS } from '@/utils/time';

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { SearchRecord } from '../../../utils/storage';
-  import { SEARCH_ENGINES } from '../../../constants';
-  import { formatRelativeTime } from '../../../utils/time';
+  import type { SearchRecord } from '@/utils/storage';
+  import { SEARCH_ENGINES } from '@/constants';
+  import { formatRelativeTime } from '@/utils/time';
+  import { t } from '@/utils/locale-store.svelte';
 
   let { searchHistory = [], onSearch } = $props<{
     searchHistory: SearchRecord[];
@@ -25,8 +26,8 @@
 
 <section class="search-section">
   <div class="search-section-heading">
-    <h2 class="card-title">搜索记录</h2>
-    <p class="card-desc">所有搜索引擎的搜索历史，点击可重新搜索</p>
+    <h2 class="card-title">{t('searchHistory')}</h2>
+    <p class="card-desc">{t('searchHistoryDesc')}</p>
   </div>
 
   {#if searchHistory.length === 0}
@@ -37,16 +38,16 @@
           <path d="m21 21-4.35-4.35"/>
         </svg>
       </div>
-      <h3>暂无搜索记录</h3>
-      <p>使用搜索引擎搜索后，记录将显示在此处</p>
+      <h3>{t('noHistory')}</h3>
+      <p>{t('noHistoryDesc')}</p>
     </div>
   {:else}
     <div class="search-table" role="table">
       <div class="search-table-head" role="row">
-        <span>搜索关键词</span>
-        <span>引擎</span>
-        <span>时间</span>
-        <span>操作</span>
+        <span>{t('keywordColumn')}</span>
+        <span>{t('engineColumn')}</span>
+        <span>{t('timeColumn')}</span>
+        <span>{t('actionColumn')}</span>
       </div>
       {#each searchHistory as record, i}
         <div class="search-table-row" role="row">
@@ -62,9 +63,9 @@
           </span>
           <span class="search-table-time">{formatRelativeTime(record.timestamp)}</span>
           <span class="search-table-actions">
-            <button class="btn-ghost" onclick={() => doSearch(record)} title={`用 ${record.engineName} 搜索`}>搜索</button>
+            <button class="btn-ghost" onclick={() => doSearch(record)}>{t('searchAction')}</button>
             <div class="search-switch-wrapper" role="presentation" onclick={(e) => { e.stopPropagation(); toggleEngineMenu(i); }}>
-              <button class="search-switch-btn" aria-label="切换搜索引擎">
+              <button class="search-switch-btn" aria-label={t('switchEngine')}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>

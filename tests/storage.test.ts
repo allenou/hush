@@ -46,7 +46,7 @@ import {
   addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
   recordBlock, incrementBlockCount,
   setEnabled, subscribe,
-} from '../utils/storage';
+} from '@/utils/storage';
 
 beforeEach(() => resetStore());
 

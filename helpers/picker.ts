@@ -1,4 +1,5 @@
-import { addBlockedSelector, recordBlock } from '../utils/storage';
+import { addBlockedSelector, recordBlock } from '@/utils/storage';
+import { t } from '@/utils/i18n';
 
 // ========== Module State ==========
 
@@ -189,13 +190,13 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
 
   overlay.innerHTML =
     '<div class="srb-picker-confirm-box">' +
-    '<div class="srb-picker-confirm-title">标记此元素</div>' +
-    '<div style="margin-bottom:8px;color:#666;">域名：<code class="srb-picker-confirm-code">' + currentHost + '</code></div>' +
-    '<div style="margin-bottom:8px;color:#666;">选择器：<code class="srb-picker-confirm-code" style="word-break:break-all;">' + escSelector + '</code></div>' +
-    '<div style="margin-bottom:16px;color:#666;">内容预览：<span style="color:#333;">' + escPreview + '</span></div>' +
+    '<div class="srb-picker-confirm-title">' + t('markElement') + '</div>' +
+    '<div style="margin-bottom:8px;color:#666;">' + t('targetDomain') + ' <code class="srb-picker-confirm-code">' + currentHost + '</code></div>' +
+    '<div style="margin-bottom:8px;color:#666;">' + t('targetSelector') + ' <code class="srb-picker-confirm-code" style="word-break:break-all;">' + escSelector + '</code></div>' +
+    '<div style="margin-bottom:16px;color:#666;">' + t('contentPreview') + ' <span style="color:#333;">' + escPreview + '</span></div>' +
     '<div class="srb-picker-confirm-actions">' +
-    '<button class="srb-picker-cancel">取消</button>' +
-    '<button class="srb-picker-ok">标记</button>' +
+    '<button class="srb-picker-cancel">' + t('cancel') + '</button>' +
+    '<button class="srb-picker-ok">' + t('mark') + '</button>' +
     '</div>' +
     '</div>';
 
@@ -212,8 +213,8 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
       el.appendChild(mask);
       const badge = document.createElement('div');
       badge.className = 'srb-blocked-badge';
-      badge.textContent = '🎯 元素命中';
-      badge.title = '此元素已被标记';
+      badge.textContent = '🎯 ' + t('elementHit');
+      badge.title = t('elementBlocked');
       el.appendChild(badge);
       overlay.remove();
     } catch (err) {
@@ -255,7 +256,7 @@ export function activatePicker(getHostnameFn: () => string): void {
 
   tooltip = document.createElement('div');
   tooltip.className = 'srb-picker-tooltip';
-  tooltip.textContent = '点击页面元素选择要标记的内容 · Esc 退出';
+  tooltip.textContent = t('pickerTooltip');
   document.body.appendChild(tooltip);
 
   highlight = document.createElement('div');

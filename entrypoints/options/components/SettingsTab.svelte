@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '@/utils/locale-store.svelte';
+
   let {
     blockAds = false,
     blockSubdomains = true,
@@ -6,6 +8,8 @@
     onToggleAdBlock,
     onToggleSubdomain,
     onToggleRecordSearch,
+    currentLocale = 'zh_CN',
+    onLocaleChange,
   }: {
     blockAds?: boolean;
     blockSubdomains?: boolean;
@@ -13,7 +17,14 @@
     onToggleAdBlock?: () => void;
     onToggleSubdomain?: () => void;
     onToggleRecordSearch?: () => void;
+    currentLocale?: string;
+    onLocaleChange?: (locale: string) => void;
   } = $props();
+
+  const LOCALE_OPTIONS = [
+    { value: 'zh_CN', label: '中文' },
+    { value: 'en', label: 'English' },
+  ];
 
   function handleToggleAdBlock() {
     onToggleAdBlock?.();
@@ -26,30 +37,34 @@
   function handleToggleRecordSearch() {
     onToggleRecordSearch?.();
   }
+
+  function handleLocaleSelect(locale: string) {
+    onLocaleChange?.(locale);
+  }
 </script>
 
 <div class="method-card">
   <div class="method-heading">
-    <h2 class="card-title">匹配方式</h2>
-    <p class="card-desc">控制规则匹配行为，按需开启或关闭</p>
+    <h2 class="card-title">{t('matchingMethod')}</h2>
+    <p class="card-desc">{t('matchingDesc')}</p>
   </div>
   <div class="toggle-list">
     <div class="toggle-item">
       <div class="toggle-copy">
-        <strong>广告标记</strong>
-        <p>自动识别搜索结果中的广告并标记</p>
+        <strong>{t('adBlockLabel')}</strong>
+        <p>{t('adBlockDesc')}</p>
       </div>
-      <label class="toggle" aria-label="切换广告标记">
+      <label class="toggle" aria-label={t('toggleAdBlock')}>
         <input type="checkbox" checked={blockAds} onchange={handleToggleAdBlock} />
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
       </label>
     </div>
     <div class="toggle-item">
       <div class="toggle-copy">
-        <strong>子域名匹配</strong>
-        <p>主域名规则自动覆盖子域名</p>
+        <strong>{t('subdomainLabel')}</strong>
+        <p>{t('subdomainDesc')}</p>
       </div>
-      <label class="toggle" aria-label="切换子域名匹配">
+      <label class="toggle" aria-label={t('toggleSubdomain')}>
         <input type="checkbox" checked={blockSubdomains} onchange={handleToggleSubdomain} />
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
       </label>
@@ -59,20 +74,38 @@
 
 <div class="method-card">
   <div class="method-heading">
-    <h2 class="card-title">搜索记录</h2>
-    <p class="card-desc">记录搜索关键词和使用的搜索引擎</p>
+    <h2 class="card-title">{t('searchRecordLabel')}</h2>
+    <p class="card-desc">{t('searchRecordDesc')}</p>
   </div>
   <div class="toggle-list">
     <div class="toggle-item">
       <div class="toggle-copy">
-        <strong>记录搜索历史</strong>
-        <p>关闭后不再记录新的搜索关键词</p>
+        <strong>{t('recordSearchLabel')}</strong>
+        <p>{t('recordSearchDesc')}</p>
       </div>
-      <label class="toggle" aria-label="切换搜索记录">
+      <label class="toggle" aria-label={t('toggleRecordSearch')}>
         <input type="checkbox" checked={recordSearchHistory} onchange={handleToggleRecordSearch} />
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
       </label>
     </div>
+  </div>
+</div>
+
+<div class="method-card">
+  <div class="method-heading">
+    <h2 class="card-title">Language / 语言</h2>
+    <p class="card-desc">{t('languageDesc')}</p>
+  </div>
+  <div class="locale-selector">
+    {#each LOCALE_OPTIONS as { value, label }}
+      <button
+        class="locale-btn"
+        class:active={currentLocale === value}
+        onclick={() => handleLocaleSelect(value)}
+      >
+        {label}
+      </button>
+    {/each}
   </div>
 </div>
 
@@ -168,5 +201,33 @@
   }
   .toggle input:checked + .toggle-track .toggle-thumb {
     transform: translateX(18px);
+  }
+
+  .locale-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .locale-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid #dde6e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #18211d;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .locale-btn:hover {
+    border-color: #0d8f66;
+    background: #f0fdf4;
+  }
+  .locale-btn.active {
+    border-color: #0d8f66;
+    background: #0d8f66;
+    color: #fff;
   }
 </style>

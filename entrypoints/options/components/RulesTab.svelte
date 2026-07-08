@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { RULE_FILTERS, RULE_FILTER_LABEL } from '../../../constants';
-  import type { RuleFilter } from '../../../constants';
+  import { RULE_FILTERS, RULE_FILTER_LABEL } from '@/constants';
+  import type { RuleFilter } from '@/constants';
+  import { t } from '@/utils/locale-store.svelte';
 
   let {
     filteredItems = [],
@@ -20,8 +21,16 @@
     onRemove?: (item: any) => void;
   } = $props();
 
+  let filterLabel = $derived.by(() => {
+    const map: Record<string, string> = {};
+    for (const f of RULE_FILTERS) {
+      map[f] = t(RULE_FILTER_LABEL[f]);
+    }
+    return map;
+  });
+
   function formatTypeLabel(type: string): string {
-    return RULE_FILTER_LABEL[type as RuleFilter] ?? type;
+    return t(RULE_FILTER_LABEL[type as RuleFilter]) ?? type;
   }
 
   function handleAddRule() {
@@ -40,22 +49,22 @@
 <section class="rules-section">
   <div class="rules-bar">
     <div>
-      <h2 class="card-title">已保存规则</h2>
-      <p class="card-desc">管理所有屏蔽规则</p>
+      <h2 class="card-title">{t('savedRules')}</h2>
+      <p class="card-desc">{t('rulesDesc')}</p>
     </div>
     <div class="rules-actions">
       <input
         class="search-box"
         type="search"
         bind:value={searchQuery}
-        placeholder="搜索规则…"
+        placeholder={t('searchRules')}
       />
       <div class="filter-tabs" role="tablist">
-        {#each RULE_FILTERS as { id, label }}
-          <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{label}</button>
+        {#each RULE_FILTERS as id}
+          <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{filterLabel[id]}</button>
         {/each}
       </div>
-      <button class="add-trigger" onclick={handleAddRule}>+ 添加规则</button>
+      <button class="add-trigger" onclick={handleAddRule}>{t('addRule')}</button>
     </div>
   </div>
 
@@ -67,20 +76,20 @@
           <polyline points="12 6 12 12 16 14"/>
         </svg>
       </div>
-      <h3>还没有任何规则</h3>
-      <p>点击"+ 添加规则"后，规则将显示在此处</p>
+      <h3>{t('noRulesYet')}</h3>
+      <p>{t('noRulesYetDesc')}</p>
     </div>
   {:else if filteredItems.length === 0}
     <div class="empty">
-      <h3>没有匹配结果</h3>
-      <p>尝试切换筛选类型或调整搜索关键词</p>
+      <h3>{t('noMatch')}</h3>
+      <p>{t('noMatchDesc')}</p>
     </div>
   {:else}
     <div class="table" role="table">
       <div class="table-head" role="row">
-        <span>类型</span>
-        <span>内容</span>
-        <span>操作</span>
+        <span>{t('typeColumn')}</span>
+        <span>{t('contentColumn')}</span>
+        <span>{t('actionColumn')}</span>
       </div>
       {#each filteredItems as item}
         <div class="table-row" role="row">
@@ -93,7 +102,7 @@
             <code>{item.value}</code>
           </span>
           <span class="action-cell">
-            <button class="btn-ghost" onclick={() => handleRemove(item)}>删除</button>
+            <button class="btn-ghost" onclick={() => handleRemove(item)}>{t('delete')}</button>
           </span>
         </div>
       {/each}

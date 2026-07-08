@@ -1,19 +1,20 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { BUILT_IN_ENGINES, normalizeHostname, detectSearchEngine, extractSearchQuery } from '../helpers/search-engines';
-import type { SearchEngineConfig } from '../helpers/search-engines';
-import { addCustomEngine, findMatchingCustomEngine, get, subscribe, recordSearch } from '../utils/storage';
-import { injectStyles } from '../utils/styles';
-import { activatePicker, deactivatePicker } from '../helpers/picker';
-import { getHostname, extractResultUrl } from '../utils/url';
-import { autoDetectSearchResults } from '../helpers/detector';
-import { injectFloatingBtn, injectCollapseBar } from '../helpers/ui';
+import { BUILT_IN_ENGINES, normalizeHostname, detectSearchEngine, extractSearchQuery } from '@/helpers/search-engines';
+import type { SearchEngineConfig } from '@/helpers/search-engines';
+import { addCustomEngine, findMatchingCustomEngine, get, subscribe, recordSearch } from '@/utils/storage';
+import { injectStyles } from '@/utils/styles';
+import { activatePicker, deactivatePicker } from '@/helpers/picker';
+import { getHostname, extractResultUrl } from '@/utils/url';
+import { autoDetectSearchResults } from '@/helpers/detector';
+import { injectFloatingBtn, injectCollapseBar } from '@/helpers/ui';
 import {
   initBlocker, syncBlockerState,
   scanForAds, scanResults,
   applyBlockedSelectors, checkSavedSelectors,
   restoreBlockedSelectors, clearAllMarkers,
   setOnContainerMissing,
-} from '../helpers/ad-blocker';
+} from '@/helpers/ad-blocker';
+import { initLocale } from '@/utils/i18n';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -97,6 +98,12 @@ export default defineContentScript({
     // ===== 入口 =====
 
     async function init(): Promise<void> {
+      const storage = await get();
+      if (storage.locale) {
+        await initLocale(storage.locale);
+      } else {
+        await initLocale();
+      }
       const hostname = getHostname();
       injectStyles();
       injectFloatingBtn();

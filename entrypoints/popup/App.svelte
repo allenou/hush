@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { get, setEnabled, subscribe } from '../../utils/storage';
-  import { extractDomain } from '../../utils/domain';
+  import { get, setEnabled, subscribe } from '@/utils/storage';
+  import { extractDomain } from '@/utils/domain';
+  import { t, getLocale, initLocale } from '@/utils/locale-store.svelte';
   import { onMount } from 'svelte';
 
   let blockCount = 0;
@@ -12,6 +13,11 @@
   async function loadData() {
     const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
     const storage = await get();
+    if (storage.locale) {
+      await initLocale(storage.locale);
+    } else {
+      await initLocale();
+    }
     blockCount = storage.blockCount;
     enabled = storage.enabled;
     stats = buildWeekStats(storage.stats ?? []);
@@ -48,7 +54,7 @@
 
   function dayLabel(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('zh-CN', { weekday: 'short' });
+    return d.toLocaleDateString(getLocale(), { weekday: 'short' });
   }
 
   $: maxCount = Math.max(...stats.map(s => s.count), 1);
@@ -66,7 +72,7 @@
       <span class="brand-icon">🛡</span>
       <span class="brand-text">SearchKit</span>
     </div>
-    <label class="toggle" aria-label="{enabled ? '禁用' : '启用'}标记">
+    <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
       <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
       <span class="toggle-track">
         <span class="toggle-thumb"></span>
@@ -78,11 +84,11 @@
   <div class="stats-grid">
     <div class="stat-card">
       <span class="stat-value">{blockCount}</span>
-      <span class="stat-label">全部拦截</span>
+      <span class="stat-label">{t('totalBlockedLabel')}</span>
     </div>
     <div class="stat-card">
       <span class="stat-value">{todayCount}</span>
-      <span class="stat-label">今日</span>
+      <span class="stat-label">{t('todayLabel')}</span>
     </div>
   </div>
 
@@ -90,20 +96,20 @@
   <div class="site-status" class:blocked={currentSiteBlocked}>
     {#if currentSiteBlocked}
       <span class="status-icon">🔴</span>
-      <span>当前网站已被标记</span>
+      <span>{t('siteBlocked')}</span>
     {:else}
       <span class="status-icon">🟢</span>
-      <span>当前网站正常</span>
+      <span>{t('siteNormal')}</span>
     {/if}
   </div>
 
   <!-- ===== Chart (7-day) ===== -->
   {#if stats.length > 0}
     <div class="chart-section">
-      <span class="chart-label">近 7 天趋势</span>
+      <span class="chart-label">{t('weeklyTrend')}</span>
       <div class="chart">
         {#each stats as day}
-          <div class="bar-wrapper" title="{day.date}: {day.count} 次">
+          <div class="bar-wrapper" title="{day.date}: {day.count} {t('times')}">
             <div
               class="bar"
               style="height: {Math.max((day.count / maxCount) * 48, 2)}px;"
@@ -118,7 +124,7 @@
 
   <!-- ===== Footer ===== -->
   <footer>
-    <button class="settings-btn" onclick={openOptions} aria-label="打开设置">
+    <button class="settings-btn" onclick={openOptions} aria-label={t('openSettings')}>
       <span>⚙️</span>
     </button>
     <span class="version">v1.0</span>

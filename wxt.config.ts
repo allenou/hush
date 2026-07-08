@@ -6,6 +6,7 @@ export default defineConfig({
     name: 'SearchKit',
     description: 'Search result management — block, mark ads, track search history',
     version: '1.0.0',
+    default_locale: 'en',
     permissions: ['storage', 'activeTab'],
     host_permissions: ['<all_urls>'],
     action: {

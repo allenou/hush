@@ -1,10 +1,10 @@
-import type { SearchEngineConfig, SearchRecord } from '../helpers/search-engines';
+import type { SearchEngineConfig, SearchRecord } from '@/helpers/search-engines';
 import {
   BUILT_IN_ENGINES,
   matchEngineConfig,
   normalizeHostname,
   rankEngineConfigMatch,
-} from '../helpers/search-engines';
+} from '@/helpers/search-engines';
 
 export interface ExtensionStorage {
   urls: string[];
@@ -21,6 +21,7 @@ export interface ExtensionStorage {
   customEngines: SearchEngineConfig[];
   blockedSelectors: string[];
   stats: BlockStats[];
+  locale?: string;
 }
 
 export interface BlockItem {
@@ -271,4 +272,8 @@ export async function setBlockSubdomains(blockSubdomains: boolean): Promise<void
 
 export async function setRecordSearchHistory(value: boolean): Promise<void> {
   await set({ recordSearchHistory: value });
+}
+
+export async function setStoredLocale(locale: string): Promise<void> {
+  await set({ locale });
 }
