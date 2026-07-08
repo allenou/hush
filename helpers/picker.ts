@@ -1,4 +1,4 @@
-import { addBlockedSelector, removeBlockedSelector, recordBlock, get } from '../utils/storage';
+import { addBlockedSelector, recordBlock } from '../utils/storage';
 
 // ========== Module State ==========
 
@@ -113,26 +113,6 @@ function findBlockTarget(el: Element): Element | null {
   return best;
 }
 
-// ========== Undo Toast ==========
-
-function showUndoToast(fullEntry: string, el: Element): void {
-  const toast = document.createElement('div');
-  toast.className = 'srb-undo-toast';
-  toast.innerHTML = '已标记该元素 <button class="srb-undo-btn">撤销</button>';
-  document.body.appendChild(toast);
-
-  const timer = setTimeout(() => toast.remove(), 5000);
-
-  toast.querySelector('.srb-undo-btn')?.addEventListener('click', async () => {
-    clearTimeout(timer);
-    (el as HTMLElement).style.display = '';
-    const { blockedSelectors: bs } = await get();
-    const idx = bs.indexOf(fullEntry);
-    if (idx >= 0) await removeBlockedSelector(idx);
-    toast.remove();
-  });
-}
-
 // ========== Confirm Dialog ==========
 
 function showPickerConfirm(el: Element, selector: string, currentHost: string): void {
@@ -145,13 +125,13 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
 
   overlay.innerHTML =
     '<div class="srb-picker-confirm-box">' +
-    '<div class="srb-picker-confirm-title">屏蔽此元素</div>' +
+    '<div class="srb-picker-confirm-title">标记此元素</div>' +
     '<div style="margin-bottom:8px;color:#666;">域名：<code class="srb-picker-confirm-code">' + currentHost + '</code></div>' +
     '<div style="margin-bottom:8px;color:#666;">选择器：<code class="srb-picker-confirm-code" style="word-break:break-all;">' + escSelector + '</code></div>' +
     '<div style="margin-bottom:16px;color:#666;">内容预览：<span style="color:#333;">' + escPreview + '</span></div>' +
     '<div class="srb-picker-confirm-actions">' +
     '<button class="srb-picker-cancel">取消</button>' +
-    '<button class="srb-picker-ok">屏蔽</button>' +
+    '<button class="srb-picker-ok">标记</button>' +
     '</div>' +
     '</div>';
 
@@ -160,10 +140,17 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
   overlay.querySelector('.srb-picker-ok')?.addEventListener('click', async () => {
     try {
       const full = currentHost + '||' + selector;
-      (el as HTMLElement).style.display = 'none';
       await addBlockedSelector(full);
       await recordBlock();
-      showUndoToast(full, el);
+      (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
+      const mask = document.createElement('div');
+      mask.className = 'srb-mask';
+      el.appendChild(mask);
+      const badge = document.createElement('div');
+      badge.className = 'srb-blocked-badge';
+      badge.textContent = '🎯 元素命中';
+      badge.title = '此元素已被标记';
+      el.appendChild(badge);
       overlay.remove();
     } catch (err) {
       console.error('[SRB] Failed to block by selector:', err);
@@ -204,7 +191,7 @@ export function activatePicker(getHostnameFn: () => string): void {
 
   tooltip = document.createElement('div');
   tooltip.className = 'srb-picker-tooltip';
-  tooltip.textContent = '点击页面元素选择要屏蔽的内容 · Esc 退出';
+  tooltip.textContent = '点击页面元素选择要标记的内容 · Esc 退出';
   document.body.appendChild(tooltip);
 
   highlight = document.createElement('div');

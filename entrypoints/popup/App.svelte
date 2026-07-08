@@ -64,9 +64,9 @@
   <header>
     <div class="brand">
       <span class="brand-icon">🛡</span>
-      <span class="brand-text">搜索结果屏蔽</span>
+      <span class="brand-text">搜索结果标记</span>
     </div>
-    <label class="toggle" aria-label="{enabled ? '禁用' : '启用'}屏蔽">
+    <label class="toggle" aria-label="{enabled ? '禁用' : '启用'}标记">
       <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
       <span class="toggle-track">
         <span class="toggle-thumb"></span>
@@ -90,7 +90,7 @@
   <div class="site-status" class:blocked={currentSiteBlocked}>
     {#if currentSiteBlocked}
       <span class="status-icon">🔴</span>
-      <span>当前网站已被屏蔽</span>
+      <span>当前网站已被标记</span>
     {:else}
       <span class="status-icon">🟢</span>
       <span>当前网站正常</span>

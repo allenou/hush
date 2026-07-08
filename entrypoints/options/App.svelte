@@ -7,6 +7,7 @@ import {
     get,
     subscribe,
     setBlockAds,
+    setBlockSubdomains,
   } from '../../utils/storage';
   import { onMount } from 'svelte';
 
@@ -14,6 +15,7 @@ import {
   let inputValue = '';
   let errorMsg = '';
   let blockAds = false;
+  let blockSubdomains = true;
 
 
   async function toggleAdBlock() {
@@ -21,10 +23,16 @@ import {
       await setBlockAds(blockAds);
   }
 
+  async function toggleSubdomainBlock() {
+    blockSubdomains = !blockSubdomains;
+    await setBlockSubdomains(blockSubdomains);
+  }
+
   async function loadData() {
     const storage = await get();
     blockedItems = await getAllBlocked();
     blockAds = storage.blockAds ?? false;
+    blockSubdomains = storage.blockSubdomains ?? true;
   }
 
   async function handleAdd() {
@@ -32,13 +40,22 @@ import {
     if (!value) return;
     errorMsg = '';
     try {
+      const { urls, blockedUrls } = await get();
       if (value.startsWith('http') && new URL(value).pathname !== '/') {
+        if (blockedUrls.includes(value)) {
+          errorMsg = '该链接已在列表中';
+          return;
+        }
         await addBlockedUrl(value);
       } else {
         const domain = value.startsWith('http')
           ? new URL(value).hostname.replace(/^www\./, '')
           : value.replace(/^www\./, '');
         new URL(domain.startsWith('http') ? domain : `https://${domain}`);
+        if (urls.includes(domain)) {
+          errorMsg = '该域名已在列表中';
+          return;
+        }
         await addDomain(domain);
       }
       inputValue = '';
@@ -90,7 +107,7 @@ import {
       <div class="list-scroll">
         {#if blockedItems.length === 0}
           <div class="empty">
-            <p>暂无屏蔽内容</p>
+            <p>暂无标记内容</p>
           </div>
         {:else}
           {#each blockedItems as item}
@@ -112,8 +129,8 @@ import {
   <section class="section">
     <div class="section-inner">
       <div class="ad-toggle">
-        <span>📢 广告屏蔽</span>
-        <label class="toggle" aria-label="切换广告屏蔽">
+        <span>📢 广告标记</span>
+        <label class="toggle" aria-label="切换广告标记">
           <input type="checkbox" checked={blockAds} onchange={toggleAdBlock} />
           <span class="toggle-track">
             <span class="toggle-thumb"></span>
@@ -121,6 +138,22 @@ import {
         </label>
       </div>
       <p class="ad-hint">开启后自动标记搜索结果中的广告链接</p>
+    </div>
+  </section>
+
+  <!-- Subdomain Block -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="ad-toggle">
+        <span>🌐 子域名标记</span>
+        <label class="toggle" aria-label="切换子域名标记">
+          <input type="checkbox" checked={blockSubdomains} onchange={toggleSubdomainBlock} />
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+      </div>
+      <p class="ad-hint">开启后标记域名时同时匹配其所有子域名（如 a.example.com）</p>
     </div>
   </section>
 </main>

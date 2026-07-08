@@ -7,6 +7,7 @@ export interface ExtensionStorage {
   blockCount: number;
   enabled: boolean;
   blockAds: boolean;
+  blockSubdomains: boolean;
   customEngines: SearchEngineConfig[];
   blockedSelectors: string[];
   stats: BlockStats[];
@@ -29,6 +30,7 @@ const DEFAULT: ExtensionStorage = {
   blockCount: 0,
   enabled: true,
   blockAds: true,
+  blockSubdomains: true,
   customEngines: [],
   blockedSelectors: [],
   stats: [],
@@ -181,4 +183,8 @@ export async function setEnabled(enabled: boolean): Promise<void> {
 
 export async function setBlockAds(blockAds: boolean): Promise<void> {
   await set({ blockAds });
+}
+
+export async function setBlockSubdomains(blockSubdomains: boolean): Promise<void> {
+  await set({ blockSubdomains });
 }

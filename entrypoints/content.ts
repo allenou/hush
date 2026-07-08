@@ -25,6 +25,7 @@ export default defineContentScript({
     let blockedSelectors: string[] = [];
     let isEnabled = true;
     let blockAds = true;
+    let blockSubdomains = true;
     let currentEngine: SearchEngineConfig | null = null;
 
     // ===== 初始化 Blocker（注入依赖）=====
@@ -33,7 +34,7 @@ export default defineContentScript({
 
     function pushState(engine?: SearchEngineConfig | null): void {
       syncBlockerState(
-        { blockedDomains, blockedUrls, blockedSelectors, isEnabled, blockAds },
+        { blockedDomains, blockedUrls, blockedSelectors, isEnabled, blockAds, blockSubdomains },
         engine ?? currentEngine,
       );
     }
@@ -135,6 +136,7 @@ export default defineContentScript({
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
       blockAds = storage.blockAds ?? true;
+      blockSubdomains = storage.blockSubdomains ?? true;
       pushState();
 
       if (!isEnabled) {
@@ -157,6 +159,7 @@ export default defineContentScript({
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
       blockAds = storage.blockAds ?? true;
+      blockSubdomains = storage.blockSubdomains ?? true;
       init();
       checkSavedSelectors();
     });

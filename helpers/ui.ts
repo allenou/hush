@@ -40,17 +40,17 @@ export function injectFloatingBtn(): void {
   img.style.pointerEvents = 'none';
   img.alt = '';
   btn.appendChild(img);
-  btn.title = '搜索结果屏蔽工具';
+  btn.title = '搜索结果标记工具';
 
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
   if (isSearchEngine(window.location.href)) {
-    popup.innerHTML = '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取屏蔽</button>';
+    popup.innerHTML = '<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> 选取标记</button>';
   } else {
     popup.innerHTML =
-      '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 屏蔽此域名</button>' +
-      '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 屏蔽此链接</button>';
+      '<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> 标记此域名</button>' +
+      '<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> 标记此链接</button>';
   }
 
   // ===== 位置初始化 =====

@@ -10,6 +10,7 @@ export interface BlockerState {
   blockedSelectors: string[];
   isEnabled: boolean;
   blockAds: boolean;
+  blockSubdomains: boolean;
 }
 
 let _state: BlockerState;
@@ -37,11 +38,13 @@ function tryParseHostname(url: string): string | null {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
 }
 
-/** 在域名列表中查找匹配（支持子域名），返回 index 或 -1 */
+/** 在域名列表中查找匹配，返回 index 或 -1 */
 function matchBlockedDomain(href: string, domains: string[]): number {
   const hostname = tryParseHostname(href);
   if (!hostname) return -1;
-  return domains.findIndex((d) => hostname === d || hostname.endsWith('.' + d));
+  return domains.findIndex((d) =>
+    hostname === d || (_state.blockSubdomains && hostname.endsWith('.' + d)),
+  );
 }
 
 // ========== Ad Text Detection ==========
@@ -86,14 +89,22 @@ export function injectBlockButton(item: Element, href: string): void {
   const btn = document.createElement('button');
   btn.className = 'srb-block-btn';
   btn.textContent = '⊕';
-  btn.title = '屏蔽此结果';
+  btn.title = '标记此结果';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
 
   const popup = document.createElement('div');
   popup.className = 'srb-popup';
-  popup.innerHTML =
-    '<button class="srb-opt" data-action="domain">🌐 屏蔽此域名</button>' +
-    '<button class="srb-opt" data-action="url">🔗 屏蔽此链接</button>';
+  try {
+    const u = new URL(href);
+    const isRoot = u.pathname === '/' && !u.hash && !u.search;
+    popup.innerHTML = isRoot
+      ? '<button class="srb-opt" data-action="domain">🌐 屏蔽此域名</button>'
+      : '<button class="srb-opt" data-action="url">🔗 屏蔽此链接</button>';
+  } catch {
+    popup.innerHTML =
+      '<button class="srb-opt" data-action="domain">🌐 标记此域名</button>' +
+      '<button class="srb-opt" data-action="url">🔗 标记此链接</button>';
+  }
 
   item.addEventListener('mouseenter', () => { btn.style.display = 'flex'; });
   item.addEventListener('mouseleave', (e) => {
@@ -110,14 +121,13 @@ export function injectBlockButton(item: Element, href: string): void {
   popup.addEventListener('click', async (e) => {
     const t = e.target as HTMLElement;
     const domain = new URL(href).hostname.replace(/^www\./, '');
-    if (t.getAttribute('data-action') === 'domain') await addDomain(domain);
+    const isDomain = t.getAttribute('data-action') === 'domain';
+    if (isDomain) await addDomain(domain);
     else await addBlockedUrl(href);
     await recordBlock();
-    popup.style.display = 'none';
-    btn.style.display = 'none';
-    btn.remove();
     popup.remove();
-    injectBadge(item, t.getAttribute('data-action') === 'domain', t.getAttribute('data-action') === 'url', href);
+    btn.remove();
+    injectBadge(item, isDomain, !isDomain, href);
     updateCollapseBar();
   });
   item.appendChild(btn);
@@ -378,33 +388,9 @@ export function applyBlockedSelectors(): void {
         const badge = document.createElement('div');
         badge.className = 'srb-blocked-badge';
         badge.textContent = '🎯 元素命中';
-        badge.title = '此选择器已被屏蔽';
+        badge.title = '此元素已被标记';
         badge.setAttribute('data-entry', entry);
-
-        const cancelBadge = document.createElement('div');
-        cancelBadge.className = 'srb-cancel-badge';
-        cancelBadge.textContent = '🎯 取消标记';
-        cancelBadge.style.display = 'none';
-        cancelBadge.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const fullEntry = badge.getAttribute('data-entry');
-          if (fullEntry) {
-            const idx = _state.blockedSelectors.indexOf(fullEntry);
-            if (idx >= 0) await removeBlockedItem('selector', idx);
-          }
-          mask.remove();
-          badge.remove();
-          cancelBadge.remove();
-        });
-
-        let hideTimer: ReturnType<typeof setTimeout>;
-        badge.addEventListener('mouseenter', () => { clearTimeout(hideTimer); cancelBadge.style.display = 'block'; });
-        badge.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => { if (!cancelBadge.matches(':hover')) cancelBadge.style.display = 'none'; }, 150); });
-        cancelBadge.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-        cancelBadge.addEventListener('mouseleave', () => { cancelBadge.style.display = 'none'; });
-
         el.appendChild(badge);
-        el.appendChild(cancelBadge);
       });
     } catch { /* skip */ }
   });
