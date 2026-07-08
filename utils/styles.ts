@@ -234,6 +234,31 @@ const CSS = `
   background: #FEE2E2;
 }
 
+/* ===== Cancel Badge (hover 显示在 badge 上方) ===== */
+.srb-cancel-badge {
+  display: none;
+  position: absolute;
+  bottom: 34px;
+  right: 6px;
+  z-index: 10000;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--srb-font);
+  line-height: normal;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  background: var(--srb-accent-light);
+  color: var(--srb-accent);
+  transition: background 0.12s;
+}
+.srb-cancel-badge:hover {
+  background: #D1FAE5;
+}
+
 /* ===== Ad Badge — 样式与域名屏蔽一致，仅 badge 文字区分 ===== */
 .srb-ad-mask {
   position: absolute;

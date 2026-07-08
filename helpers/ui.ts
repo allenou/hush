@@ -166,5 +166,5 @@ export function updateCollapseBar(): void {
     bar.style.display = display;
     _lastCollapseDisplay = display;
   }
-  bar.textContent = '🚫 已屏蔽 ' + count + ' 个低质结果';
+  bar.textContent = '🚫 已标记 ' + count + ' 个低质结果';
 }

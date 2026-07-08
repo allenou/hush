@@ -125,5 +125,5 @@ npm run wxt-prepare  # WXT 类型生成
 ## Git
 
 - 作者：allenou <jskindler@outlook.com>
-- 当前分支：refactor（正在从 WXT 之前的结构迁移，主分支为 master）
-- ❌ 不要自动执行 `git commit` / `git push` — 所有版本控制操作需经用户明确许可
+- 当前分支：dev（主分支为 master）
+- ❌ **严禁自动提交/推送代码** — 所有 `git commit`、`git push` 操作必须得到用户明确许可后才能执行

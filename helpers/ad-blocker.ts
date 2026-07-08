@@ -132,27 +132,80 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
   const badge = document.createElement('div');
   badge.className = 'srb-blocked-badge';
-  badge.textContent = '已屏蔽';
-  badge.title = '点击取消屏蔽';
-  badge.addEventListener('click', async () => {
-    mask.remove();
-    badge.remove();
-    const di = matchBlockedDomain(href, _state.blockedDomains);
-    const ui = _state.blockedUrls.indexOf(href);
+  if (domainMatch) {
+    badge.textContent = '🌐 域名命中';
+    badge.title = '此域名已被屏蔽';
+  } else {
+    badge.textContent = '🔗 链接命中';
+    badge.title = '此链接已被屏蔽';
+  }
 
-    if (di >= 0 && !urlMatch) await removeBlockedItem('domain', di);
-    else if (ui >= 0 && di === -1) await removeBlockedItem('url', ui);
-    else if (di >= 0 && urlMatch) {
-      if (confirm('取消屏蔽此域名？\n确定=是，取消=仅取消此链接')) {
-        await removeBlockedItem('domain', di);
-      } else if (ui >= 0) {
-        await removeBlockedItem('url', ui);
+  // Hover 时在 badge 正上方显示取消标记小 badge
+  const di = matchBlockedDomain(href, _state.blockedDomains);
+  const ui = _state.blockedUrls.indexOf(href);
+
+  const cancelBadges: HTMLDivElement[] = [];
+
+  function makeCancelBadge(text: string, onClick: () => Promise<void>): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'srb-cancel-badge';
+    el.textContent = text;
+    el.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await onClick();
+    });
+    return el;
+  }
+
+  if (di >= 0) {
+    cancelBadges.push(makeCancelBadge('🌐 取消标记', async () => {
+      await removeBlockedItem('domain', di);
+      mask.remove();
+      badge.remove();
+      cancelBadges.forEach((b) => b.remove());
+      updateCollapseBar();
+    }));
+  }
+  if (ui >= 0) {
+    cancelBadges.push(makeCancelBadge('🔗 取消标记', async () => {
+      await removeBlockedItem('url', ui);
+      if (di < 0) {
+        mask.remove();
+        badge.remove();
+        cancelBadges.forEach((b) => b.remove());
+      } else {
+        badge.textContent = '🌐 域名命中';
+        badge.title = '此域名已被屏蔽';
+        // 移除对应的取消链接 badge
+        cancelBadges.pop()?.remove();
       }
-    }
-    updateCollapseBar();
+      updateCollapseBar();
+    }));
+  }
+
+  let hideTimer: ReturnType<typeof setTimeout>;
+  badge.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimer);
+    cancelBadges.forEach((b) => { b.style.display = 'block'; });
   });
+  badge.addEventListener('mouseleave', () => {
+    hideTimer = setTimeout(() => {
+      const anyHovered = cancelBadges.some((b) => b.matches(':hover'));
+      if (!anyHovered) cancelBadges.forEach((b) => { b.style.display = 'none'; });
+    }, 150);
+  });
+  cancelBadges.forEach((b) => {
+    b.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    b.addEventListener('mouseleave', () => { b.style.display = 'none'; });
+  });
+
   item.appendChild(mask);
   item.appendChild(badge);
+  // 从主 badge 上方往上叠，每个 cancel badge 间隔 26px
+  cancelBadges.forEach((b, i) => {
+    b.style.bottom = (34 + i * 26) + 'px';
+    item.appendChild(b);
+  });
 }
 
 export function injectAdBadge(item: Element, href: string): void {
@@ -324,19 +377,34 @@ export function applyBlockedSelectors(): void {
         el.appendChild(mask);
         const badge = document.createElement('div');
         badge.className = 'srb-blocked-badge';
-        badge.textContent = '已屏蔽';
-        badge.title = '点击取消屏蔽';
+        badge.textContent = '🎯 元素命中';
+        badge.title = '此选择器已被屏蔽';
         badge.setAttribute('data-entry', entry);
-        badge.addEventListener('click', async () => {
-          mask.remove();
-          badge.remove();
+
+        const cancelBadge = document.createElement('div');
+        cancelBadge.className = 'srb-cancel-badge';
+        cancelBadge.textContent = '🎯 取消标记';
+        cancelBadge.style.display = 'none';
+        cancelBadge.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const fullEntry = badge.getAttribute('data-entry');
           if (fullEntry) {
             const idx = _state.blockedSelectors.indexOf(fullEntry);
             if (idx >= 0) await removeBlockedItem('selector', idx);
           }
+          mask.remove();
+          badge.remove();
+          cancelBadge.remove();
         });
+
+        let hideTimer: ReturnType<typeof setTimeout>;
+        badge.addEventListener('mouseenter', () => { clearTimeout(hideTimer); cancelBadge.style.display = 'block'; });
+        badge.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => { if (!cancelBadge.matches(':hover')) cancelBadge.style.display = 'none'; }, 150); });
+        cancelBadge.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        cancelBadge.addEventListener('mouseleave', () => { cancelBadge.style.display = 'none'; });
+
         el.appendChild(badge);
+        el.appendChild(cancelBadge);
       });
     } catch { /* skip */ }
   });

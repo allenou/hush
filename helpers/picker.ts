@@ -118,7 +118,7 @@ function findBlockTarget(el: Element): Element | null {
 function showUndoToast(fullEntry: string, el: Element): void {
   const toast = document.createElement('div');
   toast.className = 'srb-undo-toast';
-  toast.innerHTML = '已屏蔽该元素 <button class="srb-undo-btn">撤销</button>';
+  toast.innerHTML = '已标记该元素 <button class="srb-undo-btn">撤销</button>';
   document.body.appendChild(toast);
 
   const timer = setTimeout(() => toast.remove(), 5000);
