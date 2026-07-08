@@ -1,4 +1,4 @@
-import type { SearchEngineConfig } from '../helpers/search-engines';
+import type { SearchEngineConfig, SearchRecord } from '../helpers/search-engines';
 import {
   BUILT_IN_ENGINES,
   matchEngineConfig,
@@ -13,6 +13,8 @@ export interface ExtensionStorage {
   adBlockCount: number;
   domainBlockCount: number;
   blockedDomainStats: { domain: string; count: number }[];
+  searchHistory: SearchRecord[];
+  recordSearchHistory: boolean;
   enabled: boolean;
   blockAds: boolean;
   blockSubdomains: boolean;
@@ -41,6 +43,8 @@ const DEFAULT: ExtensionStorage = {
   adBlockCount: 0,
   domainBlockCount: 0,
   blockedDomainStats: [],
+  searchHistory: [],
+  recordSearchHistory: true,
   enabled: true,
   blockAds: true,
   blockSubdomains: true,
@@ -73,6 +77,8 @@ function freshDefaults(): ExtensionStorage {
     blockedDomainStats: [...DEFAULT.blockedDomainStats],
   };
 }
+
+export { type SearchRecord };
 
 export async function get(): Promise<ExtensionStorage> {
   try {
@@ -239,6 +245,13 @@ export async function recordBlock(type?: BlockRecordType, domain?: string): Prom
   await set(patch);
 }
 
+export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {
+  const { searchHistory } = await get();
+  const record: SearchRecord = { query, engineName, engineHostname, timestamp: Date.now() };
+  const updated = [record, ...(searchHistory ?? [])].slice(0, 50);
+  await set({ searchHistory: updated });
+}
+
 export async function incrementBlockCount(): Promise<void> {
   const { blockCount } = await get();
   await set({ blockCount: blockCount + 1 });
@@ -254,4 +267,8 @@ export async function setBlockAds(blockAds: boolean): Promise<void> {
 
 export async function setBlockSubdomains(blockSubdomains: boolean): Promise<void> {
   await set({ blockSubdomains });
+}
+
+export async function setRecordSearchHistory(value: boolean): Promise<void> {
+  await set({ recordSearchHistory: value });
 }

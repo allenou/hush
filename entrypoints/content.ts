@@ -1,7 +1,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { BUILT_IN_ENGINES, normalizeHostname } from '../helpers/search-engines';
+import { BUILT_IN_ENGINES, normalizeHostname, detectSearchEngine, extractSearchQuery } from '../helpers/search-engines';
 import type { SearchEngineConfig } from '../helpers/search-engines';
-import { addCustomEngine, findMatchingCustomEngine, get, subscribe } from '../utils/storage';
+import { addCustomEngine, findMatchingCustomEngine, get, subscribe, recordSearch } from '../utils/storage';
 import { injectStyles } from '../utils/styles';
 import { activatePicker, deactivatePicker } from '../helpers/picker';
 import { getHostname, extractResultUrl } from '../utils/url';
@@ -69,6 +69,31 @@ export default defineContentScript({
         .observe(c, { childList: true, subtree: true });
     }
 
+    // ===== 搜索记录 =====
+
+    function recordCurrentSearch(): void {
+      const query = extractSearchQuery(window.location.href);
+      if (!query) return;
+      const engine = detectSearchEngine(window.location.href);
+      if (!engine) return;
+      // 检查用户是否开启了搜索记录
+      get().then((storage) => {
+        if (storage.recordSearchHistory !== false) {
+          recordSearch(query, engine.name, engine.hostname);
+        }
+      });
+    }
+
+    // ===== SPA 导航检测 =====
+
+    let lastSearchUrl = window.location.href;
+    window.addEventListener('popstate', () => {
+      if (window.location.href !== lastSearchUrl) {
+        lastSearchUrl = window.location.href;
+        recordCurrentSearch();
+      }
+    });
+
     // ===== 入口 =====
 
     async function init(): Promise<void> {
@@ -76,6 +101,7 @@ export default defineContentScript({
       injectStyles();
       injectFloatingBtn();
       pushState();
+      recordCurrentSearch();
       document.addEventListener('srb-start-picker', () => activatePicker(getHostname));
 
       // 尝试从已存自定义引擎加载

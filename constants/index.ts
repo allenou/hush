@@ -1,0 +1,44 @@
+/** 页面 Tab 定义 */
+export type TabId = 'dashboard' | 'rules' | 'search' | 'method';
+
+export const TABS: { id: TabId; label: string }[] = [
+  { id: 'dashboard', label: '概览' },
+  { id: 'rules', label: '规则' },
+  { id: 'search', label: '搜索记录' },
+  { id: 'method', label: '设置' },
+];
+
+/** 规则筛选类型 */
+export type RuleFilter = 'all' | 'domain' | 'url' | 'selector';
+
+export const RULE_FILTERS: { id: RuleFilter; label: string }[] = [
+  { id: 'all', label: '全部' },
+  { id: 'domain', label: '域名' },
+  { id: 'url', label: '链接' },
+  { id: 'selector', label: '选择器' },
+];
+
+export const RULE_FILTER_LABEL: Record<RuleFilter, string> = {
+  all: '全部',
+  domain: '域名',
+  url: '链接',
+  selector: '选择器',
+};
+
+/** 搜索引擎选项（用于搜索记录下拉切换） */
+export interface EngineOption {
+  hostname: string;
+  label: string;
+  color: string;
+}
+
+export const SEARCH_ENGINES: EngineOption[] = [
+  { hostname: 'google.com', label: 'Google', color: '#0d8f66' },
+  { hostname: 'bing.com', label: 'Bing', color: '#0078d4' },
+  { hostname: 'baidu.com', label: '百度', color: '#2932e1' },
+  { hostname: 'so.com', label: '360搜索', color: '#f60' },
+];
+
+export const SEARCH_ENGINE_MAP = new Map(SEARCH_ENGINES.map((e) => [e.hostname, e]));
+
+export { formatRelativeTime, MINUTE_MS, HOUR_MS, DAY_MS } from '../utils/time';
