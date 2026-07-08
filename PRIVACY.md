@@ -1,8 +1,8 @@
-# Privacy Policy for Search Result Blocker
+# Privacy Policy for SearchKit
 
 **Last updated: July 2026**
 
-Search Result Blocker does not collect, transmit, or share any personal data.
+SearchKit does not collect, transmit, or share any personal data.
 
 ## Data Storage
 

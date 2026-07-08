@@ -1,5 +1,5 @@
-# Search Result Blocker
-隐藏搜索结果中的垃圾域名
+# SearchKit
+Search result management — block unwanted results, mark ads, track search history
 
 ## Future
 - [ x ]：右键加入域名到黑名单

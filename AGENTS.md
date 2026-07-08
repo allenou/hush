@@ -1,8 +1,8 @@
-# Search Result Blocker — AGENTS.md
+# SearchKit — AGENTS.md
 
 ## 项目概述
 
-Chrome 浏览器扩展，用于在搜索结果页面中屏蔽指定域名的低质量结果。用户可通过悬浮按钮快速屏蔽某个域名或链接，支持 Google / Baidu / Bing / DuckDuckGo 内置搜索引擎，也可通过"教学模式"自动适配任意搜索结果页。
+Chrome 浏览器扩展，用于管理搜索结果页面——屏蔽指定域名、标记广告、记录搜索历史。用户可通过悬浮按钮快速屏蔽某个域名或链接，支持 Google / Baidu / Bing / 360搜索 等主流搜索引擎。
 
 ## 技术栈
 
@@ -18,7 +18,7 @@ Chrome 浏览器扩展，用于在搜索结果页面中屏蔽指定域名的低�
 ## 目录结构
 
 ```
-search-result-blocker/
+search-kit/
 ├── entrypoints/                # WXT 入口点
 │   ├── background.ts           # Service Worker — 图标 Badge 更新
 │   ├── content.ts              # Content Script — 核心屏蔽逻辑 + 教学模式
@@ -110,7 +110,7 @@ npm run wxt-prepare  # WXT 类型生成
 - **CSS**：组件内使用 `<style>` 标签隔离样式；注入的 DOM 元素使用行内 `cssText` 赋值
 - **API 兼容**：使用 `chrome.*` API（非 `browser.*`）
 - **代码风格**：无 Prettier/ESLint 配置，遵循项目现有风格（2 空格缩进，Svelte 组件使用单文件 `.svelte`）
-- **命名**：注入的 DOM 元素使用 `srb-` 前缀（Search Result Blocker）
+- **命名**：注入的 DOM 元素使用 `srb-` 前缀（SearchKit）
 - **通信**：Content Script ↔ Popup 通过 `chrome.runtime.sendMessage` / `onMessage`
 
 ## 重要注意事项

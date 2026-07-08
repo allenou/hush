@@ -44,18 +44,18 @@
       <p class="card-desc">管理所有屏蔽规则</p>
     </div>
     <div class="rules-actions">
-      <button class="add-trigger" onclick={handleAddRule}>+ 添加规则</button>
-      <div class="filter-tabs" role="tablist">
-        {#each RULE_FILTERS as { id, label }}
-          <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{label}</button>
-        {/each}
-      </div>
       <input
         class="search-box"
         type="search"
         bind:value={searchQuery}
         placeholder="搜索规则…"
       />
+      <div class="filter-tabs" role="tablist">
+        {#each RULE_FILTERS as { id, label }}
+          <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{label}</button>
+        {/each}
+      </div>
+      <button class="add-trigger" onclick={handleAddRule}>+ 添加规则</button>
     </div>
   </div>
 

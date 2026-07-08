@@ -3,14 +3,14 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   manifest: {
-    name: 'Search Result Blocker',
-    description: 'Block unwanted search results by domain',
+    name: 'SearchKit',
+    description: 'Search result management — block, mark ads, track search history',
     version: '1.0.0',
     permissions: ['storage', 'activeTab'],
     host_permissions: ['<all_urls>'],
     action: {
       default_popup: '/popup.html',
-      default_title: 'Search Result Blocker',
+      default_title: 'SearchKit',
     },
 
     icons: {

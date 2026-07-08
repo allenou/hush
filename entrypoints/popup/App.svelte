@@ -64,7 +64,7 @@
   <header>
     <div class="brand">
       <span class="brand-icon">🛡</span>
-      <span class="brand-text">搜索结果标记</span>
+      <span class="brand-text">SearchKit</span>
     </div>
     <label class="toggle" aria-label="{enabled ? '禁用' : '启用'}标记">
       <input type="checkbox" checked={enabled} onchange={toggleEnabled} />

@@ -17,7 +17,7 @@
           <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" opacity="0.2"/>
           <path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="brand-label">Search Result Blocker</span>
+        <span class="brand-label">SearchKit</span>
       </div>
       <div class="nav-links">
         {#each TABS as { id, label }}
