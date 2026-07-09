@@ -1,3 +1,5 @@
+import type { ContentScriptContext } from 'wxt/utils/content-script-context';
+import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '@/utils/storage';
 import { getHostname } from '@/utils/url';
 import { t } from '@/utils/i18n';
@@ -8,6 +10,102 @@ const STORAGE_KEY = 'srb_float_pos';
 const BTN_SIZE = 40;
 const MARGIN = 24;
 const POPUP_GAP = 12;
+
+const FLOATING_UI_CSS = `
+:host {
+  --srb-surface: #ffffff;
+  --srb-text: #18211d;
+  --srb-border: #dde6e1;
+  --srb-border-light: #e2e9e4;
+  --srb-accent: #059669;
+  --srb-accent-light: #ecfdf5;
+  --srb-accent-mid: #d1fae5;
+  --srb-shadow-sm: 0 1px 4px rgba(24, 33, 29, 0.08);
+  --srb-shadow-md: 0 4px 16px rgba(24, 33, 29, 0.12);
+  --srb-shadow-lg: 0 8px 24px rgba(24, 33, 29, 0.14);
+  --srb-shadow-accent: 0 10px 28px rgba(5, 150, 105, 0.25);
+  --srb-radius-sm: 6px;
+  --srb-radius-md: 10px;
+  --srb-font: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;
+}
+.srb-float-btn {
+  position: fixed;
+  z-index: 999999;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--srb-border-light);
+  border-radius: 50%;
+  background: var(--srb-surface);
+  font-size: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--srb-shadow-sm);
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.srb-float-btn:hover {
+  transform: scale(1.08);
+  box-shadow: var(--srb-shadow-accent);
+}
+.srb-float-btn:active {
+  transform: scale(0.95);
+}
+.srb-float-popup {
+  z-index: 999999;
+  position: fixed;
+  background: var(--srb-surface);
+  border: 1px solid var(--srb-border);
+  border-radius: var(--srb-radius-md);
+  box-shadow: var(--srb-shadow-lg);
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  overflow: hidden;
+  padding: 4px;
+}
+.srb-float-popup::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--srb-surface);
+  border-right: 1px solid var(--srb-border);
+  border-bottom: 1px solid var(--srb-border);
+  transform: translateY(-50%) rotate(45deg);
+}
+.srb-float-popup[data-side="left"]::after {
+  right: -6px;
+}
+.srb-float-popup[data-side="right"]::after {
+  left: -6px;
+  transform: translateY(-50%) rotate(225deg);
+}
+.srb-fopt {
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--srb-radius-sm);
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  text-align: left;
+  color: var(--srb-text);
+  font-family: var(--srb-font);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.1s;
+}
+.srb-fopt:hover {
+  background: var(--srb-accent-light);
+  color: var(--srb-accent);
+}
+.srb-fopt:active {
+  background: var(--srb-accent-mid);
+}
+`;
 
 interface FloatPos { x: number; y: number; side?: FloatSide; vertical?: FloatVertical; }
 
@@ -60,9 +158,9 @@ function getAnchoredVertical(y: number): FloatVertical {
 }
 
 /** 浮动 🛡 屏蔽按钮（页面右下角），支持拖动 */
-export function injectFloatingBtn(): void {
+export async function injectFloatingBtn(ctx: ContentScriptContext): Promise<void> {
   if (floatingBtnInjected) {
-    if (!document.getElementById('srb-float-btn')) {
+    if (!document.querySelector('srb-floating-ui')) {
       floatingBtnInjected = false;
     } else {
       return;
@@ -70,6 +168,28 @@ export function injectFloatingBtn(): void {
   }
   floatingBtnInjected = true;
 
+  const ui = await createShadowRootUi(ctx, {
+    name: 'srb-floating-ui',
+    position: 'inline',
+    anchor: document.body,
+    append: 'last',
+    css: FLOATING_UI_CSS,
+    isolateEvents: true,
+    onMount(uiContainer, _shadow, shadowHost) {
+      mountFloatingControls(ctx, uiContainer, shadowHost);
+    },
+    onRemove() {
+      floatingBtnInjected = false;
+    },
+  });
+  ui.mount();
+}
+
+function mountFloatingControls(
+  ctx: ContentScriptContext,
+  uiContainer: HTMLElement,
+  shadowHost: HTMLElement,
+): void {
   const btn = document.createElement('button');
   btn.id = 'srb-float-btn';
   btn.className = 'srb-float-btn';
@@ -172,7 +292,7 @@ export function injectFloatingBtn(): void {
     applyBtnPosition(next.x, next.y);
     syncPopupPosition();
     if (save) void savePos(next.x, next.y, anchoredSide, anchoredVertical);
-    setTimeout(() => btn.style.transition = '', 300);
+    ctx.setTimeout(() => btn.style.transition = '', 300);
   }
 
   function adjustToViewport(save = false): void {
@@ -188,7 +308,7 @@ export function injectFloatingBtn(): void {
     dragData = { startX: e.clientX, startY: e.clientY, origX: btn.offsetLeft, origY: btn.offsetTop, dist: 0 };
     btn.style.cursor = 'grabbing';
   });
-  document.addEventListener('mousemove', (e) => {
+  ctx.addEventListener(document, 'mousemove', (e) => {
     if (btn.style.cursor !== 'grabbing') return;
     const dx = e.clientX - dragData.startX, dy = e.clientY - dragData.startY;
     dragData.dist = Math.max(dragData.dist, Math.abs(dx), Math.abs(dy));
@@ -196,7 +316,7 @@ export function injectFloatingBtn(): void {
     applyBtnPosition(pos.x, pos.y);
     syncPopupPosition();
   });
-  document.addEventListener('mouseup', () => {
+  ctx.addEventListener(document, 'mouseup', () => {
     if (btn.style.cursor !== 'grabbing') return;
     btn.style.cursor = '';
     if (dragData.dist > 5) snapToEdge(true);
@@ -225,30 +345,35 @@ export function injectFloatingBtn(): void {
     await recordBlock(action === 'domain' ? 'domain' : 'url', hostname);
     popup.style.display = 'none';
     btn.style.opacity = '0.6';
-    setTimeout(() => { btn.style.opacity = '1'; }, 1200);
+    ctx.setTimeout(() => { btn.style.opacity = '1'; }, 1200);
   };
 
   // 点击按钮外区域关闭弹窗
-  document.addEventListener('click', (e) => {
-    if (!btn.contains(e.target as Node) && !popup.contains(e.target as Node)) popup.style.display = 'none';
+  ctx.addEventListener(document, 'click', (e) => {
+    const path = e.composedPath();
+    if (!path.includes(btn) && !path.includes(popup) && !path.includes(shadowHost)) {
+      popup.style.display = 'none';
+    }
   });
 
   initPos().then(() => {
-    document.body.appendChild(popup);
-    document.body.appendChild(btn);
+    uiContainer.appendChild(popup);
+    uiContainer.appendChild(btn);
 
     let viewportFrame = 0;
     const handleViewportChange = () => {
       if (viewportFrame) cancelAnimationFrame(viewportFrame);
-      viewportFrame = requestAnimationFrame(() => {
+      viewportFrame = ctx.requestAnimationFrame(() => {
         viewportFrame = 0;
-        if (!document.getElementById('srb-float-btn')) return;
+        if (!btn.isConnected) return;
         adjustToViewport(true);
       });
     };
-    window.addEventListener('resize', handleViewportChange);
-    window.visualViewport?.addEventListener('resize', handleViewportChange);
-    window.visualViewport?.addEventListener('scroll', handleViewportChange);
+    ctx.addEventListener(window, 'resize', handleViewportChange);
+    if (window.visualViewport) {
+      ctx.addEventListener(window.visualViewport, 'resize', handleViewportChange);
+      ctx.addEventListener(window.visualViewport, 'scroll', handleViewportChange);
+    }
   });
 }
 

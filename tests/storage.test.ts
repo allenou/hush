@@ -1,40 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-// ------ In-memory chrome.storage mock for this test file ------
-const store: Record<string, unknown> = {};
-const mockChrome = {
-  storage: {
-    local: {
-      get: vi.fn(async (keys?: any) => {
-        if (!keys) return { ...store };
-        if (typeof keys === 'string') return { [keys]: keys in store ? JSON.parse(JSON.stringify(store[keys])) : null };
-        if (Array.isArray(keys)) {
-          const r: Record<string, unknown> = {};
-          for (const k of keys) r[k] = k in store ? JSON.parse(JSON.stringify(store[k])) : null;
-          return r;
-        }
-        return { ...store, ...keys };
-      }),
-      set: vi.fn(async (items: Record<string, unknown>) => {
-        for (const [k, v] of Object.entries(items)) store[k] = JSON.parse(JSON.stringify(v));
-      }),
-      remove: vi.fn(async (keys: string | string[]) => {
-        for (const k of (Array.isArray(keys) ? keys : [keys])) delete store[k];
-      }),
-      clear: vi.fn(async () => { for (const k of Object.keys(store)) delete store[k]; }),
-    },
-    onChanged: { addListener: vi.fn() },
-  },
-  runtime: { openOptionsPage: vi.fn() },
-  action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn(), setTitle: vi.fn() },
-  tabs: { query: vi.fn(async () => [{ url: 'https://www.google.com/search?q=test' }]) },
-};
-vi.stubGlobal('chrome', mockChrome);
-
-function resetStore(): void {
-  for (const k of Object.keys(store)) delete store[k];
-  // clear only call history, not implementations
-}
+import { fakeBrowser } from 'wxt/testing';
 
 // ------ Imports ------
 import {
@@ -48,7 +13,9 @@ import {
   setEnabled, subscribe,
 } from '@/utils/storage';
 
-beforeEach(() => resetStore());
+beforeEach(() => {
+  fakeBrowser.reset();
+});
 
 describe('get / set defaults', () => {
   it('returns default values when storage is empty', async () => {
@@ -64,11 +31,22 @@ describe('get / set defaults', () => {
   });
 
   it('persists and retrieves values', async () => {
-    await mockChrome.storage.local.set({ blocker: { urls: ['example.com'], blockCount: 5, enabled: false } });
+    await fakeBrowser.storage.local.set({ blocker: { urls: ['example.com'], blockCount: 5, enabled: false } });
     const s = await get();
     expect(s.urls).toEqual(['example.com']);
     expect(s.blockCount).toBe(5);
     expect(s.enabled).toBe(false);
+  });
+
+  it('notifies subscribers through the WXT storage item watcher', async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    await setEnabled(false);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0][0].enabled).toBe(false);
+    unsubscribe();
   });
 });
 
@@ -252,7 +230,7 @@ describe('recordBlock', () => {
       const d = new Date(); d.setDate(d.getDate() - i);
       past.push({ date: d.toISOString().slice(0, 10), count: 1 });
     }
-    await mockChrome.storage.local.set({
+    await fakeBrowser.storage.local.set({
       blocker: { stats: past, blockCount: 31, urls: [], blockedUrls: [], blockedSelectors: [], customEngines: [], enabled: true, blockAds: true },
     });
     await recordBlock();

@@ -1,4 +1,6 @@
 {
+  "extName": { "message": "SearchKit" },
+  "extDescription": { "message": "搜索结果管理工具：屏蔽指定域名、标记广告、记录搜索历史" },
   "tabDashboard": { "message": "概览" },
   "tabRules": { "message": "规则" },
   "tabSearch": { "message": "搜索记录" },

@@ -19,7 +19,7 @@ import { initLocale } from '@/utils/i18n';
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_end',
-  main() {
+  main(ctx) {
     // ===== 状态 =====
     let blockedDomains: string[] = [];
     let blockedUrls: string[] = [];
@@ -28,6 +28,7 @@ export default defineContentScript({
     let blockAds = true;
     let blockSubdomains = true;
     let currentEngine: SearchEngineConfig | null = null;
+    let containerObserver: MutationObserver | null = null;
 
     // ===== 初始化 Blocker（注入依赖）=====
     initBlocker({ getHostname, extractResultUrl });
@@ -49,10 +50,10 @@ export default defineContentScript({
       if (autoDetectRetries >= MAX_AUTO_DETECT_RETRIES) return;
       autoDetectRetries++;
       const detected = autoDetectSearchResults(getHostname);
-      if (!detected) { setTimeout(() => tryAutoDetect(), 3000); return; }
+      if (!detected) { ctx.setTimeout(() => tryAutoDetect(), 3000); return; }
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {
-        setTimeout(() => tryAutoDetect(), 3000);
+        ctx.setTimeout(() => tryAutoDetect(), 3000);
         return;
       }
       const hostname = getHostname();
@@ -66,8 +67,9 @@ export default defineContentScript({
       scanResults(detected);
       // 结果容器 observer（翻页检测）
       const c = document.querySelector(detected.containerSelector) ?? document.body;
-      new MutationObserver(() => { pushState(); scanResults(detected); scanForAds(); applyBlockedSelectors(); })
-        .observe(c, { childList: true, subtree: true });
+      containerObserver?.disconnect();
+      containerObserver = new MutationObserver(() => { pushState(); scanResults(detected); scanForAds(); applyBlockedSelectors(); });
+      containerObserver.observe(c, { childList: true, subtree: true });
     }
 
     // ===== 搜索记录 =====
@@ -88,7 +90,7 @@ export default defineContentScript({
     // ===== SPA 导航检测 =====
 
     let lastSearchUrl = window.location.href;
-    window.addEventListener('popstate', () => {
+    ctx.addEventListener(window, 'popstate', () => {
       if (window.location.href !== lastSearchUrl) {
         lastSearchUrl = window.location.href;
         recordCurrentSearch();
@@ -106,10 +108,10 @@ export default defineContentScript({
       }
       const hostname = getHostname();
       injectStyles();
-      injectFloatingBtn();
+      await injectFloatingBtn(ctx);
       pushState();
       recordCurrentSearch();
-      document.addEventListener('srb-start-picker', () => activatePicker(getHostname));
+      ctx.addEventListener(document, 'srb-start-picker', () => activatePicker(getHostname));
 
       // 尝试从已存自定义引擎加载
       const { customEngines } = await get();
@@ -125,8 +127,9 @@ export default defineContentScript({
           injectCollapseBar(currentEngine.containerSelector);
           scanResults(currentEngine);
           const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
-          new MutationObserver(() => { pushState(); scanResults(currentEngine!); scanForAds(); applyBlockedSelectors(); })
-            .observe(c, { childList: true, subtree: true });
+          containerObserver?.disconnect();
+          containerObserver = new MutationObserver(() => { pushState(); scanResults(currentEngine!); scanForAds(); applyBlockedSelectors(); });
+          containerObserver.observe(c, { childList: true, subtree: true });
           return;
         }
         currentEngine = null;
@@ -136,21 +139,21 @@ export default defineContentScript({
       if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname))) {
         await tryAutoDetect();
       } else {
-        setTimeout(() => tryAutoDetect(), 2000);
+        ctx.setTimeout(() => tryAutoDetect(), 2000);
       }
 
       // 首屏扫描 + 兜底扫描
       pushState();
       scanForAds();
-      setTimeout(() => { pushState(); scanForAds(); }, 1500);
+      ctx.setTimeout(() => { pushState(); scanForAds(); }, 1500);
     }
 
     // ===== 全 DOM Observer（防抖 300ms，监听无限加载）=====
 
-    let obsTimer: ReturnType<typeof setTimeout>;
+    let obsTimer: number | undefined;
     const globalObserver = new MutationObserver(() => {
-      clearTimeout(obsTimer);
-      obsTimer = setTimeout(() => {
+      if (obsTimer) clearTimeout(obsTimer);
+      obsTimer = ctx.setTimeout(() => {
         if (!isEnabled) return;
         pushState();
         scanForAds();
@@ -159,10 +162,16 @@ export default defineContentScript({
       }, 300);
     });
     globalObserver.observe(document.body, { childList: true, subtree: true });
+    ctx.onInvalidated(() => {
+      globalObserver.disconnect();
+      containerObserver?.disconnect();
+      deactivatePicker();
+      setOnContainerMissing(() => {});
+    });
 
     // ===== Storage 订阅 =====
 
-    subscribe((storage) => {
+    const unsubscribeStorage = subscribe((storage) => {
       blockedDomains = storage.urls;
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
@@ -182,6 +191,7 @@ export default defineContentScript({
       if (blockAds) scanForAds();
       if (currentEngine) { scanResults(currentEngine); applyBlockedSelectors(); }
     });
+    ctx.onInvalidated(unsubscribeStorage);
 
     // ===== 启动 =====
 

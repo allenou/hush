@@ -1,11 +1,2 @@
 # SearchKit
 Search result management — block unwanted results, mark ads, track search history
-
-## Future
-- [ x ]：右键加入域名到黑名单
-- [ x ]：搜索时不显示黑名单中域名的结果
-- [ ]：管理黑名单
-- [ ]：隐藏搜索结果形式选择
-- [ ]：域名校验
-- [ ]：拦截次数统计
-- [ ]：图标上区分当前网页有无加入黑名单

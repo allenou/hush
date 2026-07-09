@@ -16,15 +16,15 @@ export default defineConfig({
     },
   },
   manifest: {
-    name: 'SearchKit',
-    description: 'Search result management — block, mark ads, track search history',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
     version: '1.0.0',
     default_locale: 'en',
     permissions: ['storage', 'activeTab'],
     host_permissions: ['<all_urls>'],
     action: {
       default_popup: '/popup.html',
-      default_title: 'SearchKit',
+      default_title: '__MSG_extName__',
     },
 
     icons: {
@@ -35,7 +35,7 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
-        resources: ['icons/*'],
+        resources: ['icons/*', '_locales/*/messages.json'],
         matches: ['<all_urls>'],
       },
     ],

@@ -1,12 +1,8 @@
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'node:path';
+import { WxtVitest } from 'wxt/testing/vitest-plugin';
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
-  },
+  plugins: [WxtVitest()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],

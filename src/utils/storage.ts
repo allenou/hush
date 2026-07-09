@@ -1,3 +1,4 @@
+import { storage } from 'wxt/utils/storage';
 import type { SearchEngineConfig, SearchRecord } from '@/helpers/search-engines';
 import {
   BUILT_IN_ENGINES,
@@ -57,14 +58,27 @@ const DEFAULT: ExtensionStorage = {
 type Listener = (value: ExtensionStorage) => void;
 const listeners = new Set<Listener>();
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local') return;
-  get().then((v) => listeners.forEach((fn) => fn(v)));
+const blockerItem = storage.defineItem<Partial<ExtensionStorage>>('local:blocker', {
+  fallback: DEFAULT,
 });
+
+let unwatchBlocker: (() => void) | null = null;
 
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  if (!unwatchBlocker) {
+    unwatchBlocker = blockerItem.watch((value) => {
+      const next = normalizeStorage(value);
+      listeners.forEach((listener) => listener(next));
+    });
+  }
+  return () => {
+    listeners.delete(fn);
+    if (listeners.size === 0 && unwatchBlocker) {
+      unwatchBlocker();
+      unwatchBlocker = null;
+    }
+  };
 }
 
 function freshDefaults(): ExtensionStorage {
@@ -79,15 +93,27 @@ function freshDefaults(): ExtensionStorage {
   };
 }
 
+function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): ExtensionStorage {
+  const merged = value && typeof value === 'object'
+    ? { ...freshDefaults(), ...value }
+    : freshDefaults();
+  return {
+    ...merged,
+    urls: [...(merged.urls ?? [])],
+    blockedUrls: [...(merged.blockedUrls ?? [])],
+    blockedSelectors: [...(merged.blockedSelectors ?? [])],
+    customEngines: [...(merged.customEngines ?? [])],
+    stats: [...(merged.stats ?? [])],
+    blockedDomainStats: [...(merged.blockedDomainStats ?? [])],
+    searchHistory: [...(merged.searchHistory ?? [])],
+  };
+}
+
 export { type SearchRecord };
 
 export async function get(): Promise<ExtensionStorage> {
   try {
-    const result = await chrome.storage.local.get('blocker');
-    if (result.blocker && typeof result.blocker === 'object') {
-      return { ...freshDefaults(), ...result.blocker };
-    }
-    return freshDefaults();
+    return normalizeStorage(await blockerItem.getValue());
   } catch {
     return freshDefaults();
   }
@@ -95,7 +121,7 @@ export async function get(): Promise<ExtensionStorage> {
 
 async function set(partial: Partial<ExtensionStorage>): Promise<void> {
   const current = await get();
-  await chrome.storage.local.set({ blocker: { ...current, ...partial } });
+  await blockerItem.setValue({ ...current, ...partial });
 }
 
 export async function addDomain(domain: string): Promise<void> {

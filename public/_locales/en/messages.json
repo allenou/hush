@@ -1,4 +1,6 @@
 {
+  "extName": { "message": "SearchKit" },
+  "extDescription": { "message": "Search result management - block, mark ads, track search history" },
   "tabDashboard": { "message": "Dashboard" },
   "tabRules": { "message": "Rules" },
   "tabSearch": { "message": "Search History" },

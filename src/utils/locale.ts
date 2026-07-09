@@ -16,22 +16,29 @@ let _listeners = new Set<() => void>();
 
 /** 获取翻译文本（同步，适合 content script） */
 export function t(key: string, ...subs: string[]): string {
-  // 未初始化时回退到 chrome.i18n（同步、始终可用）
-  if (_messages === UNINIT) {
-    const result = chrome.i18n.getMessage(
-      key,
-      subs.length > 0 ? (subs.length === 1 ? subs[0] : subs) : undefined,
-    );
+  let msg = _messages === UNINIT ? undefined : _messages[key];
+  if (!msg) {
+    const result = getChromeMessage(key, subs);
     if (result) return result;
+    return key;
   }
-  let msg = _messages[key];
-  if (!msg) return key;
   if (subs.length > 0) {
     subs.forEach((sub, i) => {
       msg = msg!.replace(`$${i + 1}`, sub);
     });
   }
   return msg;
+}
+
+function getChromeMessage(key: string, subs: string[]): string {
+  try {
+    return chrome.i18n.getMessage(
+      key,
+      subs.length > 0 ? (subs.length === 1 ? subs[0] : subs) : undefined,
+    );
+  } catch {
+    return '';
+  }
 }
 
 /** 获取当前语言代码 */

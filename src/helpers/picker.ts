@@ -12,6 +12,8 @@ let handlers: {
   onKey: ((e: KeyboardEvent) => void) | null;
 } | null = null;
 
+const PICKER_EXCLUDE_SELECTOR = 'srb-floating-ui, #srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast';
+
 // ========== Selector Generation ==========
 
 /** 为元素生成稳定的 CSS 选择器 */
@@ -272,7 +274,7 @@ export function activatePicker(getHostnameFn: () => string): void {
       return;
     }
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) {
+    if (!target || target.closest(PICKER_EXCLUDE_SELECTOR)) {
       highlight.style.display = 'none';
       document.body.style.cursor = 'not-allowed';
       return;
@@ -294,7 +296,7 @@ export function activatePicker(getHostnameFn: () => string): void {
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     if (!el || el === document.body || el === document.documentElement) return;
     const target = findBlockTarget(el);
-    if (!target || target.closest('#srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast')) return;
+    if (!target || target.closest(PICKER_EXCLUDE_SELECTOR)) return;
 
     const selector = generateSelector(target);
     deactivatePicker();
