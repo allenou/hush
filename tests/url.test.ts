@@ -100,12 +100,16 @@ describe('extractResultUrl', () => {
     expect(extractResultUrl(container, 'a[href]')).toBe('https://example.com/page');
   });
 
-  it('returns redirect URL when no real URL can be extracted', () => {
+  it('extracts decoded target URL from Google redirect parameters', () => {
     const container = document.createElement('div');
     container.innerHTML = '<a href="https://www.google.com/url?q=https://real-site.com&sa=U">result</a>';
-    expect(extractResultUrl(container, 'a[href]')).toBe(
-      'https://www.google.com/url?q=https://real-site.com&sa=U',
-    );
+    expect(extractResultUrl(container, 'a[href]')).toBe('https://real-site.com');
+  });
+
+  it('extracts decoded target URL from generic redirect url parameters', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<a href="https://www.example.com/redirect?url=https%3A%2F%2Freal-site.com%2Fpage">result</a>';
+    expect(extractResultUrl(container, 'a[href]')).toBe('https://real-site.com/page');
   });
 
   it('extracts real URL from link data- attributes on Baidu', () => {
@@ -116,11 +120,12 @@ describe('extractResultUrl', () => {
     expect(extractResultUrl(container, 'a[href]')).toBe('https://target.com');
   });
 
-  it('returns cite text as fallback for redirect URLs', () => {
+  it('normalizes cite text as fallback for opaque redirect URLs', () => {
+    mockLocation('https://www.baidu.com/s?wd=test');
     const container = document.createElement('div');
     container.innerHTML =
-      '<a href="https://www.google.com/url?q=https://real.com">result</a><cite>real-site.com</cite>';
-    expect(extractResultUrl(container, 'a[href]')).toBeTruthy();
+      '<a href="https://www.baidu.com/link?url=opaque">result</a><cite>www.real-site.com/path › cached</cite>';
+    expect(extractResultUrl(container, 'a[href]')).toBe('https://www.real-site.com/path');
   });
 
   it('extracts URL from item attribute when link has no data', () => {

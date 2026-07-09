@@ -14,11 +14,7 @@ export function shouldPersistAutoDetectedEngine(config: Pick<DetectedSearchEngin
 
 /** 自动分析 DOM 中重复出现的结构模式，检测搜索结果列表 */
 export function autoDetectSearchResults(getHostname: () => string): DetectedSearchEngineConfig | null {
-  const config = detectByClassPattern(getHostname);
-  if (config) {
-    console.log('[SRB] Auto-detect success:', config.containerSelector, '>', config.itemSelector, 'confidence:', config.confidence);
-  }
-  return config;
+  return detectByClassPattern(getHostname);
 }
 
 interface ClassPattern {
@@ -38,10 +34,10 @@ interface LinkQualityStats {
 
 function detectByClassPattern(getHostname: () => string): DetectedSearchEngineConfig | null {
   const patternMap = scanDomPatterns();
-  if (patternMap.size === 0) { console.log('[SRB] No patterns found'); return null; }
+  if (patternMap.size === 0) return null;
 
   const candidates = scorePatterns(patternMap);
-  if (candidates.length === 0) { console.log('[SRB] No scored candidates'); return null; }
+  if (candidates.length === 0) return null;
 
   for (const candidate of candidates.slice(0, 5)) {
     const config = buildConfig(candidate, getHostname);
@@ -56,7 +52,6 @@ function detectByClassPattern(getHostname: () => string): DetectedSearchEngineCo
 function scanDomPatterns(): Map<string, ClassPattern> {
   const map = new Map<string, ClassPattern>();
   const all = document.querySelectorAll('li, div, tr, section, article, dl, ol, .result, [class*="result"], [class*="item"], [class*="hit"]');
-  console.log('[SRB] Scanning', all.length, 'candidate elements');
 
   for (const el of all) {
     if (el.children.length === 0) continue;
@@ -76,47 +71,24 @@ function scanDomPatterns(): Map<string, ClassPattern> {
     map.set(key, entry);
   }
 
-  console.log('[SRB] Found', map.size, 'unique patterns');
-
-  const byCount = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
-  console.log('[SRB] Top 20 by count:');
-  byCount.slice(0, 20).forEach(([key, p]) => {
-    console.log('  ' + key + ' x' + p.count + ' links:' + p.linkCount + ' textLen:' + p.childTextLen);
-  });
-
   return map;
 }
 
 /** 给候选模式评分，返回按分降序的 Top10 */
 function scorePatterns(map: Map<string, ClassPattern>): ClassPattern[] {
   const result: ClassPattern[] = [];
-  let filteredCount = 0, filteredNoLinks = 0, filteredExclude = 0;
 
-  outer:
   for (const [, pattern] of map) {
-    if (pattern.count < 4) { filteredCount++; continue; }
-    if (pattern.linkCount === 0) { filteredNoLinks++; continue; }
-    if (isExcludedPattern(pattern.sample)) { filteredExclude++; continue; }
+    if (pattern.count < 4) continue;
+    if (pattern.linkCount === 0) continue;
+    if (isExcludedPattern(pattern.sample)) continue;
 
     pattern.score = scorePatternCandidate(pattern);
     if (pattern.score <= 0) continue;
     result.push(pattern);
   }
 
-  console.log('[SRB] Filter: total=' + map.size + ' count<4=' + filteredCount + ' noLinks=' + filteredNoLinks + ' excluded=' + filteredExclude + ' passed=' + result.length);
-  if (result.length === 0) {
-    for (const [, p] of map) {
-      if (p.count >= 4 && p.linkCount > 0) {
-        console.log('[SRB] Excluded candidate:', p.key, 'x' + p.count, 'links:', p.linkCount);
-      }
-    }
-  }
-
   result.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-
-  console.log('[SRB] Top candidates:');
-  result.slice(0, 5).forEach((p) => console.log('  ', p.key, 'score:', p.score, 'x' + p.count, 'links:', p.linkCount, 'el:', p.sample));
-
   return result;
 }
 
@@ -174,7 +146,6 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Detect
   const containerEl = document.querySelector(containerSelector);
   const itemCount = containerEl?.querySelectorAll(itemSelector).length ?? 0;
   if (!containerEl || itemCount < 4 || itemCount > 80) {
-    console.log('[SRB] Config build rejected:', containerSelector, itemSelector, 'count=', itemCount);
     return null;
   }
 
@@ -200,46 +171,39 @@ function calculateDetectionConfidence(candidate: ClassPattern, itemCount: number
 /** 验证配置：容器能找到、列表像主结果区、且多数项含有效链接 */
 function validateConfig(config: SearchEngineConfig): boolean {
   const containerEl = document.querySelector(config.containerSelector);
-  if (!containerEl) { console.log('[SRB] Config invalid: container not found'); return false; }
+  if (!containerEl) return false;
 
   const items = Array.from(containerEl.querySelectorAll(config.itemSelector));
-  if (items.length < 4) { console.log('[SRB] Config invalid: only', items.length, 'items'); return false; }
+  if (items.length < 4) return false;
 
   const rects = items
     .map((item) => item.getBoundingClientRect())
     .filter((rect) => rect.width > 120 && rect.height > 24);
-  if (rects.length < 4) { console.log('[SRB] Config invalid: not enough visible items'); return false; }
+  if (rects.length < 4) return false;
 
   if (!isMainColumn(containerEl.getBoundingClientRect())) {
-    console.log('[SRB] Config invalid: container not in main column');
     return false;
   }
 
   if (!isMostlyVerticalList(rects)) {
-    console.log('[SRB] Config invalid: items are not vertically aligned');
     return false;
   }
 
   if (!hasConsistentWidths(rects)) {
-    console.log('[SRB] Config invalid: item widths are inconsistent');
     return false;
   }
 
   const linkStats = getLinkQualityStats(items, config.linkSelector);
   if (linkStats.validCount < Math.max(4, Math.floor(items.length * 0.7))) {
-    console.log('[SRB] Config invalid: only', linkStats.validCount, 'of', items.length, 'have valid links');
     return false;
   }
   if (linkStats.richLinkCount < Math.max(3, Math.floor(items.length * 0.5))) {
-    console.log('[SRB] Config invalid: rich links too few', linkStats.richLinkCount, '/', items.length);
     return false;
   }
   if (linkStats.longTextCount < Math.max(3, Math.floor(items.length * 0.5))) {
-    console.log('[SRB] Config invalid: text too short', linkStats.longTextCount, '/', items.length);
     return false;
   }
 
-  console.log('[SRB] Config valid:', items.length, 'items,', linkStats.validCount, 'with links');
   return true;
 }
 

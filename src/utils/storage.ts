@@ -358,7 +358,6 @@ export async function removeBlockedSelector(index: number): Promise<void> {
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {
   // 禁止添加已在内置列表中的搜索引擎
   if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(config.hostname))) {
-    console.log('[SRB] Reject: cannot add built-in engine', config.hostname);
     return;
   }
   const { customEngines } = await get();

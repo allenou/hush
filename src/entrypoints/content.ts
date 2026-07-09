@@ -44,12 +44,39 @@ export default defineContentScript({
       );
     }
 
+    function applyStorageState(storage: Awaited<ReturnType<typeof get>>): void {
+      blockedDomains = storage.urls;
+      blockedUrls = storage.blockedUrls;
+      blockedSelectors = storage.blockedSelectors;
+      isEnabled = storage.enabled;
+      blockAds = storage.blockAds ?? true;
+      blockSubdomains = storage.blockSubdomains ?? true;
+    }
+
     function runDynamicScan(engine: SearchEngineConfig | null = currentEngine): void {
       if (!isEnabled) return;
       pushState(engine);
-      scanForAds();
       if (engine) scanResults(engine);
+      else scanForAds();
       applyBlockedSelectors();
+    }
+
+    function rescanWithCurrentState(): void {
+      pushState();
+
+      if (!isEnabled) {
+        disconnectScanObserver();
+        restoreBlockedSelectors();
+        clearAllMarkers();
+        return;
+      }
+
+      clearAllMarkers();
+      pushState();
+      if (currentEngine) scanResults(currentEngine);
+      else scanForAds();
+      applyBlockedSelectors();
+      setupScanObserver();
     }
 
     function disconnectScanObserver(): void {
@@ -67,6 +94,7 @@ export default defineContentScript({
         engine: currentEngine,
         blockedSelectors,
         hostname: getHostname(),
+        searchEngineHosts: BUILT_IN_ENGINES.map((engine) => engine.hostname),
       });
       if (target === scanObserverTarget && scanObserver) return;
 
@@ -76,7 +104,13 @@ export default defineContentScript({
       scanObserverTarget = target;
       scanObserver = new MutationObserver(() => {
         if (scanTimer) clearTimeout(scanTimer);
-        scanTimer = ctx.setTimeout(() => runDynamicScan(), 300);
+        scanTimer = ctx.setTimeout(() => {
+          if (!currentEngine) {
+            autoDetectRetries = 0;
+            void tryAutoDetect();
+          }
+          runDynamicScan();
+        }, 300);
       });
       scanObserver.observe(target, { childList: true, subtree: true });
     }
@@ -136,8 +170,7 @@ export default defineContentScript({
 
     // ===== 入口 =====
 
-    async function init(): Promise<void> {
-      const storage = await get();
+    async function init(storage: Awaited<ReturnType<typeof get>>): Promise<void> {
       if (storage.locale) {
         await initLocale(storage.locale);
       } else {
@@ -151,8 +184,7 @@ export default defineContentScript({
       ctx.addEventListener(document, 'srb-start-picker', () => activatePicker(getHostname));
 
       // 尝试从已存自定义引擎加载
-      const { customEngines } = await get();
-      currentEngine = findMatchingCustomEngine(customEngines, {
+      currentEngine = findMatchingCustomEngine(storage.customEngines, {
         hostname,
         pathname: window.location.pathname,
       });
@@ -191,39 +223,16 @@ export default defineContentScript({
     // ===== Storage 订阅 =====
 
     const unsubscribeStorage = subscribe((storage) => {
-      blockedDomains = storage.urls;
-      blockedUrls = storage.blockedUrls;
-      blockedSelectors = storage.blockedSelectors;
-      isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? true;
-      blockSubdomains = storage.blockSubdomains ?? true;
-      pushState();
-
-      if (!isEnabled) {
-        disconnectScanObserver();
-        restoreBlockedSelectors();
-        clearAllMarkers();
-        return;
-      }
-
-      clearAllMarkers();
-      pushState();
-      if (blockAds) scanForAds();
-      if (currentEngine) { scanResults(currentEngine); applyBlockedSelectors(); }
-      setupScanObserver();
+      applyStorageState(storage);
+      rescanWithCurrentState();
     });
     ctx.onInvalidated(unsubscribeStorage);
 
     // ===== 启动 =====
 
     get().then((storage) => {
-      blockedDomains = storage.urls;
-      blockedUrls = storage.blockedUrls;
-      blockedSelectors = storage.blockedSelectors;
-      isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? true;
-      blockSubdomains = storage.blockSubdomains ?? true;
-      init();
+      applyStorageState(storage);
+      init(storage);
       checkSavedSelectors();
     });
   },

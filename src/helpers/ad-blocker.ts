@@ -238,17 +238,34 @@ export function injectAdBadge(item: Element, href: string): void {
   item.appendChild(badge);
 }
 
+function clearActionMarkers(item: Element): void {
+  item.querySelectorAll('.srb-block-btn, .srb-popup, .srb-ad-mask, .srb-ad-badge').forEach((el) => el.remove());
+}
+
+function applyBlockedRuleMarker(item: Element, href: string): boolean {
+  const di = matchBlockedDomain(href, _state.blockedDomains);
+  const urlMatch = _state.blockedUrls.includes(href);
+  if (di < 0 && !urlMatch) return false;
+
+  clearActionMarkers(item);
+  injectBadge(item, di >= 0, urlMatch, href);
+  return true;
+}
+
 // ========== Item Processing ==========
 
 export function processItem(item: Element): void {
-  if (item.hasAttribute('data-srb-processed')) return;
-  item.setAttribute('data-srb-processed', 'true');
+  const wasProcessed = item.hasAttribute('data-srb-processed');
   if (!_currentEngine) return;
   const href = _extractResultUrl(item, _currentEngine.linkSelector);
   if (!href) { return; }
-  const di = matchBlockedDomain(href, _state.blockedDomains);
-  const urlMatch = _state.blockedUrls.includes(href);
-  if (di >= 0 || urlMatch) injectBadge(item, di >= 0, urlMatch, href);
+  if (wasProcessed) {
+    applyBlockedRuleMarker(item, href);
+    return;
+  }
+
+  item.setAttribute('data-srb-processed', 'true');
+  if (applyBlockedRuleMarker(item, href)) return;
   else if (_state.blockAds && isAdItem(item)) {
     const adContainer = findAdContainer(item);
     if (adContainer) { injectAdBadge(adContainer, href); }

@@ -5,6 +5,7 @@ export interface ScanObserverTargetOptions {
   engine: SearchEngineConfig | null;
   blockedSelectors: string[];
   hostname: string;
+  searchEngineHosts?: string[];
 }
 
 export function hasSelectorRuleForHost(blockedSelectors: string[], hostname: string): boolean {
@@ -17,9 +18,12 @@ export function hasSelectorRuleForHost(blockedSelectors: string[], hostname: str
 }
 
 export function getScanObserverTarget(options: ScanObserverTargetOptions): Element | null {
-  if (options.engine) {
-    const container = document.querySelector(options.engine.containerSelector);
-    if (container) return container;
+  if (options.engine) return document.body;
+
+  if (options.searchEngineHosts?.some((host) =>
+    normalizeHostname(host) === normalizeHostname(options.hostname),
+  )) {
+    return document.body;
   }
 
   if (hasSelectorRuleForHost(options.blockedSelectors, options.hostname)) {

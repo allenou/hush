@@ -13,7 +13,7 @@ import {
   setEnabled, subscribe,
   createStorageBackup, restoreStorageBackup,
 } from '@/utils/storage';
-import { initBlocker, injectBlockButton, syncBlockerState } from '@/helpers/ad-blocker';
+import { initBlocker, injectBlockButton, processItem, syncBlockerState } from '@/helpers/ad-blocker';
 
 beforeEach(() => {
   fakeBrowser.reset();
@@ -371,6 +371,55 @@ describe('manual result block statistics', () => {
     expect(s.adBlockCount).toBe(0);
     expect(s.domainBlockCount).toBe(0);
     expect(s.blockCount).toBe(1);
+  });
+});
+
+describe('result domain matching', () => {
+  function makeEngine() {
+    return {
+      name: 'Google',
+      hostname: 'google.com',
+      containerSelector: '#results',
+      itemSelector: '.result',
+      linkSelector: 'a[href]',
+    };
+  }
+
+  function syncForDomains(blockedDomains: string[]): void {
+    syncBlockerState({
+      blockedDomains,
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, makeEngine());
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => 'https://sub.example.com/page',
+    });
+  });
+
+  it('upgrades an already processed result when a later domain rule matches it', () => {
+    const item = document.createElement('div');
+    item.innerHTML = '<a href="https://sub.example.com/page">Example</a>';
+    document.body.appendChild(item);
+
+    syncForDomains([]);
+    processItem(item);
+
+    expect(item.querySelector('.srb-block-btn')).toBeTruthy();
+    expect(item.querySelector('.srb-blocked-badge')).toBeNull();
+
+    syncForDomains(['example.com']);
+    processItem(item);
+
+    expect(item.querySelector('.srb-block-btn')).toBeNull();
+    expect(item.querySelector('.srb-blocked-badge')).toBeTruthy();
   });
 });
 

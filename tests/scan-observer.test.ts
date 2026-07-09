@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { SearchEngineConfig } from '@/helpers/search-engines';
-import { getScanObserverTarget, hasSelectorRuleForHost } from '@/helpers/scan-observer';
+import {
+  getScanObserverTarget,
+  hasSelectorRuleForHost,
+} from '@/helpers/scan-observer';
 
 function makeEngine(containerSelector: string): SearchEngineConfig {
   return {
@@ -35,7 +38,7 @@ describe('getScanObserverTarget', () => {
     })).toBeNull();
   });
 
-  it('prefers the active search container when it exists', () => {
+  it('uses document.body for active search engines so first-page rerenders are observed', () => {
     const container = document.createElement('main');
     container.id = 'results';
     document.body.appendChild(container);
@@ -44,7 +47,16 @@ describe('getScanObserverTarget', () => {
       engine: makeEngine('#results'),
       blockedSelectors: ['example.com||.ad'],
       hostname: 'example.com',
-    })).toBe(container);
+    })).toBe(document.body);
+  });
+
+  it('uses document.body on built-in search hosts before engine detection succeeds', () => {
+    expect(getScanObserverTarget({
+      engine: null,
+      blockedSelectors: [],
+      hostname: 'google.com',
+      searchEngineHosts: ['google.com'],
+    })).toBe(document.body);
   });
 
   it('falls back to document.body for current-host selector rules', () => {
