@@ -50,6 +50,13 @@ export interface BlockStats {
 
 export type BlockRecordType = 'ad' | 'domain' | 'url' | 'selector';
 
+export interface StorageBackup {
+  app: 'SearchKit';
+  version: 1;
+  exportedAt: string;
+  data: ExtensionStorage;
+}
+
 const DEFAULT: ExtensionStorage = {
   urls: [],
   blockedUrls: [],
@@ -134,6 +141,32 @@ export async function get(): Promise<ExtensionStorage> {
   } catch {
     return freshDefaults();
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+export async function createStorageBackup(): Promise<StorageBackup> {
+  return {
+    app: 'SearchKit',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: await get(),
+  };
+}
+
+export async function restoreStorageBackup(value: unknown): Promise<ExtensionStorage> {
+  if (!isRecord(value)
+    || value.app !== 'SearchKit'
+    || value.version !== 1
+    || !isRecord(value.data)) {
+    throw new Error('Invalid SearchKit backup');
+  }
+
+  const normalized = normalizeStorage(value.data as Partial<ExtensionStorage>);
+  await blockerItem.setValue(normalized);
+  return normalized;
 }
 
 async function set(partial: Partial<ExtensionStorage>): Promise<void> {

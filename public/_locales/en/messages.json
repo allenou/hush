@@ -107,5 +107,13 @@
   "justNow": { "message": "Just now" },
   "minutesAgo": { "message": "$1 minutes ago" },
   "hoursAgo": { "message": "$1 hours ago" },
+  "backupLabel": { "message": "Data backup" },
+  "backupDesc": { "message": "Export or restore all rules, settings, statistics, and search history as a local JSON file" },
+  "backupExport": { "message": "Export backup" },
+  "backupImport": { "message": "Import backup" },
+  "backupExported": { "message": "Backup file exported" },
+  "backupImported": { "message": "Backup imported" },
+  "backupImportFailed": { "message": "Import failed. Please choose a valid SearchKit backup file" },
+  "backupImportConfirm": { "message": "Importing this backup will replace current SearchKit data. Continue?" },
   "languageDesc": { "message": "Switch the display language of the extension" }
 }

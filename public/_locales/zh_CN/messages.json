@@ -107,5 +107,13 @@
   "justNow": { "message": "刚刚" },
   "minutesAgo": { "message": "$1 分钟前" },
   "hoursAgo": { "message": "$1 小时前" },
+  "backupLabel": { "message": "数据备份" },
+  "backupDesc": { "message": "将规则、设置、统计和搜索记录导出为本地 JSON 文件，或从备份恢复" },
+  "backupExport": { "message": "导出备份" },
+  "backupImport": { "message": "导入备份" },
+  "backupExported": { "message": "备份文件已导出" },
+  "backupImported": { "message": "备份已导入" },
+  "backupImportFailed": { "message": "导入失败，请选择有效的 SearchKit 备份文件" },
+  "backupImportConfirm": { "message": "导入备份会替换当前 SearchKit 数据，是否继续？" },
   "languageDesc": { "message": "切换扩展界面的显示语言" }
 }

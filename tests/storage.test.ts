@@ -11,6 +11,7 @@ import {
   addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
   recordBlock, incrementBlockCount,
   setEnabled, subscribe,
+  createStorageBackup, restoreStorageBackup,
 } from '@/utils/storage';
 import { initBlocker, injectBlockButton, syncBlockerState } from '@/helpers/ad-blocker';
 
@@ -395,5 +396,45 @@ describe('subscribe', () => {
     const unsub = subscribe(() => {});
     expect(typeof unsub).toBe('function');
     unsub();
+  });
+});
+
+describe('local backup and restore', () => {
+  it('creates a versioned backup with normalized storage data', async () => {
+    await addDomain('example.com');
+    await addBlockedUrl('https://example.com/page');
+    await setEnabled(false);
+
+    const backup = await createStorageBackup();
+
+    expect(backup.app).toBe('SearchKit');
+    expect(backup.version).toBe(1);
+    expect(new Date(backup.exportedAt).toString()).not.toBe('Invalid Date');
+    expect(backup.data.enabled).toBe(false);
+    expect(backup.data.urls).toEqual(['example.com']);
+    expect(backup.data.blockedUrls).toEqual(['https://example.com/page']);
+    expect(backup.data.rules).toEqual([
+      expect.objectContaining({ type: 'domain', value: 'example.com' }),
+      expect.objectContaining({ type: 'url', value: 'https://example.com/page' }),
+    ]);
+  });
+
+  it('restores a backup by replacing current local storage', async () => {
+    await addDomain('before.com');
+    const backup = await createStorageBackup();
+
+    await addDomain('after.com');
+    await setEnabled(false);
+
+    const restored = await restoreStorageBackup(backup);
+
+    expect(restored.urls).toEqual(['before.com']);
+    expect(restored.enabled).toBe(true);
+    expect((await get()).urls).toEqual(['before.com']);
+  });
+
+  it('rejects invalid backup data', async () => {
+    await expect(restoreStorageBackup({ app: 'Other', version: 1, data: {} }))
+      .rejects.toThrow('Invalid SearchKit backup');
   });
 });

@@ -10,6 +10,9 @@
     onToggleRecordSearch,
     currentLocale = 'zh_CN',
     onLocaleChange,
+    backupStatus = '',
+    onExportBackup,
+    onImportBackup,
   }: {
     blockAds?: boolean;
     blockSubdomains?: boolean;
@@ -19,7 +22,12 @@
     onToggleRecordSearch?: () => void;
     currentLocale?: string;
     onLocaleChange?: (locale: string) => void;
+    backupStatus?: string;
+    onExportBackup?: () => void | Promise<void>;
+    onImportBackup?: (file: File) => void | Promise<void>;
   } = $props();
+
+  let backupInput: HTMLInputElement | null = null;
 
   const LOCALE_OPTIONS = [
     { value: 'zh_CN', label: '中文' },
@@ -40,6 +48,21 @@
 
   function handleLocaleSelect(locale: string) {
     onLocaleChange?.(locale);
+  }
+
+  function handleExportBackup() {
+    void onExportBackup?.();
+  }
+
+  function handleImportClick() {
+    backupInput?.click();
+  }
+
+  function handleBackupFileChange(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) void onImportBackup?.(file);
+    input.value = '';
   }
 </script>
 
@@ -89,6 +112,31 @@
       </label>
     </div>
   </div>
+</div>
+
+<div class="method-card">
+  <div class="method-heading">
+    <h2 class="card-title">{t('backupLabel')}</h2>
+    <p class="card-desc">{t('backupDesc')}</p>
+  </div>
+  <div class="backup-actions">
+    <button class="backup-btn primary" onclick={handleExportBackup}>
+      {t('backupExport')}
+    </button>
+    <button class="backup-btn" onclick={handleImportClick}>
+      {t('backupImport')}
+    </button>
+    <input
+      bind:this={backupInput}
+      class="backup-input"
+      type="file"
+      accept="application/json,.json"
+      onchange={handleBackupFileChange}
+    />
+  </div>
+  {#if backupStatus}
+    <p class="backup-status">{backupStatus}</p>
+  {/if}
 </div>
 
 <div class="method-card">
@@ -207,6 +255,45 @@
     display: flex;
     gap: var(--srb-space-sm);
     margin-top: 4px;
+  }
+  .backup-actions {
+    display: flex;
+    gap: var(--srb-space-sm);
+  }
+  .backup-btn {
+    flex: 1;
+    min-height: var(--srb-button-height);
+    padding: 10px 16px;
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    color: var(--srb-text);
+    font: inherit;
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-semibold);
+    cursor: pointer;
+    transition: all var(--srb-transition-base);
+  }
+  .backup-btn:hover {
+    border-color: var(--srb-engine-google);
+    background: var(--srb-success-light);
+  }
+  .backup-btn.primary {
+    border-color: var(--srb-engine-google);
+    background: var(--srb-engine-google);
+    color: var(--srb-on-primary);
+  }
+  .backup-btn.primary:hover {
+    background: var(--srb-primary-hover);
+  }
+  .backup-input {
+    display: none;
+  }
+  .backup-status {
+    margin: var(--srb-space-sm) 0 0;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-sm);
+    line-height: var(--srb-line-height-body);
   }
   .locale-btn {
     flex: 1;

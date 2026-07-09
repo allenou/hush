@@ -7,6 +7,8 @@
     get,
     getAllBlocked,
     removeBlockedItem,
+    createStorageBackup,
+    restoreStorageBackup,
     setBlockAds,
     setBlockSubdomains,
     setRecordSearchHistory,
@@ -40,6 +42,7 @@
   let topBlockedDomains = $state<{ domain: string; count: number }[]>([]);
   let searchHistory = $state<SearchRecord[]>([]);
   let recordSearchHistory = $state(true);
+  let backupStatus = $state('');
 
   function buildWeekStats(raw: { date: string; count: number }[]): { date: string; count: number }[] {
     const result: { date: string; count: number }[] = [];
@@ -71,6 +74,37 @@
   async function handleLocaleChange(newLocale: string) {
     await setAppLocale(newLocale);
     await setStoredLocale(newLocale);
+  }
+
+  function downloadTextFile(filename: string, content: string) {
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleExportBackup() {
+    const backup = await createStorageBackup();
+    const date = backup.exportedAt.slice(0, 10);
+    downloadTextFile(`searchkit-backup-${date}.json`, JSON.stringify(backup, null, 2));
+    backupStatus = t('backupExported');
+  }
+
+  async function handleImportBackup(file: File) {
+    try {
+      if (!confirm(t('backupImportConfirm'))) return;
+      const raw = await file.text();
+      await restoreStorageBackup(JSON.parse(raw));
+      await loadData();
+      backupStatus = t('backupImported');
+    } catch {
+      backupStatus = t('backupImportFailed');
+    }
   }
 
   async function loadData() {
@@ -211,6 +245,9 @@
         onToggleAdBlock={toggleAdBlock}
         onToggleSubdomain={toggleSubdomainBlock}
         onToggleRecordSearch={toggleRecordSearch}
+        {backupStatus}
+        onExportBackup={handleExportBackup}
+        onImportBackup={handleImportBackup}
       />
     {/if}
   </main>
