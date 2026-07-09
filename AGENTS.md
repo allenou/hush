@@ -19,24 +19,29 @@ Chrome 浏览器扩展，用于管理搜索结果页面——屏蔽指定域名�
 
 ```
 search-kit/
-├── entrypoints/                # WXT 入口点
-│   ├── background.ts           # Service Worker — 图标 Badge 更新
-│   ├── content.ts              # Content Script — 核心屏蔽逻辑 + 教学模式
-│   ├── options/                # 选项页（Svelte）
-│   │   ├── App.svelte          #  屏蔽列表管理 + 自定义搜索引擎管理
-│   │   ├── index.html
-│   │   └── main.ts
-│   └── popup/                  # 弹窗（Svelte）
-│       ├── App.svelte          #  启用开关 + 拦截统计 + 教学模式入口
-│       ├── index.html
-│       └── main.ts
-├── utils/                      # 共享工具模块
-│   ├── domain.ts               # 域名提取工具函数
-│   ├── search-engines.ts       # 搜索引擎配置定义与检测
-│   └── storage.ts              # chrome.storage 封装（CRUD + 订阅）
-├── assets/                     # 图标资源
+├── src/                        # 源码目录（WXT srcDir）
+│   ├── entrypoints/            # WXT 入口点
+│   │   ├── background.ts       # Service Worker — 图标 Badge 更新
+│   │   ├── content.ts          # Content Script — 核心屏蔽逻辑 + 教学模式
+│   │   ├── options/            # 选项页（Svelte）
+│   │   │   ├── App.svelte      #  屏蔽列表管理 + 自定义搜索引擎管理
+│   │   │   ├── index.html
+│   │   │   └── main.ts
+│   │   └── popup/              # 弹窗（Svelte）
+│   │       ├── App.svelte      #  启用开关 + 拦截统计 + 教学模式入口
+│   │       ├── index.html
+│   │       └── main.ts
+│   ├── helpers/                # DOM 交互、搜索引擎检测、广告屏蔽等逻辑
+│   │   ├── search-engines.ts   # 搜索引擎配置定义与检测
+│   │   └── ui.ts               # Content Script 注入 UI
+│   ├── utils/                  # 共享工具模块
+│   │   ├── domain.ts           # 域名提取工具函数
+│   │   └── storage.ts          # chrome.storage 封装（CRUD + 订阅）
+│   ├── constants/              # UI 常量与导出
+│   └── styles/                 # 共享样式
 ├── docs/                       # 设计文档与实施计划
 ├── public/                     # 静态资源
+├── tests/                      # Vitest 测试
 ├── wxt.config.ts               # WXT 构建配置
 ├── tsconfig.json               # TypeScript 配置
 └── package.json                # 依赖：wxt, svelte, typescript
@@ -58,7 +63,7 @@ search-kit/
 
 所有状态存储在 `chrome.storage.local` 的 `blocker` 键下，格式为 `ExtensionStorage`。
 
-### Storage 数据结构 (`utils/storage.ts`)
+### Storage 数据结构 (`src/utils/storage.ts`)
 
 ```typescript
 interface ExtensionStorage {
@@ -71,7 +76,7 @@ interface ExtensionStorage {
 }
 ```
 
-### 搜索引擎配置 (`utils/search-engines.ts`)
+### 搜索引擎配置 (`src/helpers/search-engines.ts`)
 
 ```typescript
 interface SearchEngineConfig {
@@ -85,7 +90,7 @@ interface SearchEngineConfig {
 
 内置引擎：Google (`#search > .g`)、Baidu (`#content_left > .result`)、Bing (`#b_results > .b_algo`)、DuckDuckGo (`.results > .result`)。
 
-## Content Script 核心逻辑 (`entrypoints/content.ts`)
+## Content Script 核心逻辑 (`src/entrypoints/content.ts`)
 
 - **定位引擎**：根据当前 URL hostname 匹配内置或自定义引擎
 - **DOM 扫描**：使用 `MutationObserver` 监听容器变化，`debounce(300ms)` 后重新扫描
@@ -116,6 +121,7 @@ npm run wxt-prepare  # WXT 类型生成
 ## 重要注意事项
 
 - `wxt.config.ts` 中 `host_permissions: ['<all_urls>']` 确保 content script 可在任意页面运行
+- `wxt.config.ts` 中 `srcDir: 'src'` 指定 WXT 源码目录；`@/...` alias 指向 `src/`
 - Content script 使用 `runAt: 'document_end'` 确保 DOM 就绪后执行
 - 存储读写均为异步操作，注意 `await`
 - 自定义搜索引擎选择器需要经过验证（至少匹配 2 个元素）
