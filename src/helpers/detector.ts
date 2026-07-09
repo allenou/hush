@@ -1,11 +1,22 @@
 import type { SearchEngineConfig } from './search-engines';
 import { buildPathnamePattern, normalizeHostname } from './search-engines';
 
+export const AUTO_DETECT_PERSISTENCE_CONFIDENCE = 85;
+
+export interface DetectedSearchEngineConfig extends SearchEngineConfig {
+  confidence: number;
+  itemCount: number;
+}
+
+export function shouldPersistAutoDetectedEngine(config: Pick<DetectedSearchEngineConfig, 'confidence'>): boolean {
+  return config.confidence >= AUTO_DETECT_PERSISTENCE_CONFIDENCE;
+}
+
 /** 自动分析 DOM 中重复出现的结构模式，检测搜索结果列表 */
-export function autoDetectSearchResults(getHostname: () => string): SearchEngineConfig | null {
+export function autoDetectSearchResults(getHostname: () => string): DetectedSearchEngineConfig | null {
   const config = detectByClassPattern(getHostname);
   if (config) {
-    console.log('[SRB] Auto-detect success:', config.containerSelector, '>', config.itemSelector);
+    console.log('[SRB] Auto-detect success:', config.containerSelector, '>', config.itemSelector, 'confidence:', config.confidence);
   }
   return config;
 }
@@ -25,7 +36,7 @@ interface LinkQualityStats {
   longTextCount: number;
 }
 
-function detectByClassPattern(getHostname: () => string): SearchEngineConfig | null {
+function detectByClassPattern(getHostname: () => string): DetectedSearchEngineConfig | null {
   const patternMap = scanDomPatterns();
   if (patternMap.size === 0) { console.log('[SRB] No patterns found'); return null; }
 
@@ -149,7 +160,7 @@ function scorePatternCandidate(pattern: ClassPattern): number {
 }
 
 /** 从最佳候选生成配置 */
-function buildConfig(candidate: ClassPattern, getHostname: () => string): SearchEngineConfig | null {
+function buildConfig(candidate: ClassPattern, getHostname: () => string): DetectedSearchEngineConfig | null {
   const el = candidate.sample;
   const itemSelector = buildStableItemSelector(el);
   if (!itemSelector) return null;
@@ -174,7 +185,16 @@ function buildConfig(candidate: ClassPattern, getHostname: () => string): Search
     containerSelector,
     itemSelector,
     linkSelector: 'a[href]',
+    confidence: calculateDetectionConfidence(candidate, itemCount),
+    itemCount,
   };
+}
+
+function calculateDetectionConfidence(candidate: ClassPattern, itemCount: number): number {
+  const score = Math.max(candidate.score ?? 0, 0);
+  const scoreConfidence = Math.min(75, score / 5);
+  const countConfidence = Math.min(25, itemCount * 2);
+  return Math.min(100, Math.round(scoreConfidence + countConfidence));
 }
 
 /** 验证配置：容器能找到、列表像主结果区、且多数项含有效链接 */

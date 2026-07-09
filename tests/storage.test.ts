@@ -12,6 +12,7 @@ import {
   recordBlock, incrementBlockCount,
   setEnabled, subscribe,
 } from '@/utils/storage';
+import { initBlocker, injectBlockButton, syncBlockerState } from '@/helpers/ad-blocker';
 
 beforeEach(() => {
   fakeBrowser.reset();
@@ -22,6 +23,7 @@ describe('get / set defaults', () => {
     const s = await get();
     expect(s.urls).toEqual([]);
     expect(s.blockedUrls).toEqual([]);
+    expect(s.rules).toEqual([]);
     expect(s.blockCount).toBe(0);
     expect(s.enabled).toBe(true);
     expect(s.blockAds).toBe(true);
@@ -34,6 +36,15 @@ describe('get / set defaults', () => {
     await fakeBrowser.storage.local.set({ blocker: { urls: ['example.com'], blockCount: 5, enabled: false } });
     const s = await get();
     expect(s.urls).toEqual(['example.com']);
+    expect(s.rules).toEqual([
+      expect.objectContaining({
+        type: 'domain',
+        value: 'example.com',
+        enabled: true,
+        source: 'migration',
+        hitCount: 0,
+      }),
+    ]);
     expect(s.blockCount).toBe(5);
     expect(s.enabled).toBe(false);
   });
@@ -47,6 +58,85 @@ describe('get / set defaults', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener.mock.calls[0][0].enabled).toBe(false);
     unsubscribe();
+  });
+});
+
+describe('rules compatibility model', () => {
+  it('migrates legacy domain, URL, and selector arrays into rules', async () => {
+    await fakeBrowser.storage.local.set({
+      blocker: {
+        urls: ['example.com'],
+        blockedUrls: ['https://spam.test/page'],
+        blockedSelectors: ['google.com||.ad-result'],
+      },
+    });
+
+    const s = await get();
+
+    expect(s.rules).toEqual([
+      expect.objectContaining({
+        id: 'domain:example.com',
+        type: 'domain',
+        value: 'example.com',
+        enabled: true,
+        source: 'migration',
+        hitCount: 0,
+      }),
+      expect.objectContaining({
+        id: 'url:https%3A%2F%2Fspam.test%2Fpage',
+        type: 'url',
+        value: 'https://spam.test/page',
+        enabled: true,
+        source: 'migration',
+        hitCount: 0,
+      }),
+      expect.objectContaining({
+        id: 'selector:google.com:.ad-result',
+        type: 'selector',
+        scope: 'google.com',
+        value: '.ad-result',
+        enabled: true,
+        source: 'migration',
+        hitCount: 0,
+      }),
+    ]);
+  });
+
+  it('keeps rules and compatibility arrays in sync when adding items', async () => {
+    await addDomain('example.com');
+    await addBlockedUrl('https://example.com/page');
+    await addBlockedSelector('google.com||.ad-result');
+
+    const s = await get();
+
+    expect(s.urls).toEqual(['example.com']);
+    expect(s.blockedUrls).toEqual(['https://example.com/page']);
+    expect(s.blockedSelectors).toEqual(['google.com||.ad-result']);
+    expect(s.rules).toEqual([
+      expect.objectContaining({ type: 'domain', value: 'example.com', source: 'manual' }),
+      expect.objectContaining({ type: 'url', value: 'https://example.com/page', source: 'manual' }),
+      expect.objectContaining({ type: 'selector', scope: 'google.com', value: '.ad-result', source: 'picker' }),
+    ]);
+  });
+
+  it('keeps rules and compatibility arrays in sync when removing items', async () => {
+    await addDomain('a.com');
+    await addDomain('b.com');
+    await addBlockedUrl('https://a.com/page');
+    await addBlockedSelector('google.com||.ad-result');
+
+    await removeDomain(0);
+    await removeBlockedUrl(0);
+    await removeBlockedSelector(0);
+
+    const s = await get();
+
+    expect(s.urls).toEqual(['b.com']);
+    expect(s.blockedUrls).toEqual([]);
+    expect(s.blockedSelectors).toEqual([]);
+    expect(s.rules).toEqual([
+      expect.objectContaining({ type: 'domain', value: 'b.com' }),
+    ]);
   });
 });
 
@@ -235,6 +325,51 @@ describe('recordBlock', () => {
     });
     await recordBlock();
     expect((await get()).stats.length).toBeLessThanOrEqual(30);
+  });
+});
+
+describe('manual result block statistics', () => {
+  async function clickInjectedBlockOption(href: string): Promise<void> {
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => href,
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+    }, null);
+
+    const item = document.createElement('div');
+    document.body.appendChild(item);
+    injectBlockButton(item, href);
+    item.querySelector<HTMLButtonElement>('.srb-block-btn')!.click();
+    item.querySelector<HTMLButtonElement>('.srb-opt')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('records root-result manual blocks as domain blocks, not ads', async () => {
+    await clickInjectedBlockOption('https://example.com/');
+
+    const s = await get();
+
+    expect(s.urls).toEqual(['example.com']);
+    expect(s.adBlockCount).toBe(0);
+    expect(s.domainBlockCount).toBe(1);
+  });
+
+  it('records deep-link manual blocks without incrementing ad count', async () => {
+    await clickInjectedBlockOption('https://example.com/page');
+
+    const s = await get();
+
+    expect(s.blockedUrls).toEqual(['https://example.com/page']);
+    expect(s.adBlockCount).toBe(0);
+    expect(s.domainBlockCount).toBe(0);
+    expect(s.blockCount).toBe(1);
   });
 });
 

@@ -10,6 +10,7 @@ import {
 export interface ExtensionStorage {
   urls: string[];
   blockedUrls: string[];
+  rules: BlockRule[];
   blockCount: number;
   adBlockCount: number;
   domainBlockCount: number;
@@ -31,6 +32,17 @@ export interface BlockItem {
   index: number;
 }
 
+export interface BlockRule {
+  id: string;
+  type: BlockItem['type'];
+  value: string;
+  scope?: string;
+  enabled: boolean;
+  source: 'manual' | 'picker' | 'migration';
+  createdAt: number;
+  hitCount: number;
+}
+
 export interface BlockStats {
   date: string;
   count: number;
@@ -41,6 +53,7 @@ export type BlockRecordType = 'ad' | 'domain' | 'url' | 'selector';
 const DEFAULT: ExtensionStorage = {
   urls: [],
   blockedUrls: [],
+  rules: [],
   blockCount: 0,
   adBlockCount: 0,
   domainBlockCount: 0,
@@ -86,6 +99,7 @@ function freshDefaults(): ExtensionStorage {
     ...DEFAULT,
     urls: [...DEFAULT.urls],
     blockedUrls: [...DEFAULT.blockedUrls],
+    rules: [...DEFAULT.rules],
     blockedSelectors: [...DEFAULT.blockedSelectors],
     customEngines: [...DEFAULT.customEngines],
     stats: [...DEFAULT.stats],
@@ -97,11 +111,14 @@ function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): 
   const merged = value && typeof value === 'object'
     ? { ...freshDefaults(), ...value }
     : freshDefaults();
+  const rules = normalizeRules(value);
+  const compatibility = deriveCompatibilityLists(rules);
   return {
     ...merged,
-    urls: [...(merged.urls ?? [])],
-    blockedUrls: [...(merged.blockedUrls ?? [])],
-    blockedSelectors: [...(merged.blockedSelectors ?? [])],
+    urls: compatibility.urls,
+    blockedUrls: compatibility.blockedUrls,
+    rules,
+    blockedSelectors: compatibility.blockedSelectors,
     customEngines: [...(merged.customEngines ?? [])],
     stats: [...(merged.stats ?? [])],
     blockedDomainStats: [...(merged.blockedDomainStats ?? [])],
@@ -124,30 +141,146 @@ async function set(partial: Partial<ExtensionStorage>): Promise<void> {
   await blockerItem.setValue({ ...current, ...partial });
 }
 
+function isBlockRuleSource(value: unknown): value is BlockRule['source'] {
+  return value === 'manual' || value === 'picker' || value === 'migration';
+}
+
+function buildRuleId(type: BlockItem['type'], value: string, scope?: string): string {
+  if (type === 'url') return `url:${encodeURIComponent(value)}`;
+  if (type === 'selector') return `selector:${scope ?? ''}:${value}`;
+  return `domain:${value}`;
+}
+
+function getRuleKey(rule: Pick<BlockRule, 'type' | 'value' | 'scope'>): string {
+  return `${rule.type}||${rule.scope ?? ''}||${rule.value}`;
+}
+
+function createRule(
+  type: BlockItem['type'],
+  value: string,
+  source: BlockRule['source'],
+  scope?: string,
+): BlockRule {
+  return {
+    id: buildRuleId(type, value, scope),
+    type,
+    value,
+    ...(scope ? { scope } : {}),
+    enabled: true,
+    source,
+    createdAt: Date.now(),
+    hitCount: 0,
+  };
+}
+
+function parseSelectorEntry(entry: string): { scope?: string; value: string } {
+  const sep = entry.indexOf('||');
+  if (sep === -1) return { value: entry };
+  return {
+    scope: entry.slice(0, sep),
+    value: entry.slice(sep + 2),
+  };
+}
+
+function formatSelectorEntry(rule: Pick<BlockRule, 'scope' | 'value'>): string {
+  return rule.scope ? `${rule.scope}||${rule.value}` : rule.value;
+}
+
+function normalizeRule(value: unknown): BlockRule | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<BlockRule>;
+  if (raw.type !== 'domain' && raw.type !== 'url' && raw.type !== 'selector') return null;
+  if (typeof raw.value !== 'string' || raw.value.length === 0) return null;
+  const scope = typeof raw.scope === 'string' && raw.scope.length > 0 ? raw.scope : undefined;
+  return {
+    id: typeof raw.id === 'string' && raw.id.length > 0
+      ? raw.id
+      : buildRuleId(raw.type, raw.value, scope),
+    type: raw.type,
+    value: raw.value,
+    ...(scope ? { scope } : {}),
+    enabled: raw.enabled !== false,
+    source: isBlockRuleSource(raw.source) ? raw.source : 'migration',
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : 0,
+    hitCount: typeof raw.hitCount === 'number' ? raw.hitCount : 0,
+  };
+}
+
+function pushUniqueRule(rules: BlockRule[], seen: Set<string>, rule: BlockRule): void {
+  const key = getRuleKey(rule);
+  if (seen.has(key)) return;
+  seen.add(key);
+  rules.push(rule);
+}
+
+function normalizeRules(value: Partial<ExtensionStorage> | null | undefined): BlockRule[] {
+  const rules: BlockRule[] = [];
+  const seen = new Set<string>();
+
+  const rawRules = Array.isArray(value?.rules) ? value.rules : [];
+  for (const rawRule of rawRules) {
+    const rule = normalizeRule(rawRule);
+    if (rule) pushUniqueRule(rules, seen, rule);
+  }
+
+  for (const domain of value?.urls ?? []) {
+    pushUniqueRule(rules, seen, createRule('domain', domain, 'migration'));
+  }
+  for (const url of value?.blockedUrls ?? []) {
+    pushUniqueRule(rules, seen, createRule('url', url, 'migration'));
+  }
+  for (const entry of value?.blockedSelectors ?? []) {
+    const { scope, value: selector } = parseSelectorEntry(entry);
+    pushUniqueRule(rules, seen, createRule('selector', selector, 'migration', scope));
+  }
+
+  return rules;
+}
+
+function deriveCompatibilityLists(rules: BlockRule[]): Pick<ExtensionStorage, 'urls' | 'blockedUrls' | 'blockedSelectors'> {
+  const enabledRules = rules.filter((rule) => rule.enabled);
+  return {
+    urls: enabledRules.filter((rule) => rule.type === 'domain').map((rule) => rule.value),
+    blockedUrls: enabledRules.filter((rule) => rule.type === 'url').map((rule) => rule.value),
+    blockedSelectors: enabledRules
+      .filter((rule) => rule.type === 'selector')
+      .map((rule) => formatSelectorEntry(rule)),
+  };
+}
+
+async function setRules(rules: BlockRule[]): Promise<void> {
+  await set({
+    rules,
+    ...deriveCompatibilityLists(rules),
+  });
+}
+
 export async function addDomain(domain: string): Promise<void> {
-  const { urls } = await get();
-  if (!urls.includes(domain)) {
-    await set({ urls: [...urls, domain] });
+  const { rules } = await get();
+  if (!rules.some((rule) => rule.type === 'domain' && rule.value === domain)) {
+    await setRules([...rules, createRule('domain', domain, 'manual')]);
   }
 }
 
 export async function removeDomain(index: number): Promise<void> {
-  const { urls } = await get();
-  urls.splice(index, 1);
-  await set({ urls });
+  const { urls, rules } = await get();
+  const domain = urls[index];
+  if (!domain) return;
+  await setRules(rules.filter((rule) => !(rule.type === 'domain' && rule.value === domain)));
 }
 
 export async function addBlockedUrl(url: string): Promise<void> {
-  const { blockedUrls } = await get();
-  if (!blockedUrls.includes(url)) {
-    await set({ blockedUrls: [...blockedUrls, url] });
+  const { rules } = await get();
+  if (!rules.some((rule) => rule.type === 'url' && rule.value === url)) {
+    await setRules([...rules, createRule('url', url, 'manual')]);
   }
 }
 
 export async function removeBlockedUrl(index: number): Promise<void> {
-  const { blockedUrls } = await get();
-  blockedUrls.splice(index, 1);
-  await set({ blockedUrls });
+  const { blockedUrls, rules } = await get();
+  const url = blockedUrls[index];
+  if (!url) return;
+  await setRules(rules.filter((rule) => !(rule.type === 'url' && rule.value === url)));
 }
 
 export async function removeBlockedItem(type: 'domain' | 'url' | 'selector', index: number): Promise<void> {
@@ -172,16 +305,21 @@ export async function getAllBlocked(): Promise<BlockItem[]> {
 }
 
 export async function addBlockedSelector(selector: string): Promise<void> {
-  const { blockedSelectors } = await get();
-  if (!blockedSelectors.includes(selector)) {
-    await set({ blockedSelectors: [...blockedSelectors, selector] });
+  const { scope, value } = parseSelectorEntry(selector);
+  const { rules } = await get();
+  if (!rules.some((rule) => rule.type === 'selector' && rule.scope === scope && rule.value === value)) {
+    await setRules([...rules, createRule('selector', value, 'picker', scope)]);
   }
 }
 
 export async function removeBlockedSelector(index: number): Promise<void> {
-  const { blockedSelectors } = await get();
-  blockedSelectors.splice(index, 1);
-  await set({ blockedSelectors });
+  const { blockedSelectors, rules } = await get();
+  const selector = blockedSelectors[index];
+  if (!selector) return;
+  const { scope, value } = parseSelectorEntry(selector);
+  await setRules(rules.filter((rule) =>
+    !(rule.type === 'selector' && rule.scope === scope && rule.value === value),
+  ));
 }
 
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {

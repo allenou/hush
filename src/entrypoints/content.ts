@@ -5,8 +5,9 @@ import { addCustomEngine, findMatchingCustomEngine, get, subscribe, recordSearch
 import { injectStyles } from '@/utils/styles';
 import { activatePicker, deactivatePicker } from '@/helpers/picker';
 import { getHostname, extractResultUrl } from '@/utils/url';
-import { autoDetectSearchResults } from '@/helpers/detector';
+import { autoDetectSearchResults, shouldPersistAutoDetectedEngine } from '@/helpers/detector';
 import { injectFloatingBtn, injectCollapseBar } from '@/helpers/ui';
+import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
   initBlocker, syncBlockerState,
   scanForAds, scanResults,
@@ -28,7 +29,9 @@ export default defineContentScript({
     let blockAds = true;
     let blockSubdomains = true;
     let currentEngine: SearchEngineConfig | null = null;
-    let containerObserver: MutationObserver | null = null;
+    let scanObserver: MutationObserver | null = null;
+    let scanObserverTarget: Element | null = null;
+    let scanTimer: number | undefined;
 
     // ===== 初始化 Blocker（注入依赖）=====
     initBlocker({ getHostname, extractResultUrl });
@@ -39,6 +42,43 @@ export default defineContentScript({
         { blockedDomains, blockedUrls, blockedSelectors, isEnabled, blockAds, blockSubdomains },
         engine ?? currentEngine,
       );
+    }
+
+    function runDynamicScan(engine: SearchEngineConfig | null = currentEngine): void {
+      if (!isEnabled) return;
+      pushState(engine);
+      scanForAds();
+      if (engine) scanResults(engine);
+      applyBlockedSelectors();
+    }
+
+    function disconnectScanObserver(): void {
+      if (scanTimer) {
+        clearTimeout(scanTimer);
+        scanTimer = undefined;
+      }
+      scanObserver?.disconnect();
+      scanObserver = null;
+      scanObserverTarget = null;
+    }
+
+    function setupScanObserver(): void {
+      const target = getScanObserverTarget({
+        engine: currentEngine,
+        blockedSelectors,
+        hostname: getHostname(),
+      });
+      if (target === scanObserverTarget && scanObserver) return;
+
+      disconnectScanObserver();
+      if (!target) return;
+
+      scanObserverTarget = target;
+      scanObserver = new MutationObserver(() => {
+        if (scanTimer) clearTimeout(scanTimer);
+        scanTimer = ctx.setTimeout(() => runDynamicScan(), 300);
+      });
+      scanObserver.observe(target, { childList: true, subtree: true });
     }
 
     // ===== 引擎自动检测 =====
@@ -58,18 +98,15 @@ export default defineContentScript({
       }
       const hostname = getHostname();
       const isBuiltIn = BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname));
-      if (!isBuiltIn) {
-        await addCustomEngine(detected);
+      if (!isBuiltIn && shouldPersistAutoDetectedEngine(detected)) {
+        const { confidence: _confidence, itemCount: _itemCount, ...engineConfig } = detected;
+        await addCustomEngine(engineConfig);
       }
       currentEngine = detected;
       pushState();
       injectCollapseBar(detected.containerSelector);
       scanResults(detected);
-      // 结果容器 observer（翻页检测）
-      const c = document.querySelector(detected.containerSelector) ?? document.body;
-      containerObserver?.disconnect();
-      containerObserver = new MutationObserver(() => { pushState(); scanResults(detected); scanForAds(); applyBlockedSelectors(); });
-      containerObserver.observe(c, { childList: true, subtree: true });
+      setupScanObserver();
     }
 
     // ===== 搜索记录 =====
@@ -126,10 +163,7 @@ export default defineContentScript({
           pushState();
           injectCollapseBar(currentEngine.containerSelector);
           scanResults(currentEngine);
-          const c = document.querySelector(currentEngine.containerSelector) ?? document.body;
-          containerObserver?.disconnect();
-          containerObserver = new MutationObserver(() => { pushState(); scanResults(currentEngine!); scanForAds(); applyBlockedSelectors(); });
-          containerObserver.observe(c, { childList: true, subtree: true });
+          setupScanObserver();
           return;
         }
         currentEngine = null;
@@ -146,25 +180,10 @@ export default defineContentScript({
       pushState();
       scanForAds();
       ctx.setTimeout(() => { pushState(); scanForAds(); }, 1500);
+      setupScanObserver();
     }
-
-    // ===== 全 DOM Observer（防抖 300ms，监听无限加载）=====
-
-    let obsTimer: number | undefined;
-    const globalObserver = new MutationObserver(() => {
-      if (obsTimer) clearTimeout(obsTimer);
-      obsTimer = ctx.setTimeout(() => {
-        if (!isEnabled) return;
-        pushState();
-        scanForAds();
-        if (currentEngine) scanResults(currentEngine);
-        applyBlockedSelectors();
-      }, 300);
-    });
-    globalObserver.observe(document.body, { childList: true, subtree: true });
     ctx.onInvalidated(() => {
-      globalObserver.disconnect();
-      containerObserver?.disconnect();
+      disconnectScanObserver();
       deactivatePicker();
       setOnContainerMissing(() => {});
     });
@@ -181,6 +200,7 @@ export default defineContentScript({
       pushState();
 
       if (!isEnabled) {
+        disconnectScanObserver();
         restoreBlockedSelectors();
         clearAllMarkers();
         return;
@@ -190,6 +210,7 @@ export default defineContentScript({
       pushState();
       if (blockAds) scanForAds();
       if (currentEngine) { scanResults(currentEngine); applyBlockedSelectors(); }
+      setupScanObserver();
     });
     ctx.onInvalidated(unsubscribeStorage);
 
