@@ -2,6 +2,9 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   srcDir: 'src',
+  webExt: {
+    disabled: true,
+  },
   modules: ['@wxt-dev/module-svelte'],
   imports: {
     dirsScanOptions: {
