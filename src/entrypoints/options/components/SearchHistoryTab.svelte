@@ -27,7 +27,6 @@
 <section class="search-section">
   <div class="search-section-heading">
     <h2 class="card-title">{t('searchHistory')}</h2>
-    <p class="card-desc">{t('searchHistoryDesc')}</p>
   </div>
 
   {#if searchHistory.length === 0}
@@ -108,18 +107,10 @@
     letter-spacing: -0.02em;
     line-height: var(--srb-line-height-tight);
   }
-  .card-desc {
-    margin: 4px 0 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
-  }
-
   .empty {
     padding: var(--srb-space-4xl) var(--srb-space-2xl);
     border: 1px dashed var(--srb-dashed-border);
     border-radius: var(--srb-radius-xl);
-    background: var(--srb-empty-bg);
     text-align: center;
   }
   .empty-icon {

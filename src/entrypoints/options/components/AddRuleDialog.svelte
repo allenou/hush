@@ -42,7 +42,6 @@
       <div class="dialog-header">
         <div>
           <h2 id="dialog-title" class="card-title">{t('newRule')}</h2>
-          <p class="card-desc">{t('addRuleDesc')}</p>
         </div>
         <button class="dialog-close" onclick={() => onClose?.()} aria-label={t('close')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -120,13 +119,6 @@
     letter-spacing: -0.02em;
     line-height: var(--srb-line-height-tight);
   }
-  .card-desc {
-    margin: 4px 0 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
-  }
-
   .add-row {
     display: grid;
     grid-template-columns: 1fr auto;

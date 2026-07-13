@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
 
 // ------ Imports ------
@@ -14,6 +14,7 @@ import {
   createStorageBackup, restoreStorageBackup,
 } from '@/utils/storage';
 import { initBlocker, injectBlockButton, processItem, syncBlockerState } from '@/helpers/ad-blocker';
+import { formatLocalDateKey } from '@/utils/statistics';
 
 beforeEach(() => {
   fakeBrowser.reset();
@@ -292,6 +293,11 @@ describe('findMatchingCustomEngine', () => {
 });
 
 describe('recordBlock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
   it('increments blockCount', async () => {
     const before = (await get()).blockCount;
     await recordBlock();
@@ -300,16 +306,28 @@ describe('recordBlock', () => {
 
   it('adds today stats entry', async () => {
     await recordBlock();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatLocalDateKey(new Date());
     const entry = (await get()).stats.find(s => s.date === today);
     expect(entry).toBeDefined();
     expect(entry!.count).toBe(1);
   });
 
+  it('records the local calendar date near midnight instead of the UTC date', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('TZ', 'Asia/Shanghai');
+    vi.setSystemTime(new Date('2026-03-01T00:30:00+08:00'));
+
+    await recordBlock();
+
+    const stats = (await get()).stats;
+    expect(stats).toContainEqual({ date: '2026-03-01', count: 1 });
+    expect(stats).not.toContainEqual({ date: '2026-02-28', count: 1 });
+  });
+
   it('accumulates on repeated calls', async () => {
     await recordBlock();
     await recordBlock();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatLocalDateKey(new Date());
     const entry = (await get()).stats.find(s => s.date === today);
     expect(entry!.count).toBe(2);
     expect((await get()).blockCount).toBe(2);
@@ -319,7 +337,7 @@ describe('recordBlock', () => {
     const past = [];
     for (let i = 0; i < 31; i++) {
       const d = new Date(); d.setDate(d.getDate() - i);
-      past.push({ date: d.toISOString().slice(0, 10), count: 1 });
+      past.push({ date: formatLocalDateKey(d), count: 1 });
     }
     await fakeBrowser.storage.local.set({
       blocker: { stats: past, blockCount: 31, urls: [], blockedUrls: [], blockedSelectors: [], customEngines: [], enabled: true, blockAds: true },

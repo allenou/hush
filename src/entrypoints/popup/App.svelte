@@ -1,14 +1,18 @@
 <script lang="ts">
+  import ChartCanvas from '@/components/ChartCanvas.svelte';
   import { get, setEnabled, subscribe } from '@/utils/storage';
   import { extractDomain } from '@/utils/domain';
-  import { t, getLocale, initLocale } from '@/utils/locale-store.svelte';
+  import { t, initLocale } from '@/utils/locale-store.svelte';
+  import { formatDate } from '@/utils/locale';
+  import { buildDailySeries, formatLocalDateKey } from '@/utils/statistics';
   import { onMount } from 'svelte';
+  import type { ChartConfiguration } from 'chart.js';
 
   let blockCount = 0;
   let todayCount = 0;
   let enabled = true;
   let currentSiteBlocked = false;
-  let stats: { date: string; count: number }[] = [];
+  let stats = buildDailySeries([], 7);
 
   async function loadData() {
     const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
@@ -20,27 +24,14 @@
     }
     blockCount = storage.blockCount;
     enabled = storage.enabled;
-    stats = buildWeekStats(storage.stats ?? []);
-    const today = new Date().toISOString().slice(0, 10);
+    stats = buildDailySeries(storage.stats ?? [], 7);
+    const today = formatLocalDateKey(new Date());
     const todayStat = (storage.stats ?? []).find(s => s.date === today);
     todayCount = todayStat?.count ?? 0;
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       currentSiteBlocked = domain ? storage.urls.includes(domain) : false;
     }
-  }
-
-  function buildWeekStats(raw: { date: string; count: number }[]): { date: string; count: number }[] {
-    const result: { date: string; count: number }[] = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      const found = raw.find(s => s.date === key);
-      result.push({ date: key, count: found?.count ?? 0 });
-    }
-    return result;
   }
 
   async function toggleEnabled() {
@@ -52,12 +43,76 @@
     chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
   }
 
-  function dayLabel(dateStr: string): string {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString(getLocale(), { weekday: 'short' });
+  function dateLabel(dateStr: string): string {
+    return formatDate(new Date(`${dateStr}T00:00:00`), { weekday: 'short' });
   }
 
-  $: maxCount = Math.max(...stats.map(s => s.count), 1);
+  function chartColor(property: string, fallback: string): string {
+    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
+      return fallback;
+    }
+
+    try {
+      return getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  let trendConfiguration: ChartConfiguration<'line'>;
+  $: trendConfiguration = {
+    type: 'line',
+    data: {
+      labels: stats.map((item) => dateLabel(item.date)),
+      datasets: [{
+        label: t('weeklyTrend'),
+        data: stats.map((item) => item.count),
+        borderColor: chartColor('--srb-primary', '#328f7e'),
+        backgroundColor: chartColor('--srb-chart-teal-soft', 'rgba(50, 143, 126, 0.18)'),
+        borderWidth: 2,
+        fill: true,
+        pointBackgroundColor: chartColor('--srb-accent', '#9fdd60'),
+        pointBorderColor: chartColor('--srb-surface', '#ffffff'),
+        pointBorderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 4,
+        tension: 0.34,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 180 },
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: false,
+          padding: 8,
+          callbacks: {
+            label: (context) => `${context.parsed.y ?? 0} ${t('times')}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          border: { display: false },
+          grid: { display: false },
+          ticks: {
+            autoSkip: false,
+            color: chartColor('--srb-text-muted', '#6b6f84'),
+            font: { size: 9, weight: 500 },
+            maxRotation: 0,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          display: false,
+          suggestedMax: 1,
+        },
+      },
+    },
+  };
 
   onMount(() => {
     loadData();
@@ -69,7 +124,12 @@
   <!-- ===== Header ===== -->
   <header>
     <div class="brand">
-      <span class="brand-icon">🛡</span>
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      </span>
       <span class="brand-text">SearchKit</span>
     </div>
     <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
@@ -104,23 +164,15 @@
   </div>
 
   <!-- ===== Chart (7-day) ===== -->
-  {#if stats.length > 0}
-    <div class="chart-section">
-      <span class="chart-label">{t('weeklyTrend')}</span>
-      <div class="chart">
-        {#each stats as day}
-          <div class="bar-wrapper" title="{day.date}: {day.count} {t('times')}">
-            <div
-              class="bar"
-              style="height: {Math.max((day.count / maxCount) * 48, 2)}px;"
-              class:zero={day.count === 0}
-            ></div>
-            <span class="bar-label">{dayLabel(day.date)}</span>
-          </div>
-        {/each}
-      </div>
+  <div class="chart-section">
+    <span class="chart-label">{t('weeklyTrend')}</span>
+    <div class="chart">
+      <ChartCanvas
+        ariaLabel={t('popupTrendAria')}
+        configuration={trendConfiguration}
+      />
     </div>
-  {/if}
+  </div>
 
   <!-- ===== Footer ===== -->
   <footer>
@@ -156,8 +208,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
-    background: var(--srb-primary);
-    color: var(--srb-on-primary);
+    background: var(--srb-surface);
+    color: var(--srb-text-strong);
+    border-bottom: 1px solid var(--srb-border-light);
   }
   .brand {
     display: flex;
@@ -165,7 +218,17 @@
     gap: 8px;
   }
   .brand-icon {
-    font-size: var(--srb-space-xl);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--srb-radius-md);
+    color: var(--srb-primary);
+    background: var(--srb-status-bg);
+  }
+  .brand-icon svg {
+    width: 17px;
+    height: 17px;
   }
   .brand-text {
     font-weight: var(--srb-weight-semibold);
@@ -189,12 +252,12 @@
     position: relative;
     width: var(--srb-popup-toggle-width);
     height: var(--srb-popup-toggle-height);
-    background: var(--srb-overlay-soft);
+    background: var(--srb-toggle-off);
     border-radius: var(--srb-radius-full);
     transition: background 0.2s;
   }
   .toggle input:checked + .toggle-track {
-    background: var(--srb-accent);
+    background: var(--srb-primary);
   }
   .toggle-thumb {
     position: absolute;
@@ -286,32 +349,8 @@
     margin-bottom: 10px;
   }
   .chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-    height: 56px;
-  }
-  .bar-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .bar {
-    width: 100%;
-    background: var(--srb-chart-gradient);
-    border-radius: 3px 3px 1px 1px;
-    min-height: 2px;
-    transition: height 0.3s ease;
-  }
-  .bar.zero {
-    background: var(--srb-border-light);
-  }
-  .bar-label {
-    font-size: 9px;
-    color: var(--srb-text-muted);
-    margin-top: 4px;
-    font-weight: 500;
+    position: relative;
+    height: 92px;
   }
 
   /* ===== Footer ===== */

@@ -1,175 +1,544 @@
 <script lang="ts">
-  import { t, getLocale } from '@/utils/locale-store.svelte';
+  import ChartCanvas from '@/components/ChartCanvas.svelte';
+  import { t } from '@/utils/locale-store.svelte';
+  import { formatDate } from '@/utils/locale';
+  import {
+    buildBlockBreakdown,
+    buildDailySeries,
+    summarizeDailySeries,
+    truncateDomainLabel,
+  } from '@/utils/statistics';
+  import type { BlockStats } from '@/utils/storage';
+  import type { StatisticsRange } from '@/utils/statistics';
+  import type { ChartConfiguration } from 'chart.js';
+
+  interface DomainStat {
+    domain: string;
+    count: number;
+  }
+
+  interface Props {
+    dailyStats?: BlockStats[];
+    now?: Date;
+    totalBlockCount?: number;
+    todayBlockCount?: number;
+    totalCount?: number;
+    adBlockCount?: number;
+    domainBlockCount?: number;
+    topBlockedDomains?: DomainStat[];
+  }
 
   let {
+    dailyStats = [],
+    now = new Date(),
     totalBlockCount = 0,
     todayBlockCount = 0,
     totalCount = 0,
     adBlockCount = 0,
     domainBlockCount = 0,
-    adPct = 0,
-    domainPct = 0,
-    otherPct = 0,
-    weekStats = [] as { date: string; count: number }[],
-    maxCount = 1,
-    topBlockedDomains = [] as { domain: string; count: number }[],
-  } = $props();
+    topBlockedDomains = [],
+  }: Props = $props();
 
-  function dayLabel(dateStr: string): string {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString(getLocale(), { weekday: 'short' });
+  let rangeDays = $state<StatisticsRange>(7);
+  let dailySeries = $derived(buildDailySeries(dailyStats, rangeDays, now));
+  let summary = $derived(summarizeDailySeries(dailySeries));
+  let visibleTopDomains = $derived(topBlockedDomains.slice(0, 10));
+  let breakdown = $derived(buildBlockBreakdown(
+    totalBlockCount,
+    adBlockCount,
+    domainBlockCount,
+  ));
+
+  function parseDate(dateStr: string): Date {
+    return new Date(`${dateStr}T00:00:00`);
   }
+
+  function dateLabel(dateStr: string): string {
+    return formatDate(parseDate(dateStr), {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+    });
+  }
+
+  function chartColor(property: string, fallback: string): string {
+    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
+      return fallback;
+    }
+
+    try {
+      return getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
+    const teal = chartColor('--srb-primary', '#328f7e');
+    const fill = chartColor('--srb-chart-teal-soft', 'rgba(50, 143, 126, 0.18)');
+
+    return {
+      type: 'line',
+      data: {
+        labels: dailySeries.map((item) => dateLabel(item.date)),
+        datasets: [{
+          label: t('dailyBlocks'),
+          data: dailySeries.map((item) => item.count),
+          borderColor: teal,
+          backgroundColor: fill,
+          borderWidth: 2,
+          fill: true,
+          pointBackgroundColor: teal,
+          pointBorderColor: chartColor('--srb-surface', '#ffffff'),
+          pointBorderWidth: 2,
+          pointRadius: rangeDays === 7 ? 4 : 2,
+          pointHoverRadius: 5,
+          tension: 0.32,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.parsed.y ?? 0} ${t('times')}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { maxTicksLimit: rangeDays === 7 ? 7 : 8 },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            grid: { color: chartColor('--srb-border-light', '#eef0f5') },
+          },
+        },
+      },
+    };
+  });
+
+  let breakdownConfiguration = $derived.by((): ChartConfiguration<'doughnut'> => ({
+    type: 'doughnut',
+    data: {
+      labels: [t('adLabel'), t('domainLabel'), t('otherLabel')],
+      datasets: [{
+        data: [breakdown.ads, breakdown.domains, breakdown.other],
+        backgroundColor: [
+          chartColor('--srb-primary', '#328f7e'),
+          chartColor('--srb-accent', '#9fdd60'),
+          chartColor('--srb-chart-purple', '#898beb'),
+        ],
+        borderColor: chartColor('--srb-surface', '#ffffff'),
+        borderWidth: 3,
+        hoverOffset: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.label}: ${context.formattedValue} ${t('times')}`,
+          },
+        },
+      },
+    },
+  }));
+
+  let domainsConfiguration = $derived.by((): ChartConfiguration<'bar'> => ({
+    type: 'bar',
+    data: {
+      labels: visibleTopDomains.map((item) => item.domain),
+      datasets: [{
+        label: t('topDomains'),
+        data: visibleTopDomains.map((item) => item.count),
+        backgroundColor: visibleTopDomains.map((_, index) => [
+          chartColor('--srb-primary', '#328f7e'),
+          chartColor('--srb-chart-purple', '#898beb'),
+          chartColor('--srb-accent', '#9fdd60'),
+        ][index % 3]),
+        borderRadius: 7,
+        borderSkipped: false,
+        barThickness: 14,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label ?? '',
+            label: (context) => `${context.label}: ${context.parsed.x ?? 0} ${t('times')}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          grid: { color: chartColor('--srb-border-light', '#eef0f5') },
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            callback(value) {
+              return truncateDomainLabel(this.getLabelForValue(Number(value)));
+            },
+          },
+        },
+      },
+    },
+  }));
 </script>
 
 <div class="dash">
-  <!-- HERO -->
-  <section class="dash-hero">
-    <div class="dash-hero-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
+  <header class="dash-page-heading">
+    <div>
+      <h1>{t('dashboardTitle')}</h1>
     </div>
-    <div class="dash-hero-body">
-      <span class="dash-hero-label">{t('totalBlocked')}</span>
-      <strong class="dash-hero-number">{totalBlockCount}</strong>
-      <span class="dash-hero-sub">
-        {t('today')} <strong>{todayBlockCount}</strong> {t('times')}
-        <span class="dash-hero-divider">·</span>
-        {t('rulesCount')} <strong>{totalCount}</strong>
-      </span>
+    <div class="range-switch" role="group" aria-label={t('blockTrend')}>
+      <button
+        type="button"
+        aria-pressed={rangeDays === 7}
+        class:active={rangeDays === 7}
+        onclick={() => rangeDays = 7}
+      >{t('last7Days')}</button>
+      <button
+        type="button"
+        aria-pressed={rangeDays === 30}
+        class:active={rangeDays === 30}
+        onclick={() => rangeDays = 30}
+      >{t('last30Days')}</button>
     </div>
-  </section>
+  </header>
 
-  <!-- TWO-COLUMN: BREAKDOWN + CHART -->
-  <div class="dash-cols">
-    <section class="dash-card">
-      <div class="dash-card-heading">
-        <h2 class="card-title">{t('blockBreakdown')}</h2>
-        <p class="card-desc">{t('breakdownDesc')}</p>
+  <div class="dash-overview-grid">
+    <section class="dash-hero" aria-labelledby="total-blocked-title">
+      <div class="dash-hero-main">
+        <span id="total-blocked-title" class="dash-eyebrow">{t('totalBlocked')}</span>
+        <div class="dash-hero-total">
+          <strong class="dash-hero-number">{totalBlockCount}</strong>
+          <span class="dash-hero-unit">{t('times')}</span>
+        </div>
+        <div class="dash-hero-watermark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
       </div>
-      <div class="breakdown-bar">
-        {#if adPct > 0}
-          <div class="breakdown-segment ad" style="flex: {adPct}" title="{t('adLabel')} {adPct}%">
-            <span class="breakdown-seg-label">{t('adLabel')} {adPct}%</span>
-          </div>
-        {/if}
-        {#if domainPct > 0}
-          <div class="breakdown-segment domain" style="flex: {domainPct}" title="{t('domainLabel')} {domainPct}%">
-            <span class="breakdown-seg-label">{t('domainLabel')} {domainPct}%</span>
-          </div>
-        {/if}
-        {#if otherPct > 0}
-          <div class="breakdown-segment other" style="flex: {otherPct}" title="{t('otherLabel')} {otherPct}%"></div>
-        {/if}
-      </div>
-      <div class="breakdown-legend">
-        <span class="legend-item"><span class="legend-dot ad"></span>{t('adLabel')} {adBlockCount} {t('times')}</span>
-        <span class="legend-item"><span class="legend-dot domain"></span>{t('domainLabel')} {domainBlockCount} {t('times')}</span>
-        <span class="legend-item"><span class="legend-dot other"></span>{t('otherLabel')} {Math.max(0, totalBlockCount - adBlockCount - domainBlockCount)} {t('times')}</span>
+      <div class="dash-hero-metrics">
+        <div class="dash-hero-metric">
+          <span>{t('today')}</span>
+          <strong>{todayBlockCount}<small>{t('times')}</small></strong>
+        </div>
+        <div class="dash-hero-metric">
+          <span>{t('tabRules')}</span>
+          <strong>{totalCount}<small>{t('rulesCount')}</small></strong>
+        </div>
       </div>
     </section>
 
-    <section class="dash-card">
-      <div class="dash-card-heading">
-        <h2 class="card-title">{t('weeklyTrend')}</h2>
-        <p class="card-desc">{t('dailyBlocks')}</p>
-      </div>
-      <div class="chart">
-        {#each weekStats as day}
-          <div class="chart-bar-group" title="{day.date}: {day.count} {t('times')}">
-            <div class="chart-bar" style="height: {Math.max((day.count / maxCount) * 80, 3)}px;" class:zero={day.count === 0}></div>
-            <span class="chart-bar-label">{dayLabel(day.date)}</span>
-          </div>
-        {/each}
-      </div>
+    <section class="dash-kpis" aria-label={t('dashboardTitle')}>
+      <article class="kpi-card">
+        <span class="kpi-label">{t('rangeBlocked')}</span>
+        <strong class="kpi-value" data-testid="range-total">
+          {summary.total}<small class="kpi-unit">{t('times')}</small>
+        </strong>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">{t('dailyAverage')}</span>
+        <strong class="kpi-value">
+          {summary.average}<small class="kpi-unit">{t('perDayUnit')}</small>
+        </strong>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">{t('peakBlocked')}</span>
+        <strong class="kpi-value">
+          {summary.peakCount}<small class="kpi-unit">{t('times')}</small>
+        </strong>
+        <span class="kpi-context">
+          {summary.peakDate ? dateLabel(summary.peakDate) : t('peakNoDate')}
+        </span>
+      </article>
     </section>
   </div>
 
-  <!-- TOP DOMAINS -->
-  <section class="dash-card">
-    <div class="dash-card-heading">
-      <h2 class="card-title">{t('topDomains')}</h2>
-      <p class="card-desc">{t('topDomainsDesc')}</p>
-    </div>
-    {#if topBlockedDomains.length === 0}
-      <div class="dash-empty">{t('noData')}</div>
-    {:else}
-      <div class="dash-domain-list">
-        {#each topBlockedDomains as item, i}
-          <div class="dash-domain-row">
-            <span class="dash-domain-rank">{i + 1}</span>
-            <div class="dash-domain-bar" style="width: {Math.max((item.count / topBlockedDomains[0].count) * 100, 10)}%"></div>
-            <code class="dash-domain-name">{item.domain}</code>
-            <span class="dash-domain-count">{item.count}</span>
-          </div>
-        {/each}
+  <div class="detail-grid">
+    <section class="dash-card trend-card">
+      <div class="dash-card-heading">
+        <div>
+          <h2>{t('blockTrend')}</h2>
+        </div>
+        <span class="trend-total">{summary.total} {t('times')}</span>
       </div>
-    {/if}
-  </section>
+      <div class="chart-frame trend-chart">
+        <ChartCanvas
+          ariaLabel={t('chartTrendAria', String(rangeDays))}
+          configuration={trendConfiguration}
+        />
+      </div>
+    </section>
+
+    <section class="dash-card breakdown-card">
+      <div class="dash-card-heading">
+        <div>
+          <h2>{t('blockBreakdown')}</h2>
+        </div>
+      </div>
+      <div class="chart-frame compact-chart">
+        <ChartCanvas
+          ariaLabel={t('chartBreakdownAria')}
+          configuration={breakdownConfiguration}
+        />
+        {#if breakdown.ads === 0 && breakdown.domains === 0 && breakdown.other === 0}
+          <div class="chart-empty-overlay">{t('noData')}</div>
+        {/if}
+      </div>
+      <div class="breakdown-list">
+        <span><i class="dot teal"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
+        <span><i class="dot lime"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
+        <span><i class="dot lavender"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
+      </div>
+    </section>
+
+    <section class="dash-card domains-card">
+      <div class="dash-card-heading">
+        <div>
+          <h2>{t('topDomains')}</h2>
+        </div>
+      </div>
+      {#if visibleTopDomains.length === 0}
+        <div class="dash-empty">{t('noData')}</div>
+      {:else}
+        <div class="chart-frame domain-chart">
+          <ChartCanvas
+            ariaLabel={t('chartDomainsAria')}
+            configuration={domainsConfiguration}
+          />
+        </div>
+        <div class="domain-values">
+          {#each visibleTopDomains as item}
+            <span><code title={item.domain}>{item.domain}</code><strong>{item.count}</strong></span>
+          {/each}
+        </div>
+      {/if}
+    </section>
+  </div>
 </div>
 
 <style>
-  /* ─── DASHBOARD ─── */
   .dash {
     display: flex;
     flex-direction: column;
     gap: var(--srb-space-lg);
   }
 
-  /* ─── HERO ─── */
-  .dash-hero {
+  .dash-page-heading,
+  .dash-card-heading {
     display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 28px 32px;
-    border-radius: var(--srb-radius-dialog);
-    border: 1px solid var(--srb-hero-border);
-    background: var(--srb-hero-gradient);
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--srb-space-lg);
   }
-  .dash-hero-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    border-radius: var(--srb-radius-card);
-    background: var(--srb-primary);
-    color: var(--srb-on-primary);
-    flex-shrink: 0;
+
+  .dash-page-heading { margin-bottom: var(--srb-space-sm); }
+  .dash-page-heading h1 {
+    margin: 0;
+    color: var(--srb-text-strong);
+    font-size: 30px;
+    font-weight: var(--srb-weight-heavy);
+    letter-spacing: -0.035em;
   }
-  .dash-hero-body { display: flex; flex-direction: column; }
-  .dash-hero-label {
-    color: var(--srb-text-soft);
+  .range-switch {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-xs);
+  }
+  .range-switch button {
+    min-height: 34px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: var(--srb-radius-md);
+    background: transparent;
+    color: var(--srb-text-secondary);
+    cursor: pointer;
+    font: inherit;
     font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
+    transition: background var(--srb-transition-base), color var(--srb-transition-base);
+  }
+  .range-switch button:hover { background: var(--srb-control-hover-bg); }
+  .range-switch button.active {
+    background: var(--srb-primary-action);
+    color: var(--srb-on-primary);
+  }
+  .range-switch button:focus-visible {
+    outline: 2px solid var(--srb-primary);
+    outline-offset: 2px;
+  }
+
+  .dash-overview-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--srb-space-lg);
+  }
+
+  .dash-hero {
+    display: grid;
+    position: relative;
+    isolation: isolate;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 168px;
+    padding: 30px 34px;
+    overflow: hidden;
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-dialog);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-xs);
+  }
+  .dash-hero::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 280px;
+    height: 280px;
+    left: -150px;
+    top: -170px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--srb-primary) 12%, transparent);
+  }
+  .dash-hero-main,
+  .dash-hero-metrics {
+    position: relative;
+    z-index: 1;
+  }
+  .dash-eyebrow,
+  .kpi-label {
+    font-size: var(--srb-font-size-xs);
     font-weight: var(--srb-weight-bold);
     letter-spacing: var(--srb-tracking-caps);
     text-transform: uppercase;
-    margin-bottom: 2px;
+  }
+  .dash-eyebrow { color: var(--srb-primary); }
+  .dash-hero-total {
+    display: flex;
+    position: relative;
+    z-index: 1;
+    align-items: baseline;
+    gap: var(--srb-space-sm);
+    margin-top: 8px;
   }
   .dash-hero-number {
-    color: var(--srb-primary);
-    font-size: var(--srb-font-size-display);
+    color: var(--srb-text-strong);
+    font-size: 56px;
     font-weight: var(--srb-weight-heavy);
+    letter-spacing: -0.055em;
+    line-height: 0.95;
+  }
+  .dash-hero-unit {
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
+  }
+  .dash-hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 132px);
+    gap: var(--srb-space-md);
+  }
+  .dash-hero-metric {
+    display: flex;
+    min-width: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--srb-border-light);
+    border-radius: var(--srb-radius-lg);
+    background: color-mix(in srgb, var(--srb-primary) 5%, var(--srb-bg));
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dash-hero-metric > span {
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-xs);
+    font-weight: var(--srb-weight-semibold);
+  }
+  .dash-hero-metric strong {
+    color: var(--srb-text-strong);
+    font-size: 24px;
+    line-height: 1;
+  }
+  .dash-hero-metric small {
+    margin-left: 5px;
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-2xs);
+    font-weight: var(--srb-weight-semibold);
+  }
+  .dash-hero-watermark {
+    position: absolute;
+    z-index: 0;
+    width: 112px;
+    right: 24px;
+    top: 50%;
+    color: var(--srb-primary);
+    opacity: 0.055;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .dash-hero-watermark svg { display: block; width: 100%; }
+
+  .dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--srb-space-md);
+  }
+  .kpi-card {
+    display: flex;
+    min-width: 0;
+    padding: var(--srb-space-xl);
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-card);
+    background: var(--srb-surface);
+    box-shadow: var(--srb-shadow-xs);
+    flex-direction: column;
+    justify-content: center;
+  }
+  .kpi-label { color: var(--srb-text-muted); }
+  .kpi-value {
+    margin: 10px 0 0;
+    color: var(--srb-text-strong);
+    font-size: 32px;
+    line-height: 1;
     letter-spacing: -0.04em;
-    line-height: 1.05;
   }
-  .dash-hero-sub {
-    color: var(--srb-text-soft);
-    font-size: var(--srb-font-size-body);
-    margin-top: 4px;
+  .kpi-unit {
+    margin-left: 6px;
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-xs);
+    font-weight: var(--srb-weight-semibold);
+    letter-spacing: 0;
   }
-  .dash-hero-sub strong { color: var(--srb-text); }
-  .dash-hero-divider {
-    margin: 0 8px;
-    color: var(--srb-hero-border);
+  .kpi-context {
+    margin-top: 8px;
+    color: var(--srb-text-subtle);
+    font-size: var(--srb-font-size-xs);
   }
 
-  /* ─── TWO-COLUMN ─── */
-  .dash-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--srb-space-lg);
-  }
   .dash-card {
     padding: var(--srb-space-xl);
     border: 1px solid var(--srb-border);
@@ -177,164 +546,118 @@
     background: var(--srb-surface);
     box-shadow: var(--srb-shadow-xs);
   }
-  .dash-card-heading { margin-bottom: 14px; }
-
-  /* ─── BREAKDOWN ─── */
-  .breakdown-bar {
-    display: flex;
-    height: 32px;
-    border-radius: var(--srb-radius-lg);
-    overflow: hidden;
-    background: var(--srb-breakdown-bg);
-  }
-  .breakdown-segment {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    transition: flex var(--srb-transition-slow);
-  }
-  .breakdown-segment.ad { background: var(--srb-danger); }
-  .breakdown-segment.domain { background: var(--srb-engine-google); }
-  .breakdown-segment.other { background: var(--srb-segment-other); }
-  .breakdown-seg-label {
-    color: var(--srb-on-primary);
-    font-size: var(--srb-font-size-xs);
-    font-weight: var(--srb-weight-bold);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 6px;
-  }
-  .breakdown-legend {
-    display: flex;
-    gap: var(--srb-space-lg);
-    margin-top: 12px;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: var(--srb-space-xs);
-    font-size: var(--srb-font-size-sm);
-    color: var(--srb-text-secondary);
-  }
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-  .legend-dot.ad { background: var(--srb-danger); }
-  .legend-dot.domain { background: var(--srb-engine-google); }
-  .legend-dot.other { background: var(--srb-segment-other); }
-
-  /* ─── CHART ─── */
-  .chart {
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    height: 96px;
-  }
-  .chart-bar-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .chart-bar {
-    width: 100%;
-    max-width: 40px;
-    background: var(--srb-chart-gradient);
-    border-radius: 4px 4px 2px 2px;
-    min-height: 3px;
-    transition: height 0.3s ease;
-  }
-  .chart-bar.zero { background: var(--srb-border-light); }
-  .chart-bar-label {
-    font-size: var(--srb-font-size-2xs);
-    color: var(--srb-text-muted);
-    margin-top: 6px;
-    font-weight: 500;
-  }
-
-  /* ─── TOP DOMAINS ─── */
-  .dash-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    color: var(--srb-text-muted);
-    font-size: var(--srb-font-size-sm);
-  }
-  .dash-domain-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .dash-domain-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-    padding: 6px 0;
-  }
-  .dash-domain-rank {
-    width: 20px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--srb-text-muted);
-    flex-shrink: 0;
-    z-index: 1;
-  }
-  .dash-domain-bar {
-    position: absolute;
-    left: 0;
-    height: 100%;
-    border-radius: 8px;
-    background: var(--srb-accent-soft);
-    z-index: 0;
-    transition: width 0.4s ease;
-  }
-  .dash-domain-name {
-    flex: 1;
-    font-size: var(--srb-font-size-sm);
-    font-family: var(--srb-mono);
-    color: var(--srb-text-code);
-    word-break: break-all;
-    line-height: 1.4;
-    z-index: 1;
-  }
-  .dash-domain-count {
-    flex-shrink: 0;
-    font-size: var(--srb-font-size-sm);
-    font-weight: var(--srb-weight-bold);
-    color: var(--srb-primary);
-    z-index: 1;
-  }
-
-  /* ─── CARD TITLE / DESC ─── */
-  .card-title {
+  .dash-card-heading { margin-bottom: var(--srb-space-lg); }
+  .dash-card-heading h2 {
     margin: 0;
+    color: var(--srb-text-strong);
     font-size: var(--srb-font-size-title);
     font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
-    line-height: var(--srb-line-height-tight);
   }
-  .card-desc {
-    margin: 4px 0 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
+  .trend-total {
+    padding: 6px 10px;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-accent-light);
+    color: var(--srb-primary-hover);
+    font-size: var(--srb-font-size-xs);
+    font-weight: var(--srb-weight-bold);
   }
 
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 1100px) {
-    .dash-cols { grid-template-columns: 1fr; }
+  .chart-frame { position: relative; width: 100%; }
+  .trend-chart { height: 250px; }
+  .compact-chart { height: 205px; }
+  .domain-chart { height: 205px; }
+  .chart-frame :global(canvas) { width: 100% !important; height: 100% !important; }
+  .chart-empty-overlay {
+    display: grid;
+    position: absolute;
+    inset: 0;
+    border-radius: var(--srb-radius-lg);
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-sm);
+    pointer-events: none;
+    place-items: center;
   }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--srb-space-lg);
+  }
+  .trend-card { grid-column: 1 / -1; }
+  .breakdown-list {
+    display: flex;
+    justify-content: center;
+    gap: var(--srb-space-lg);
+    margin-top: var(--srb-space-sm);
+    color: var(--srb-text-secondary);
+    font-size: var(--srb-font-size-xs);
+  }
+  .breakdown-list span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--srb-space-xs);
+  }
+  .breakdown-list strong { color: var(--srb-text-strong); }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .dot.lavender { background: var(--srb-chart-purple); }
+  .dot.teal { background: var(--srb-primary); }
+  .dot.lime { background: var(--srb-accent); }
+
+  .domain-values {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--srb-space-xs) var(--srb-space-lg);
+    margin-top: var(--srb-space-md);
+  }
+  .domain-values span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-sm);
+    color: var(--srb-text-secondary);
+    font-size: var(--srb-font-size-xs);
+  }
+  .domain-values code {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--srb-mono);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .domain-values strong { color: var(--srb-primary); }
+  .dash-empty {
+    display: grid;
+    min-height: 230px;
+    border: 1px dashed var(--srb-dashed-border);
+    border-radius: var(--srb-radius-lg);
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-sm);
+    place-items: center;
+  }
+
   @media (max-width: 700px) {
-    .dash-hero { padding: var(--srb-space-xl); gap: var(--srb-space-lg); flex-wrap: wrap; }
-    .dash-hero-number { font-size: 30px; }
-    .breakdown-legend { flex-direction: column; gap: var(--srb-space-xs); }
+    .dash-page-heading { align-items: stretch; flex-direction: column; }
+    .range-switch { align-self: flex-start; }
+    .dash-kpis,
+    .detail-grid { grid-template-columns: 1fr; }
+    .trend-card { grid-column: auto; }
+    .dash-hero {
+      grid-template-columns: 1fr;
+      min-height: 0;
+      padding: var(--srb-space-xl);
+      gap: var(--srb-space-xl);
+    }
+    .dash-hero-number { font-size: 46px; }
+    .dash-hero-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-hero-watermark { width: 96px; right: 12px; top: 20px; transform: none; }
+    .breakdown-list { align-items: flex-start; flex-direction: column; }
+    .domain-values { grid-template-columns: 1fr; }
   }
 </style>

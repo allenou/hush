@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { BlockItem, SearchRecord } from '@/utils/storage';
+  import type { BlockItem, BlockStats, SearchRecord } from '@/utils/storage';
   import {
     addBlockedUrl,
     addDomain,
@@ -15,6 +15,7 @@
     subscribe,
   } from '@/utils/storage';
   import { getSearchUrl } from '@/helpers/search-engines';
+  import { formatLocalDateKey } from '@/utils/statistics';
   import type { TabId, RuleFilter } from '@/constants';
   import { t, initLocale, setLocale as setAppLocale, getLocale } from '@/utils/locale-store.svelte';
   import { setStoredLocale } from '@/utils/storage';
@@ -38,24 +39,11 @@
   let adBlockCount = $state(0);
   let domainBlockCount = $state(0);
   let todayBlockCount = $state(0);
-  let weekStats = $state<{ date: string; count: number }[]>([]);
+  let dailyStats = $state<BlockStats[]>([]);
   let topBlockedDomains = $state<{ domain: string; count: number }[]>([]);
   let searchHistory = $state<SearchRecord[]>([]);
   let recordSearchHistory = $state(true);
   let backupStatus = $state('');
-
-  function buildWeekStats(raw: { date: string; count: number }[]): { date: string; count: number }[] {
-    const result: { date: string; count: number }[] = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      const found = raw.find(s => s.date === key);
-      result.push({ date: key, count: found?.count ?? 0 });
-    }
-    return result;
-  }
 
   function openAddDialog() {
     errorMsg = '';
@@ -123,8 +111,8 @@
     topBlockedDomains = storage.blockedDomainStats ?? [];
     searchHistory = storage.searchHistory ?? [];
     recordSearchHistory = storage.recordSearchHistory ?? true;
-    weekStats = buildWeekStats(storage.stats ?? []);
-    const today = new Date().toISOString().slice(0, 10);
+    dailyStats = storage.stats ?? [];
+    const today = formatLocalDateKey(new Date());
     const todayStat = (storage.stats ?? []).find(s => s.date === today);
     todayBlockCount = todayStat?.count ?? 0;
   }
@@ -194,10 +182,6 @@
   let domainCount = $derived(blockedItems.filter((item) => item.type === 'domain').length);
   let urlCount = $derived(blockedItems.filter((item) => item.type === 'url').length);
   let selectorCount = $derived(blockedItems.filter((item) => item.type === 'selector').length);
-  let maxCount = $derived(Math.max(...weekStats.map(s => s.count), 1));
-  let adPct = $derived(totalBlockCount > 0 ? Math.round((adBlockCount / totalBlockCount) * 100) : 0);
-  let domainPct = $derived(totalBlockCount > 0 ? Math.round((domainBlockCount / totalBlockCount) * 100) : 0);
-  let otherPct = $derived(Math.max(0, 100 - adPct - domainPct));
   let filteredItems = $derived(blockedItems.filter((item) =>
     (activeFilter === 'all' || item.type === activeFilter) && matchesQuery(item, searchQuery),
   ));
@@ -217,8 +201,7 @@
     {#if activeTab === 'dashboard'}
       <Dashboard
         {totalBlockCount} {todayBlockCount} {totalCount}
-        {adBlockCount} {domainBlockCount} {adPct} {domainPct} {otherPct}
-        {weekStats} {maxCount}
+        {adBlockCount} {domainBlockCount} {dailyStats}
         topBlockedDomains={topBlockedDomains}
       />
 

@@ -29,7 +29,12 @@
       </div>
       <div class="nav-links">
         {#each TABS as id}
-          <button class="nav-link" class:active={activeTab === id} onclick={() => switchTab(id)}>{tabLabel[id]}</button>
+          <button
+            class="nav-link"
+            class:active={activeTab === id}
+            aria-current={activeTab === id ? 'page' : undefined}
+            onclick={() => switchTab(id)}
+          >{tabLabel[id]}</button>
         {/each}
       </div>
     </div>
@@ -44,13 +49,16 @@
 
 <style>
   .nav {
-    background: var(--srb-primary);
+    background: var(--srb-surface);
+    border-bottom: 1px solid var(--srb-border);
+    box-shadow: var(--srb-shadow-xs);
     padding: 0 var(--srb-space-2xl);
     position: sticky;
     top: 0;
     z-index: var(--srb-z-nav);
   }
   .nav-inner {
+    min-width: 0;
     max-width: var(--srb-options-max-width);
     margin: 0 auto;
     display: flex;
@@ -58,41 +66,70 @@
     justify-content: space-between;
     height: var(--srb-nav-height);
   }
-  .nav-left { display: flex; align-items: center; gap: 32px; }
+  .nav-left {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 32px;
+    overflow: hidden;
+  }
   .nav-brand {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: var(--srb-space-sm);
-    color: var(--srb-on-primary);
+    color: var(--srb-primary);
     font-size: 15px;
     font-weight: var(--srb-weight-bold);
     letter-spacing: -0.01em;
   }
-  .brand-label { white-space: nowrap; }
-  .nav-links { display: flex; gap: var(--srb-space-2xs); }
+  .brand-label { color: var(--srb-text-strong); white-space: nowrap; }
+  .nav-links {
+    min-width: 0;
+    display: flex;
+    gap: var(--srb-space-2xs);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
   .nav-link {
+    position: relative;
+    flex-shrink: 0;
     padding: 8px 16px;
     border: none;
     border-radius: var(--srb-radius-md);
     background: transparent;
-    color: var(--srb-on-primary-muted);
+    color: var(--srb-text-muted);
     font: inherit;
     font-size: var(--srb-font-size-body);
     font-weight: var(--srb-weight-semibold);
     cursor: pointer;
     transition: background var(--srb-transition-base), color var(--srb-transition-base);
   }
-  .nav-link:hover { color: var(--srb-on-primary); background: var(--srb-on-primary-hover-bg); }
-  .nav-link.active { color: var(--srb-on-primary); background: var(--srb-on-primary-active-bg); }
-  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .nav-link:hover { color: var(--srb-text-strong); background: var(--srb-control-hover-bg); }
+  .nav-link.active { color: var(--srb-text-strong); background: var(--srb-nav-active-bg); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 5px;
+    height: 3px;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-accent);
+    transform: translateX(-50%);
+  }
+  .nav-right { display: flex; flex-shrink: 0; align-items: center; gap: 12px; }
   .rule-badge {
     display: flex;
     align-items: center;
     gap: var(--srb-space-xs);
     padding: 6px 14px;
     border-radius: var(--srb-radius-full);
-    background: var(--srb-on-primary-badge-bg);
-    color: var(--srb-on-primary-soft);
+    background: var(--srb-status-bg);
+    color: var(--srb-text-strong);
     font-size: var(--srb-font-size-sm);
     font-weight: var(--srb-weight-semibold);
   }
@@ -100,7 +137,24 @@
     width: 8px;
     height: 8px;
     border-radius: var(--srb-radius-full);
-    background: var(--srb-success-dot);
-    box-shadow: 0 0 0 2px var(--srb-success-dot-ring);
+    background: var(--srb-primary);
+    box-shadow: 0 0 0 2px var(--srb-accent-light);
+  }
+
+  @media (max-width: 760px) {
+    .nav { padding: 0 var(--srb-space-lg); }
+    .nav-left { gap: var(--srb-space-lg); }
+    .nav-link { padding: 8px 12px; }
+  }
+
+  @media (max-width: 560px) {
+    .nav-right { display: none; }
+  }
+
+  @media (max-width: 420px) {
+    .nav { padding: 0 var(--srb-space-md); }
+    .nav-left { gap: var(--srb-space-sm); }
+    .brand-label { display: none; }
+    .nav-link { padding-inline: 10px; }
   }
 </style>

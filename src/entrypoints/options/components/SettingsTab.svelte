@@ -69,7 +69,6 @@
 <div class="method-card">
   <div class="method-heading">
     <h2 class="card-title">{t('matchingMethod')}</h2>
-    <p class="card-desc">{t('matchingDesc')}</p>
   </div>
   <div class="toggle-list">
     <div class="toggle-item">
@@ -98,7 +97,6 @@
 <div class="method-card">
   <div class="method-heading">
     <h2 class="card-title">{t('searchRecordLabel')}</h2>
-    <p class="card-desc">{t('searchRecordDesc')}</p>
   </div>
   <div class="toggle-list">
     <div class="toggle-item">
@@ -142,7 +140,6 @@
 <div class="method-card">
   <div class="method-heading">
     <h2 class="card-title">Language / 语言</h2>
-    <p class="card-desc">{t('languageDesc')}</p>
   </div>
   <div class="locale-selector">
     {#each LOCALE_OPTIONS as { value, label }}

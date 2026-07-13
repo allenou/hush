@@ -6,6 +6,7 @@ import {
   normalizeHostname,
   rankEngineConfigMatch,
 } from '@/helpers/search-engines';
+import { formatLocalDateKey } from '@/utils/statistics';
 
 export interface ExtensionStorage {
   urls: string[];
@@ -407,7 +408,7 @@ export async function removeCustomEngine(index: number): Promise<void> {
 
 export async function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
   const { blockCount, adBlockCount, domainBlockCount, stats, blockedDomainStats } = await get();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatLocalDateKey(new Date());
   const existing = stats.find((s) => s.date === today);
   if (existing) {
     existing.count++;

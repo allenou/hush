@@ -50,7 +50,6 @@
   <div class="rules-bar">
     <div>
       <h2 class="card-title">{t('savedRules')}</h2>
-      <p class="card-desc">{t('rulesDesc')}</p>
     </div>
     <div class="rules-actions">
       <input
@@ -133,13 +132,6 @@
     letter-spacing: -0.02em;
     line-height: var(--srb-line-height-tight);
   }
-  .card-desc {
-    margin: 4px 0 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
-  }
-
   .rules-actions {
     display: flex;
     gap: var(--srb-space-sm);
@@ -210,7 +202,6 @@
     padding: var(--srb-space-4xl) var(--srb-space-2xl);
     border: 1px dashed var(--srb-dashed-border);
     border-radius: var(--srb-radius-xl);
-    background: var(--srb-empty-bg);
     text-align: center;
   }
   .empty-icon {
