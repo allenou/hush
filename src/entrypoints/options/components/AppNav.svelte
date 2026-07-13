@@ -3,7 +3,15 @@
   import type { TabId } from '@/constants';
   import { t } from '@/utils/locale-store.svelte';
 
-  let { activeTab = 'dashboard' as TabId, onTabChange } = $props<{ activeTab: TabId; onTabChange?: (tab: TabId) => void }>();
+  let {
+    activeTab = 'dashboard' as TabId,
+    enabled = true,
+    onTabChange,
+  } = $props<{
+    activeTab: TabId;
+    enabled?: boolean;
+    onTabChange?: (tab: TabId) => void;
+  }>();
 
   let tabLabel = $derived<Record<TabId, string>>({
     dashboard: t('tabDashboard'),
@@ -39,9 +47,9 @@
       </div>
     </div>
     <div class="nav-right">
-      <span class="rule-badge">
+      <span class="rule-badge" class:disabled={!enabled}>
         <span class="badge-dot"></span>
-        {t('enabled')}
+        {t(enabled ? 'enabled' : 'disabled')}
       </span>
     </div>
   </div>
@@ -110,17 +118,6 @@
   }
   .nav-link:hover { color: var(--srb-text-strong); background: var(--srb-control-hover-bg); }
   .nav-link.active { color: var(--srb-text-strong); background: var(--srb-nav-active-bg); }
-  .nav-link.active::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 3px;
-    width: 5px;
-    height: 3px;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-accent);
-    transform: translateX(-50%);
-  }
   .nav-right { display: flex; flex-shrink: 0; align-items: center; gap: 12px; }
   .rule-badge {
     display: flex;
@@ -139,6 +136,14 @@
     border-radius: var(--srb-radius-full);
     background: var(--srb-primary);
     box-shadow: 0 0 0 2px var(--srb-accent-light);
+  }
+  .rule-badge.disabled {
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text-muted);
+  }
+  .rule-badge.disabled .badge-dot {
+    background: var(--srb-text-muted);
+    box-shadow: none;
   }
 
   @media (max-width: 760px) {

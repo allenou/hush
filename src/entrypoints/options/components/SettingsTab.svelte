@@ -156,8 +156,7 @@
 
 <style>
   .method-card {
-    max-width: var(--srb-settings-width);
-    margin: 0 auto;
+    width: 100%;
     padding: var(--srb-space-2xl);
     border: 1px solid var(--srb-border);
     border-radius: var(--srb-radius-card);
@@ -250,15 +249,19 @@
 
   .locale-selector {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     gap: var(--srb-space-sm);
     margin-top: 4px;
   }
   .backup-actions {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     gap: var(--srb-space-sm);
   }
   .backup-btn {
-    flex: 1;
+    min-width: 120px;
     min-height: var(--srb-button-height);
     padding: 10px 16px;
     border: 1px solid var(--srb-border);
@@ -293,7 +296,7 @@
     line-height: var(--srb-line-height-body);
   }
   .locale-btn {
-    flex: 1;
+    min-width: 112px;
     padding: 10px 16px;
     border: 2px solid var(--srb-border);
     border-radius: var(--srb-radius-lg);

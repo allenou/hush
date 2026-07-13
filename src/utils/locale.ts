@@ -82,6 +82,7 @@ export async function initLocale(storedLocale?: string): Promise<void> {
   const fallback = ui.startsWith('zh') ? 'zh_CN' : 'en';
   _locale = storedLocale && (storedLocale === 'zh_CN' || storedLocale === 'en') ? storedLocale : fallback;
   _messages = await loadMessages(_locale);
+  _listeners.forEach((fn) => fn());
 }
 
 /** 格式化日期（按当前语言） */

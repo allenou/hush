@@ -51,6 +51,23 @@ describe('get / set defaults', () => {
     expect(s.enabled).toBe(false);
   });
 
+  it('removes historical search-engine tracking hosts from domain rankings', async () => {
+    await fakeBrowser.storage.local.set({
+      blocker: {
+        blockedDomainStats: [
+          { domain: 'google.com', count: 8 },
+          { domain: 'www.baidu.com', count: 5 },
+          { domain: 'googleadservices.com', count: 3 },
+          { domain: 'merchant.example', count: 2 },
+        ],
+      },
+    });
+
+    expect((await get()).blockedDomainStats).toEqual([
+      { domain: 'merchant.example', count: 2 },
+    ]);
+  });
+
   it('notifies subscribers through the WXT storage item watcher', async () => {
     const listener = vi.fn();
     const unsubscribe = subscribe(listener);
@@ -333,6 +350,21 @@ describe('recordBlock', () => {
     expect((await get()).blockCount).toBe(2);
   });
 
+  it('serializes concurrent statistic updates', async () => {
+    await Promise.all([
+      recordBlock('domain', 'one.example'),
+      recordBlock('domain', 'two.example'),
+    ]);
+
+    const storage = await get();
+    expect(storage.blockCount).toBe(2);
+    expect(storage.domainBlockCount).toBe(2);
+    expect(storage.blockedDomainStats).toEqual(expect.arrayContaining([
+      { domain: 'one.example', count: 1 },
+      { domain: 'two.example', count: 1 },
+    ]));
+  });
+
   it('keeps at most 30 days', async () => {
     const past = [];
     for (let i = 0; i < 31; i++) {
@@ -438,6 +470,116 @@ describe('result domain matching', () => {
 
     expect(item.querySelector('.srb-block-btn')).toBeNull();
     expect(item.querySelector('.srb-blocked-badge')).toBeTruthy();
+  });
+
+  it('records each newly rendered blocked result once while enabled', async () => {
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    first.innerHTML = '<a href="https://sub.example.com/page">First</a>';
+    second.innerHTML = '<a href="https://sub.example.com/page">Second</a>';
+    document.body.append(first, second);
+
+    syncForDomains(['example.com']);
+    processItem(first);
+    processItem(second);
+
+    await vi.waitFor(async () => {
+      expect((await get()).blockCount).toBe(2);
+    });
+
+    processItem(first);
+    processItem(second);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const storage = await get();
+    expect(storage.blockCount).toBe(2);
+    expect(storage.domainBlockCount).toBe(2);
+    expect(storage.stats.at(-1)?.count).toBe(2);
+    expect(storage.blockedDomainStats).toContainEqual({
+      domain: 'sub.example.com',
+      count: 2,
+    });
+  });
+
+  it('records an automatically detected ad once while enabled', async () => {
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => 'https://advertiser.example/page',
+    });
+    const item = document.createElement('div');
+    item.className = 'ad';
+    item.innerHTML = '<a href="https://advertiser.example/page">Ad</a>';
+    document.body.appendChild(item);
+
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+    }, makeEngine());
+    processItem(item);
+
+    await vi.waitFor(async () => {
+      expect((await get()).adBlockCount).toBe(1);
+    });
+
+    processItem(item);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const storage = await get();
+    expect(storage.adBlockCount).toBe(1);
+    expect(storage.blockedDomainStats).toContainEqual({
+      domain: 'advertiser.example',
+      count: 1,
+    });
+  });
+
+  it('does not rank an opaque search-engine tracking domain as an advertiser', async () => {
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => 'https://www.google.com/aclk?opaque=1',
+    });
+    const item = document.createElement('div');
+    item.className = 'ad';
+    item.innerHTML = '<a href="https://www.google.com/aclk?opaque=1">Ad</a>';
+    document.body.appendChild(item);
+
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+    }, makeEngine());
+    processItem(item);
+
+    await vi.waitFor(async () => {
+      expect((await get()).adBlockCount).toBe(1);
+    });
+
+    expect((await get()).blockedDomainStats).toEqual([]);
+  });
+
+  it('does not record blocked results while disabled', async () => {
+    const item = document.createElement('div');
+    item.innerHTML = '<a href="https://sub.example.com/page">Disabled</a>';
+    document.body.appendChild(item);
+
+    syncBlockerState({
+      blockedDomains: ['example.com'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: false,
+      blockAds: true,
+      blockSubdomains: true,
+    }, makeEngine());
+    processItem(item);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect((await get()).blockCount).toBe(0);
+    expect(item.querySelector('.srb-blocked-badge')).toBeNull();
   });
 });
 

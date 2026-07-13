@@ -115,6 +115,16 @@ function freshDefaults(): ExtensionStorage {
   };
 }
 
+function isSearchEngineStatDomain(domain: string): boolean {
+  const normalized = normalizeHostname(domain);
+  const trackingHosts = ['googleadservices.com', 'doubleclick.net'];
+  return BUILT_IN_ENGINES.some((engine) =>
+    normalized === engine.hostname || normalized.endsWith(`.${engine.hostname}`),
+  ) || trackingHosts.some((host) =>
+    normalized === host || normalized.endsWith(`.${host}`),
+  );
+}
+
 function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): ExtensionStorage {
   const merged = value && typeof value === 'object'
     ? { ...freshDefaults(), ...value }
@@ -129,7 +139,8 @@ function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): 
     blockedSelectors: compatibility.blockedSelectors,
     customEngines: [...(merged.customEngines ?? [])],
     stats: [...(merged.stats ?? [])],
-    blockedDomainStats: [...(merged.blockedDomainStats ?? [])],
+    blockedDomainStats: [...(merged.blockedDomainStats ?? [])]
+      .filter((item) => !isSearchEngineStatDomain(item.domain)),
     searchHistory: [...(merged.searchHistory ?? [])],
   };
 }
@@ -406,7 +417,9 @@ export async function removeCustomEngine(index: number): Promise<void> {
   await set({ customEngines });
 }
 
-export async function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
+let recordBlockQueue: Promise<void> = Promise.resolve();
+
+async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<void> {
   const { blockCount, adBlockCount, domainBlockCount, stats, blockedDomainStats } = await get();
   const today = formatLocalDateKey(new Date());
   const existing = stats.find((s) => s.date === today);
@@ -441,6 +454,12 @@ export async function recordBlock(type?: BlockRecordType, domain?: string): Prom
   }
 
   await set(patch);
+}
+
+export function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
+  const operation = recordBlockQueue.then(() => recordBlockNow(type, domain));
+  recordBlockQueue = operation.catch(() => {});
+  return operation;
 }
 
 export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {

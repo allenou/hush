@@ -107,6 +107,9 @@ describe('Dashboard', () => {
 
   it('renders accessible trend, breakdown, and domain charts when domain data exists', async () => {
     const target = render({
+      totalBlockCount: 12,
+      adBlockCount: 4,
+      domainBlockCount: 5,
       topBlockedDomains: [
         { domain: 'example.com', count: 8 },
         { domain: 'news.example', count: 3 },
@@ -130,10 +133,10 @@ describe('Dashboard', () => {
     await tick();
 
     expect(target.querySelector('.dash-empty')).not.toBeNull();
-    expect(target.querySelectorAll('canvas')).toHaveLength(2);
+    expect(target.querySelectorAll('canvas')).toHaveLength(1);
   });
 
-  it('limits rendered domain details to ten and preserves each full domain in its title', async () => {
+  it('uses the chart as the only domain ranking representation', async () => {
     const domains = Array.from({ length: 12 }, (_, index) => ({
       domain: `very-long-domain-${index}.example.com`,
       count: 20 - index,
@@ -141,14 +144,13 @@ describe('Dashboard', () => {
     const target = render({ topBlockedDomains: domains });
     await tick();
 
-    const labels = target.querySelectorAll<HTMLElement>('.domain-values code');
-    expect(labels).toHaveLength(10);
-    expect(labels[0]?.textContent).toBe(domains[0].domain);
-    expect(labels[0]?.getAttribute('title')).toBe(domains[0].domain);
+    expect(target.querySelector('.domains-card canvas')).not.toBeNull();
+    expect(target.querySelector('.domain-values')).toBeNull();
   });
 
-  it('shows a readable empty overlay for a zero-value breakdown without removing its canvas', async () => {
+  it('omits empty charts and their legends', async () => {
     const target = render({
+      dailyStats: [],
       totalBlockCount: 0,
       adBlockCount: 0,
       domainBlockCount: 0,
@@ -156,10 +158,8 @@ describe('Dashboard', () => {
     });
     await tick();
 
-    const breakdown = target.querySelector('.breakdown-card');
-    const overlay = breakdown?.querySelector('.chart-empty-overlay');
-    expect(breakdown?.querySelector('canvas')).not.toBeNull();
-    expect(overlay).not.toBeNull();
-    expect(overlay?.textContent?.trim()).not.toBe('');
+    expect(target.querySelectorAll('canvas')).toHaveLength(0);
+    expect(target.querySelector('.breakdown-list')).toBeNull();
+    expect(target.querySelectorAll('.dash-empty')).toHaveLength(3);
   });
 });

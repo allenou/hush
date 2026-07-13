@@ -39,6 +39,29 @@ function tryParseHostname(url: string): string | null {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
 }
 
+function isSearchEngineTrackingDomain(domain: string): boolean {
+  const currentHost = _getHostname().replace(/^www\./, '');
+  if (domain === currentHost || domain.endsWith(`.${currentHost}`)) return true;
+  return ['googleadservices.com', 'doubleclick.net'].some((host) =>
+    domain === host || domain.endsWith(`.${host}`),
+  );
+}
+
+async function recordBlockOnce(
+  item: Element,
+  type: 'ad' | 'domain' | 'url',
+  domain?: string,
+): Promise<void> {
+  if (item.hasAttribute('data-srb-counted')) return;
+  item.setAttribute('data-srb-counted', 'true');
+  try {
+    await recordBlock(type, domain);
+  } catch (error) {
+    item.removeAttribute('data-srb-counted');
+    throw error;
+  }
+}
+
 /** 在域名列表中查找匹配，返回 index 或 -1 */
 function matchBlockedDomain(href: string, domains: string[]): number {
   const hostname = tryParseHostname(href);
@@ -125,7 +148,7 @@ export function injectBlockButton(item: Element, href: string): void {
     const isDomain = t.getAttribute('data-action') === 'domain';
     if (isDomain) await addDomain(domain);
     else await addBlockedUrl(href);
-    await recordBlock(isDomain ? 'domain' : 'url', domain);
+    await recordBlockOnce(item, isDomain ? 'domain' : 'url', domain);
     popup.remove();
     btn.remove();
     injectBadge(item, isDomain, !isDomain, href);
@@ -221,6 +244,12 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
 export function injectAdBadge(item: Element, href: string): void {
   if (item.querySelector('.srb-ad-badge')) return;
+  const adHref = href || item.querySelector<HTMLAnchorElement>('a[href]')?.href || '';
+  const parsedDomain = tryParseHostname(adHref);
+  const domain = parsedDomain && !isSearchEngineTrackingDomain(parsedDomain)
+    ? parsedDomain
+    : undefined;
+  void recordBlockOnce(item, 'ad', domain).catch(() => {});
   const mask = document.createElement('div');
   mask.className = 'srb-ad-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
@@ -247,6 +276,8 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
   const urlMatch = _state.blockedUrls.includes(href);
   if (di < 0 && !urlMatch) return false;
 
+  const domain = tryParseHostname(href) ?? undefined;
+  void recordBlockOnce(item, di >= 0 ? 'domain' : 'url', domain).catch(() => {});
   clearActionMarkers(item);
   injectBadge(item, di >= 0, urlMatch, href);
   return true;
@@ -255,6 +286,7 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
 // ========== Item Processing ==========
 
 export function processItem(item: Element): void {
+  if (!_state.isEnabled) return;
   const wasProcessed = item.hasAttribute('data-srb-processed');
   if (!_currentEngine) return;
   const href = _extractResultUrl(item, _currentEngine.linkSelector);

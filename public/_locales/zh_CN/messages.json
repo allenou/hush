@@ -25,6 +25,7 @@
   "typeUrl": { "message": "链接" },
   "typeSelector": { "message": "选择器" },
   "enabled": { "message": "已启用" },
+  "disabled": { "message": "已停用" },
   "totalBlocked": { "message": "累计拦截" },
   "today": { "message": "今日" },
   "times": { "message": "次" },

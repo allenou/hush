@@ -52,17 +52,19 @@
       <h2 class="card-title">{t('savedRules')}</h2>
     </div>
     <div class="rules-actions">
-      <input
-        class="search-box"
-        type="search"
-        bind:value={searchQuery}
-        placeholder={t('searchRules')}
-      />
-      <div class="filter-tabs" role="tablist">
-        {#each RULE_FILTERS as id}
-          <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{filterLabel[id]}</button>
-        {/each}
-      </div>
+      {#if totalCount > 0}
+        <input
+          class="search-box"
+          type="search"
+          bind:value={searchQuery}
+          placeholder={t('searchRules')}
+        />
+        <div class="filter-tabs" role="tablist">
+          {#each RULE_FILTERS as id}
+            <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{filterLabel[id]}</button>
+          {/each}
+        </div>
+      {/if}
       <button class="add-trigger" onclick={handleAddRule}>{t('addRule')}</button>
     </div>
   </div>

@@ -106,6 +106,18 @@ describe('extractResultUrl', () => {
     expect(extractResultUrl(container, 'a[href]')).toBe('https://real-site.com');
   });
 
+  it('extracts advertiser URL from Google ad redirects', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<a href="https://www.google.com/aclk?sa=L&adurl=https%3A%2F%2Fshop.example%2Flanding">ad</a>';
+    expect(extractResultUrl(container, 'a[href]')).toBe('https://shop.example/landing');
+  });
+
+  it('extracts advertiser URL from Google Ads tracking hosts', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<a href="https://www.googleadservices.com/pagead/aclk?adurl=https%3A%2F%2Fmerchant.example%2Foffer">ad</a>';
+    expect(extractResultUrl(container, 'a[href]')).toBe('https://merchant.example/offer');
+  });
+
   it('extracts decoded target URL from generic redirect url parameters', () => {
     const container = document.createElement('div');
     container.innerHTML = '<a href="https://www.example.com/redirect?url=https%3A%2F%2Freal-site.com%2Fpage">result</a>';

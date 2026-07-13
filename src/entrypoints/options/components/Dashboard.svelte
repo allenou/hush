@@ -48,6 +48,10 @@
     adBlockCount,
     domainBlockCount,
   ));
+  let hasTrendData = $derived(summary.total > 0);
+  let hasBreakdownData = $derived(
+    breakdown.ads > 0 || breakdown.domains > 0 || breakdown.other > 0,
+  );
 
   function parseDate(dateStr: string): Date {
     return new Date(`${dateStr}T00:00:00`);
@@ -282,14 +286,20 @@
         <div>
           <h2>{t('blockTrend')}</h2>
         </div>
-        <span class="trend-total">{summary.total} {t('times')}</span>
+        {#if hasTrendData}
+          <span class="trend-total">{summary.total} {t('times')}</span>
+        {/if}
       </div>
-      <div class="chart-frame trend-chart">
-        <ChartCanvas
-          ariaLabel={t('chartTrendAria', String(rangeDays))}
-          configuration={trendConfiguration}
-        />
-      </div>
+      {#if hasTrendData}
+        <div class="chart-frame trend-chart">
+          <ChartCanvas
+            ariaLabel={t('chartTrendAria', String(rangeDays))}
+            configuration={trendConfiguration}
+          />
+        </div>
+      {:else}
+        <div class="dash-empty">{t('noData')}</div>
+      {/if}
     </section>
 
     <section class="dash-card breakdown-card">
@@ -298,20 +308,21 @@
           <h2>{t('blockBreakdown')}</h2>
         </div>
       </div>
-      <div class="chart-frame compact-chart">
-        <ChartCanvas
-          ariaLabel={t('chartBreakdownAria')}
-          configuration={breakdownConfiguration}
-        />
-        {#if breakdown.ads === 0 && breakdown.domains === 0 && breakdown.other === 0}
-          <div class="chart-empty-overlay">{t('noData')}</div>
-        {/if}
-      </div>
-      <div class="breakdown-list">
-        <span><i class="dot teal"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
-        <span><i class="dot lime"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
-        <span><i class="dot lavender"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
-      </div>
+      {#if hasBreakdownData}
+        <div class="chart-frame compact-chart">
+          <ChartCanvas
+            ariaLabel={t('chartBreakdownAria')}
+            configuration={breakdownConfiguration}
+          />
+        </div>
+        <div class="breakdown-list">
+          <span><i class="dot teal"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
+          <span><i class="dot lime"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
+          <span><i class="dot lavender"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
+        </div>
+      {:else}
+        <div class="dash-empty">{t('noData')}</div>
+      {/if}
     </section>
 
     <section class="dash-card domains-card">
@@ -328,11 +339,6 @@
             ariaLabel={t('chartDomainsAria')}
             configuration={domainsConfiguration}
           />
-        </div>
-        <div class="domain-values">
-          {#each visibleTopDomains as item}
-            <span><code title={item.domain}>{item.domain}</code><strong>{item.count}</strong></span>
-          {/each}
         </div>
       {/if}
     </section>
@@ -568,16 +574,6 @@
   .compact-chart { height: 205px; }
   .domain-chart { height: 205px; }
   .chart-frame :global(canvas) { width: 100% !important; height: 100% !important; }
-  .chart-empty-overlay {
-    display: grid;
-    position: absolute;
-    inset: 0;
-    border-radius: var(--srb-radius-lg);
-    color: var(--srb-text-muted);
-    font-size: var(--srb-font-size-sm);
-    pointer-events: none;
-    place-items: center;
-  }
   .detail-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -608,34 +604,9 @@
   .dot.teal { background: var(--srb-primary); }
   .dot.lime { background: var(--srb-accent); }
 
-  .domain-values {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--srb-space-xs) var(--srb-space-lg);
-    margin-top: var(--srb-space-md);
-  }
-  .domain-values span {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--srb-space-sm);
-    color: var(--srb-text-secondary);
-    font-size: var(--srb-font-size-xs);
-  }
-  .domain-values code {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    font-family: var(--srb-mono);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .domain-values strong { color: var(--srb-primary); }
   .dash-empty {
     display: grid;
     min-height: 230px;
-    border: 1px dashed var(--srb-dashed-border);
     border-radius: var(--srb-radius-lg);
     color: var(--srb-text-muted);
     font-size: var(--srb-font-size-sm);
@@ -658,6 +629,5 @@
     .dash-hero-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-hero-watermark { width: 96px; right: 12px; top: 20px; transform: none; }
     .breakdown-list { align-items: flex-start; flex-direction: column; }
-    .domain-values { grid-template-columns: 1fr; }
   }
 </style>

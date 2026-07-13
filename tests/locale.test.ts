@@ -19,4 +19,22 @@ describe('content script locale fallback', () => {
 
     expect(t('domainHit')).toBe('域名命中');
   });
+
+  it('notifies reactive consumers after initializing the stored locale', async () => {
+    vi.resetModules();
+    vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('en-US');
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      json: async () => ({ disabled: { message: '已停用' } }),
+    })));
+
+    const { initLocale, subscribe, t } = await import('@/utils/locale');
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    await initLocale('zh_CN');
+
+    expect(t('disabled')).toBe('已停用');
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
 });

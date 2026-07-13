@@ -47,14 +47,17 @@ export function isSearchEngineRedirect(url: string): boolean {
     // URL 解析失败
   }
   // 常见跳转路径特征
-  const redirectPaths = ['/url?', '/link?', '/ck/', '/l/', '/goto/', '/redirect'];
+  const redirectPaths = ['/url?', '/link?', '/ck/', '/l/', '/goto/', '/redirect', '/aclk'];
   return redirectPaths.some((p) => url.includes(p));
 }
 
 function extractRedirectTargetUrl(href: string, currentHost: string): string | null {
   try {
     const redirectUrl = new URL(href, window.location.href);
-    const params = ['url', 'u', 'q', 'target', 'to'];
+    const params = [
+      'adurl', 'url', 'u', 'q', 'target', 'to',
+      'dest', 'destination', 'redirect', 'redirect_url', 'rurl',
+    ];
     for (const name of params) {
       const raw = redirectUrl.searchParams.get(name);
       const target = normalizeRedirectTarget(raw);

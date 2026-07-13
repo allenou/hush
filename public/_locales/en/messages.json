@@ -25,6 +25,7 @@
   "typeUrl": { "message": "URL" },
   "typeSelector": { "message": "Selector" },
   "enabled": { "message": "Enabled" },
+  "disabled": { "message": "Disabled" },
   "totalBlocked": { "message": "Total Blocked" },
   "today": { "message": "Today" },
   "times": { "message": "times" },

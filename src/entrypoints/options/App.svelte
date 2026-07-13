@@ -31,6 +31,7 @@
   let errorMsg = $state('');
   let blockAds = $state(false);
   let blockSubdomains = $state(true);
+  let enabled = $state(true);
   let activeFilter = $state<RuleFilter>('all');
   let searchQuery = $state('');
   let activeTab = $state<TabId>('dashboard');
@@ -103,6 +104,7 @@
       await initLocale(storage.locale);
     }
     blockedItems = await getAllBlocked();
+    enabled = storage.enabled;
     blockAds = storage.blockAds ?? false;
     blockSubdomains = storage.blockSubdomains ?? true;
     totalBlockCount = storage.blockCount ?? 0;
@@ -195,7 +197,7 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="app">
-  <AppNav {activeTab} onTabChange={(tab) => activeTab = tab} />
+  <AppNav {activeTab} {enabled} onTabChange={(tab) => activeTab = tab} />
 
   <main class="main">
     {#if activeTab === 'dashboard'}
