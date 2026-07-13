@@ -262,6 +262,7 @@ export function injectAdBadge(item: Element, href: string): void {
     mask.remove();
     badge.remove();
     if (href) injectBlockButton(item, href);
+    updateCollapseBar();
   });
   item.appendChild(mask);
   item.appendChild(badge);
@@ -319,7 +320,10 @@ export function scanResults(engine: SearchEngineConfig): void {
 
 /** 广告扫描 — 优先从上层容器特征找广告，回退从文字标签向上找 */
 export function scanForAds(): void {
-  if (!_state.blockAds || !_state.isEnabled) return;
+  if (!_state.blockAds || !_state.isEnabled) {
+    updateCollapseBar();
+    return;
+  }
 
   const host = _getHostname();
 
@@ -401,6 +405,7 @@ export function scanForAds(): void {
       injectAdBadge(best, '');
     }
   });
+  updateCollapseBar();
 }
 
 // ========== Selector Rules ==========
@@ -418,6 +423,7 @@ export function restoreBlockedSelectors(): void {
       });
     } catch { /* skip */ }
   });
+  updateCollapseBar();
 }
 
 export function applyBlockedSelectors(): void {
@@ -444,6 +450,7 @@ export function applyBlockedSelectors(): void {
       });
     } catch { /* skip */ }
   });
+  updateCollapseBar();
 }
 
 export function checkSavedSelectors(): void {
@@ -458,6 +465,7 @@ export function clearAllMarkers(): void {
     el.removeAttribute('data-srb-processed');
     el.removeAttribute('data-srb-ad-scanned');
   });
+  updateCollapseBar();
 }
 
 // Set by content.ts for container-missing fallback

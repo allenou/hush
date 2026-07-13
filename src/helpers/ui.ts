@@ -3,6 +3,7 @@ import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '@/utils/storage';
 import { getHostname } from '@/utils/url';
 import { t } from '@/utils/i18n';
+import { reportPageMarkerCount } from '@/utils/page-badge';
 
 let floatingBtnInjected = false;
 
@@ -391,6 +392,7 @@ let _lastCollapseCount = -1;
 let _lastCollapseDisplay = '';
 
 export function updateCollapseBar(): void {
+  reportPageMarkerCount();
   const bar = document.getElementById('srb-collapse-bar');
   if (!bar) return;
   const count = document.querySelectorAll('.srb-blocked-badge').length;
