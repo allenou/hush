@@ -120,8 +120,6 @@ npm run wxt-prepare  # WXT 类型生成
 
 ## 重要注意事项
 
-- **技能使用**：非必要不要使用流程型 `superpowers` 技能；创意探索、需求梳理和方案设计场景可按需使用头脑风暴或设计伴侣类技能；简单编码、修复和小改动直接执行，避免额外流程影响效率
-- **最小化原则**：若上级规则强制要求使用 `superpowers`，仅执行不可跳过的最小必要步骤；不得自动串联其他技能，也不得为简单任务引入计划、子代理、工作树或额外验证流程
 - `wxt.config.ts` 中 `host_permissions: ['<all_urls>']` 确保 content script 可在任意页面运行
 - `wxt.config.ts` 中 `srcDir: 'src'` 指定 WXT 源码目录；`@/...` alias 指向 `src/`
 - Content script 使用 `runAt: 'document_end'` 确保 DOM 就绪后执行

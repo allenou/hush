@@ -25,13 +25,10 @@ const mobileStyles = dashboardSource.slice(
 describe('Dashboard layout', () => {
   it('keeps the total-blocked and trend cards on standalone rows', () => {
     expect(desktopStyles).toMatch(
-      /\.dash-overview-grid\s*\{[^}]*grid-template-columns:\s*1fr;/s,
+      /\.range-section\s*\{[^}]*flex-direction:\s*column;/s,
     );
     expect(desktopStyles).toMatch(
       /\.detail-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
-    );
-    expect(desktopStyles).toMatch(
-      /\.trend-card\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/s,
     );
     expect(desktopStyles).toMatch(
       /\.dash-kpis\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/s,
@@ -39,6 +36,13 @@ describe('Dashboard layout', () => {
     expect(mobileStyles).toMatch(
       /\.dash-kpis,\s*\.detail-grid\s*\{[^}]*grid-template-columns:\s*1fr;/s,
     );
+  });
+
+  it('uses a compact range dropdown instead of a page heading switch', () => {
+    expect(dashboardSource).not.toContain('dash-page-heading');
+    expect(dashboardSource).not.toContain('range-switch');
+    expect(dashboardSource).toContain('class="range-select-shell"');
+    expect(dashboardSource.match(/<option value=\{/g)).toHaveLength(5);
   });
 
   it('uses neutral statistic cards and a white total-blocked data hub', () => {

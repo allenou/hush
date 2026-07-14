@@ -67,27 +67,44 @@
           </span>
           <span class="search-table-time">{formatRelativeTime(record.timestamp)}</span>
           <span class="search-table-actions">
-            <button class="btn-ghost" onclick={() => doSearch(record)}>{t('searchAction')}</button>
-            <button class="btn-ghost history-delete" onclick={() => onRemove?.(i)}>{t('deleteHistory')}</button>
-            <div class="search-switch-wrapper" role="presentation" onclick={(e) => { e.stopPropagation(); toggleEngineMenu(i); }}>
-              <button class="search-switch-btn" aria-label={t('switchEngine')}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
-              {#if searchEngineMenus[i]}
-                <div class="search-engine-menu" role="presentation" onclick={(e) => e.stopPropagation()}
-                  onmouseleave={() => closeEngineMenu(i)}
+            <div class="search-action-group">
+              <button class="search-again-btn" onclick={() => doSearch(record)}>{t('searchAction')}</button>
+              <div class="search-switch-wrapper">
+                <button
+                  class="search-switch-btn"
+                  aria-label={t('switchEngine')}
+                  aria-haspopup="menu"
+                  aria-expanded={searchEngineMenus[i] ?? false}
+                  onclick={(e) => { e.stopPropagation(); toggleEngineMenu(i); }}
                 >
-                  {#each SEARCH_ENGINES as engine}
-                    <button class="search-engine-opt" onclick={() => { doSearch(record, engine.hostname); closeEngineMenu(i); }}>
-                      <span class="se-dot" style="background:{engine.color}"></span>
-                      {engine.label}
-                    </button>
-                  {/each}
-                </div>
-              {/if}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                {#if searchEngineMenus[i]}
+                  <div class="search-engine-menu" role="menu" tabindex="-1" onmouseleave={() => closeEngineMenu(i)}>
+                    {#each SEARCH_ENGINES as engine}
+                      <button
+                        class:current={engine.hostname === record.engineHostname}
+                        class="search-engine-opt"
+                        role="menuitem"
+                        aria-current={engine.hostname === record.engineHostname ? 'true' : undefined}
+                        onclick={() => { doSearch(record, engine.hostname); closeEngineMenu(i); }}
+                      >
+                        <span class="se-dot" style="background:{engine.color}"></span>
+                        <span>{engine.label}</span>
+                        {#if engine.hostname === record.engineHostname}
+                          <svg class="current-engine-check" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        {/if}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
             </div>
+            <button class="history-delete" onclick={() => onRemove?.(i)}>{t('deleteHistory')}</button>
           </span>
         </div>
       {/each}
@@ -150,11 +167,11 @@
   .search-table {
     border: 1px solid var(--srb-border-light);
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
   }
   .search-table-head {
     display: grid;
-    grid-template-columns: 1fr 80px 100px 180px;
+    grid-template-columns: 1fr 80px 100px 200px;
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
@@ -164,16 +181,18 @@
     font-weight: var(--srb-weight-bold);
     letter-spacing: var(--srb-tracking-caps);
     text-transform: uppercase;
+    border-radius: 11px 11px 0 0;
   }
   .search-table-row {
     display: grid;
-    grid-template-columns: 1fr 80px 100px 180px;
+    grid-template-columns: 1fr 80px 100px 200px;
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
     border-top: 1px solid var(--srb-row-divider);
     transition: background var(--srb-transition-fast);
   }
+  .search-table-row:last-child { border-radius: 0 0 11px 11px; }
   .search-table-row:hover { background: var(--srb-row-hover); }
   .search-table-query {
     display: flex;
@@ -200,25 +219,54 @@
   .search-table-actions {
     display: flex;
     align-items: center;
-    gap: var(--srb-space-2xs);
+    justify-content: space-between;
+    gap: var(--srb-space-sm);
   }
-  .search-table-actions .btn-ghost {
-    padding: 4px 10px;
-    font-size: var(--srb-font-size-xs);
-  }
-  .btn-ghost {
-    padding: 6px 10px;
-    border: none;
+  .search-action-group {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--srb-border-strong);
     border-radius: var(--srb-radius-md);
-    background: transparent;
-    color: var(--srb-text-subtle);
+    background: var(--srb-surface);
+    overflow: visible;
+  }
+  .search-again-btn,
+  .history-delete {
     font: inherit;
-    font-size: var(--srb-font-size-sm);
+    font-size: var(--srb-font-size-xs);
     font-weight: var(--srb-weight-bold);
     cursor: pointer;
     transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
   }
-  .btn-ghost:hover { background: var(--srb-danger-soft-bg); color: var(--srb-danger); }
+  .search-again-btn {
+    padding: 5px 9px;
+    border: none;
+    border-radius: calc(var(--srb-radius-md) - 1px) 0 0 calc(var(--srb-radius-md) - 1px);
+    background: transparent;
+    color: var(--srb-text-neutral);
+  }
+  .search-again-btn:hover {
+    background: var(--srb-accent-soft);
+    color: var(--srb-text-strong);
+  }
+  .history-delete {
+    padding: 5px 8px;
+    border: none;
+    border-radius: var(--srb-radius-md);
+    background: transparent;
+    color: var(--srb-text-subtle);
+  }
+  .history-delete:hover {
+    background: var(--srb-danger-soft-bg);
+    color: var(--srb-danger);
+  }
+  .search-again-btn:focus-visible,
+  .search-switch-btn:focus-visible,
+  .history-delete:focus-visible,
+  .search-engine-opt:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
+  }
 
   .search-switch-wrapper {
     position: relative;
@@ -228,16 +276,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    min-height: 26px;
     border: none;
-    border-radius: var(--srb-radius-xs);
+    border-left: 1px solid var(--srb-border-strong);
+    border-radius: 0 calc(var(--srb-radius-md) - 1px) calc(var(--srb-radius-md) - 1px) 0;
     background: transparent;
     color: var(--srb-text-muted);
     cursor: pointer;
     transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
   }
-  .search-switch-btn:hover { background: var(--srb-border-light); color: var(--srb-text); }
+  .search-switch-btn:hover { background: var(--srb-accent-soft); color: var(--srb-text); }
   .search-engine-menu {
     position: absolute;
     top: 100%;
@@ -269,10 +318,18 @@
     transition: background var(--srb-transition-fast);
   }
   .search-engine-opt:hover { background: var(--srb-menu-hover-bg); }
+  .search-engine-opt.current {
+    background: var(--srb-accent-soft);
+    font-weight: var(--srb-weight-bold);
+  }
   .se-dot {
     width: 8px;
     height: 8px;
     border-radius: var(--srb-radius-full);
     flex-shrink: 0;
+  }
+  .current-engine-check {
+    margin-left: auto;
+    color: var(--srb-primary);
   }
 </style>

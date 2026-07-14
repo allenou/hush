@@ -58,20 +58,21 @@ describe('Dashboard', () => {
     expect(target.querySelectorAll('.chart-date-label')).toHaveLength(0);
   });
 
-  it('defaults to 7 days and switches the range total to 30 days', async () => {
-    const target = render();
-    const thirtyDayButton = [...target.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('30'));
+  it('defaults to 30 days and switches the range total from the dropdown', async () => {
+    const target = render({ dailyStats: buildStats(365) });
+    const rangeSelect = target.querySelector<HTMLSelectElement>('.range-select-shell select');
 
-    expect(thirtyDayButton).toBeDefined();
-    expect(thirtyDayButton?.getAttribute('aria-pressed')).toBe('false');
-    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('7');
+    expect(rangeSelect).not.toBeNull();
+    expect(rangeSelect?.value).toBe('30');
+    expect(rangeSelect?.options).toHaveLength(5);
+    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('30');
 
-    thirtyDayButton?.click();
+    rangeSelect!.value = '90';
+    rangeSelect!.dispatchEvent(new Event('change', { bubbles: true }));
     await tick();
 
-    expect(thirtyDayButton?.getAttribute('aria-pressed')).toBe('true');
-    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('30');
+    expect(rangeSelect?.value).toBe('90');
+    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('90');
   });
 
   it('renders a concise total-blocked data hub with inline units', async () => {
@@ -97,7 +98,8 @@ describe('Dashboard', () => {
     expect(metrics[1]?.textContent).toContain('12');
     expect(metrics[0]?.querySelector('span')?.textContent?.trim()).toBe(t('today'));
     expect(metrics[1]?.querySelector('span')?.textContent?.trim()).toBe(t('tabRules'));
-    expect(target.querySelectorAll('.dash-page-heading p, .dash-card-heading p')).toHaveLength(0);
+    expect(target.querySelector('.dash-page-heading')).toBeNull();
+    expect(target.querySelectorAll('.range-toolbar p, .dash-card-heading p')).toHaveLength(0);
     expect(kpis).toHaveLength(3);
     expect(kpiUnits).toHaveLength(3);
     expect(kpiUnits[0]?.textContent?.trim()).toBe(t('times'));
@@ -119,12 +121,13 @@ describe('Dashboard', () => {
 
     const canvases = target.querySelectorAll('canvas');
     const detailGrid = target.querySelector('.detail-grid');
+    const rangeSection = target.querySelector('.range-section');
     expect(canvases).toHaveLength(3);
     expect(detailGrid).not.toBeNull();
-    expect(detailGrid?.querySelectorAll('canvas')).toHaveLength(3);
+    expect(rangeSection?.querySelectorAll('canvas')).toHaveLength(1);
+    expect(detailGrid?.querySelectorAll('canvas')).toHaveLength(2);
     for (const canvas of canvases) {
       expect(canvas.getAttribute('aria-label')?.trim()).not.toBe('');
-      expect(detailGrid?.contains(canvas)).toBe(true);
     }
   });
 

@@ -1,6 +1,8 @@
 import type { BlockStats } from '@/utils/storage';
 
-export type StatisticsRange = 7 | 30;
+export const STATISTICS_RETENTION_DAYS = 365;
+
+export type StatisticsRange = 7 | 30 | 90 | 180 | 365;
 
 export interface StatisticsSummary {
   total: number;

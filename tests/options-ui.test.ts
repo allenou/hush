@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { mount, unmount } from 'svelte';
+import { mount, tick, unmount } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
 import App from '@/entrypoints/options/App.svelte';
@@ -107,7 +107,12 @@ describe('Options UI', () => {
     expect(onSearchQueryChange).toHaveBeenCalledWith('example');
   });
 
-  it('provides single-delete and clear-all search history actions', () => {
+  it('groups repeat search with engine selection and keeps delete separate', async () => {
+    vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
+      searchAction: '再次搜索',
+      switchEngine: '切换搜索引擎',
+    })[key] ?? '');
+    const onSearch = vi.fn();
     const onRemove = vi.fn();
     const onClear = vi.fn();
     const target = document.createElement('div');
@@ -121,10 +126,24 @@ describe('Options UI', () => {
           engineHostname: 'google.com',
           timestamp: Date.now(),
         }],
+        onSearch,
         onRemove,
         onClear,
       },
     });
+
+    const searchGroup = target.querySelector('.search-action-group')!;
+    expect(searchGroup.querySelector('.search-again-btn')?.textContent).toBe('再次搜索');
+    expect(searchGroup.querySelector('.search-switch-btn')?.getAttribute('aria-label')).toBe('切换搜索引擎');
+    searchGroup.querySelector<HTMLButtonElement>('.search-again-btn')?.click();
+    searchGroup.querySelector<HTMLButtonElement>('.search-switch-btn')?.click();
+    await tick();
+
+    expect(onSearch).toHaveBeenCalledWith(expect.objectContaining({
+      record: expect.objectContaining({ query: 'query' }),
+    }));
+    expect(searchGroup.querySelector('.search-engine-menu')).not.toBeNull();
+    expect(searchGroup.querySelector('.search-engine-opt.current')).not.toBeNull();
 
     target.querySelector<HTMLButtonElement>('.history-delete')?.click();
     target.querySelector<HTMLButtonElement>('.history-clear')?.click();

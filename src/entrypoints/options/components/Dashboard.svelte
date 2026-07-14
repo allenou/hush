@@ -39,7 +39,7 @@
     topBlockedDomains = [],
   }: Props = $props();
 
-  let rangeDays = $state<StatisticsRange>(7);
+  let rangeDays = $state<StatisticsRange>(30);
   let dailySeries = $derived(buildDailySeries(dailyStats, rangeDays, now));
   let summary = $derived(summarizeDailySeries(dailySeries));
   let visibleTopDomains = $derived(topBlockedDomains.slice(0, 10));
@@ -95,7 +95,7 @@
           pointBackgroundColor: teal,
           pointBorderColor: chartColor('--srb-surface', '#ffffff'),
           pointBorderWidth: 2,
-          pointRadius: rangeDays === 7 ? 4 : 2,
+          pointRadius: rangeDays === 7 ? 4 : rangeDays === 30 ? 2 : 0,
           pointHoverRadius: 5,
           tension: 0.32,
         }],
@@ -208,54 +208,51 @@
 </script>
 
 <div class="dash">
-  <header class="dash-page-heading">
-    <div>
-      <h1>{t('dashboardTitle')}</h1>
-    </div>
-    <div class="range-switch" role="group" aria-label={t('blockTrend')}>
-      <button
-        type="button"
-        aria-pressed={rangeDays === 7}
-        class:active={rangeDays === 7}
-        onclick={() => rangeDays = 7}
-      >{t('last7Days')}</button>
-      <button
-        type="button"
-        aria-pressed={rangeDays === 30}
-        class:active={rangeDays === 30}
-        onclick={() => rangeDays = 30}
-      >{t('last30Days')}</button>
-    </div>
-  </header>
-
-  <div class="dash-overview-grid">
-    <section class="dash-hero" aria-labelledby="total-blocked-title">
-      <div class="dash-hero-main">
-        <span id="total-blocked-title" class="dash-eyebrow">{t('totalBlocked')}</span>
-        <div class="dash-hero-total">
-          <strong class="dash-hero-number">{totalBlockCount}</strong>
-          <span class="dash-hero-unit">{t('times')}</span>
-        </div>
-        <div class="dash-hero-watermark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="m9 12 2 2 4-4"/>
-          </svg>
-        </div>
+  <section class="dash-hero" aria-labelledby="total-blocked-title">
+    <div class="dash-hero-main">
+      <span id="total-blocked-title" class="dash-eyebrow">{t('totalBlocked')}</span>
+      <div class="dash-hero-total">
+        <strong class="dash-hero-number">{totalBlockCount}</strong>
+        <span class="dash-hero-unit">{t('times')}</span>
       </div>
-      <div class="dash-hero-metrics">
-        <div class="dash-hero-metric">
-          <span>{t('today')}</span>
-          <strong>{todayBlockCount}<small>{t('times')}</small></strong>
-        </div>
-        <div class="dash-hero-metric">
-          <span>{t('tabRules')}</span>
-          <strong>{totalCount}<small>{t('rulesCount')}</small></strong>
-        </div>
+      <div class="dash-hero-watermark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
       </div>
-    </section>
+    </div>
+    <div class="dash-hero-metrics">
+      <div class="dash-hero-metric">
+        <span>{t('today')}</span>
+        <strong>{todayBlockCount}<small>{t('times')}</small></strong>
+      </div>
+      <div class="dash-hero-metric">
+        <span>{t('tabRules')}</span>
+        <strong>{totalCount}<small>{t('rulesCount')}</small></strong>
+      </div>
+    </div>
+  </section>
 
-    <section class="dash-kpis" aria-label={t('dashboardTitle')}>
+  <section class="range-section" aria-labelledby="recent-stats-title">
+    <div class="range-toolbar">
+      <h2 id="recent-stats-title">{t('recentStats')}</h2>
+      <div class="range-select-shell">
+        <select
+          value={rangeDays}
+          aria-label={t('statisticsRange')}
+          onchange={(event) => rangeDays = Number(event.currentTarget.value) as StatisticsRange}
+        >
+          <option value={7}>{t('last7Days')}</option>
+          <option value={30}>{t('last30Days')}</option>
+          <option value={90}>{t('last90Days')}</option>
+          <option value={180}>{t('last180Days')}</option>
+          <option value={365}>{t('last365Days')}</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="dash-kpis" aria-label={t('recentStats')}>
       <article class="kpi-card">
         <span class="kpi-label">{t('rangeBlocked')}</span>
         <strong class="kpi-value" data-testid="range-total">
@@ -278,9 +275,6 @@
         </span>
       </article>
     </section>
-  </div>
-
-  <div class="detail-grid">
     <section class="dash-card trend-card">
       <div class="dash-card-heading">
         <div>
@@ -301,7 +295,9 @@
         <div class="dash-empty">{t('noData')}</div>
       {/if}
     </section>
+  </section>
 
+  <div class="detail-grid">
     <section class="dash-card breakdown-card">
       <div class="dash-card-heading">
         <div>
@@ -352,7 +348,6 @@
     gap: var(--srb-space-lg);
   }
 
-  .dash-page-heading,
   .dash-card-heading {
     display: flex;
     align-items: flex-start;
@@ -360,50 +355,62 @@
     gap: var(--srb-space-lg);
   }
 
-  .dash-page-heading { margin-bottom: var(--srb-space-sm); }
-  .dash-page-heading h1 {
+  .range-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--srb-space-lg);
+  }
+  .range-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-lg);
+  }
+  .range-toolbar h2 {
     margin: 0;
     color: var(--srb-text-strong);
-    font-size: 30px;
-    font-weight: var(--srb-weight-heavy);
-    letter-spacing: -0.035em;
+    font-size: var(--srb-font-size-title);
+    font-weight: var(--srb-weight-bold);
+    letter-spacing: -0.02em;
   }
-  .range-switch {
-    display: inline-flex;
-    gap: 3px;
-    padding: 4px;
+  .range-select-shell {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .range-select-shell::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    right: 14px;
+    top: 50%;
+    border-right: 1.5px solid var(--srb-text-muted);
+    border-bottom: 1.5px solid var(--srb-text-muted);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  .range-select-shell select {
+    min-width: 132px;
+    min-height: 38px;
+    padding: 0 38px 0 14px;
+    appearance: none;
     border: 1px solid var(--srb-border);
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-surface);
-    box-shadow: var(--srb-shadow-xs);
-  }
-  .range-switch button {
-    min-height: 34px;
-    padding: 0 13px;
-    border: 0;
     border-radius: var(--srb-radius-md);
-    background: transparent;
+    background: var(--srb-surface);
     color: var(--srb-text-secondary);
     cursor: pointer;
     font: inherit;
     font-size: var(--srb-font-size-sm);
     font-weight: var(--srb-weight-semibold);
-    transition: background var(--srb-transition-base), color var(--srb-transition-base);
+    box-shadow: var(--srb-shadow-xs);
+    transition: border-color var(--srb-transition-base), box-shadow var(--srb-transition-base);
   }
-  .range-switch button:hover { background: var(--srb-control-hover-bg); }
-  .range-switch button.active {
-    background: var(--srb-primary-action);
-    color: var(--srb-on-primary);
+  .range-select-shell select:hover {
+    border-color: var(--srb-primary);
   }
-  .range-switch button:focus-visible {
+  .range-select-shell select:focus-visible {
     outline: 2px solid var(--srb-primary);
     outline-offset: 2px;
-  }
-
-  .dash-overview-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--srb-space-lg);
   }
 
   .dash-hero {
@@ -579,7 +586,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--srb-space-lg);
   }
-  .trend-card { grid-column: 1 / -1; }
   .breakdown-list {
     display: flex;
     justify-content: center;
@@ -614,11 +620,10 @@
   }
 
   @media (max-width: 700px) {
-    .dash-page-heading { align-items: stretch; flex-direction: column; }
-    .range-switch { align-self: flex-start; }
+    .range-toolbar { align-items: stretch; flex-direction: column; gap: var(--srb-space-md); }
+    .range-select-shell { align-self: flex-start; }
     .dash-kpis,
     .detail-grid { grid-template-columns: 1fr; }
-    .trend-card { grid-column: auto; }
     .dash-hero {
       grid-template-columns: 1fr;
       min-height: 0;

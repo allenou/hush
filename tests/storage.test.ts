@@ -399,17 +399,19 @@ describe('recordBlock', () => {
     ]));
   });
 
-  it('keeps at most 30 days', async () => {
+  it('keeps at most 365 days', async () => {
     const past = [];
-    for (let i = 0; i < 31; i++) {
+    for (let i = 0; i < 366; i++) {
       const d = new Date(); d.setDate(d.getDate() - i);
       past.push({ date: formatLocalDateKey(d), count: 1 });
     }
     await fakeBrowser.storage.local.set({
-      blocker: { stats: past, blockCount: 31, urls: [], blockedUrls: [], blockedSelectors: [], customEngines: [], enabled: true, blockAds: true },
+      blocker: { stats: past, blockCount: 366, urls: [], blockedUrls: [], blockedSelectors: [], customEngines: [], enabled: true, blockAds: true },
     });
     await recordBlock();
-    expect((await get()).stats.length).toBeLessThanOrEqual(30);
+    const storage = await get();
+    expect(storage.stats.length).toBeLessThanOrEqual(365);
+    expect(storage.stats.some((item) => item.date === past.at(-1)?.date)).toBe(false);
   });
 });
 

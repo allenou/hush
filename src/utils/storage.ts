@@ -6,7 +6,10 @@ import {
   normalizeHostname,
   rankEngineConfigMatch,
 } from '@/helpers/search-engines';
-import { formatLocalDateKey } from '@/utils/statistics';
+import {
+  formatLocalDateKey,
+  STATISTICS_RETENTION_DAYS,
+} from '@/utils/statistics';
 
 export interface ExtensionStorage {
   urls: string[];
@@ -505,6 +508,7 @@ async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<
     const existing = stats.find((item) => item.date === today);
     if (existing) existing.count++;
     else stats.push({ date: today, count: 1 });
+    stats.sort((a, b) => a.date.localeCompare(b.date));
 
     const blockedDomainStats = current.blockedDomainStats.map((item) => ({ ...item }));
     if (domain) {
@@ -522,7 +526,7 @@ async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<
         domainBlockCount: type === 'domain'
           ? current.domainBlockCount + 1
           : current.domainBlockCount,
-        stats: stats.slice(-30),
+        stats: stats.slice(-STATISTICS_RETENTION_DAYS),
         blockedDomainStats: domain ? blockedDomainStats.slice(0, 10) : blockedDomainStats,
       },
       result: undefined,
