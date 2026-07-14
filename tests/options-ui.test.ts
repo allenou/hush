@@ -26,6 +26,18 @@ const navSource = readFileSync(
   resolve(process.cwd(), 'src/entrypoints/options/components/AppNav.svelte'),
   'utf8',
 );
+const rulesSource = readFileSync(
+  resolve(process.cwd(), 'src/entrypoints/options/components/RulesTab.svelte'),
+  'utf8',
+);
+const appSource = readFileSync(
+  resolve(process.cwd(), 'src/entrypoints/options/App.svelte'),
+  'utf8',
+);
+const searchHistorySource = readFileSync(
+  resolve(process.cwd(), 'src/entrypoints/options/components/SearchHistoryTab.svelte'),
+  'utf8',
+);
 
 describe('Options UI', () => {
   let component: ReturnType<typeof mount> | undefined;
@@ -39,6 +51,29 @@ describe('Options UI', () => {
 
   it('uses solid card styling for the top-domain empty state', () => {
     expect(dashboardSource).not.toMatch(/\.dash-empty\s*\{[^}]*border:\s*1px dashed/s);
+  });
+
+  it('does not show a dashed border around the rules empty state', () => {
+    expect(rulesSource).not.toMatch(/\.empty\s*\{[^}]*border:\s*1px dashed/s);
+  });
+
+  it('does not show a dashed border around the search history empty state', () => {
+    expect(searchHistorySource).not.toMatch(/\.empty\s*\{[^}]*border:\s*1px dashed/s);
+  });
+
+  it('does not use the native confirm dialog for clearing search history', () => {
+    expect(appSource).not.toMatch(/confirm\(t\('clearHistoryConfirm'\)\)/);
+  });
+
+  it('reserves scrollbar space to prevent tab layout shifts', () => {
+    expect(appSource).toMatch(/:global\(html\)\s*\{[^}]*scrollbar-gutter:\s*stable;/s);
+  });
+
+  it('aligns the main content edges with the options header', () => {
+    expect(appSource).toContain('--srb-options-page-gutter: var(--srb-space-2xl);');
+    expect(appSource).toMatch(/\.main\s*\{[^}]*max-width:\s*calc\([\s\S]*var\(--srb-options-max-width\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*\);/);
+    expect(appSource).toContain('padding: var(--srb-space-2xl) var(--srb-options-page-gutter);');
+    expect(navSource).toContain('padding: 0 var(--srb-options-page-gutter);');
   });
 
   it('keeps settings cards aligned to the shared options content width', () => {
@@ -107,10 +142,13 @@ describe('Options UI', () => {
     expect(onSearchQueryChange).toHaveBeenCalledWith('example');
   });
 
-  it('groups repeat search with engine selection and keeps delete separate', async () => {
+  it('groups repeat search with engine selection and confirms before clearing history', async () => {
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       searchAction: '再次搜索',
       switchEngine: '切换搜索引擎',
+      clearHistory: '清空记录',
+      clearHistoryConfirm: '确定清空全部搜索记录吗？',
+      cancel: '取消',
     })[key] ?? '');
     const onSearch = vi.fn();
     const onRemove = vi.fn();
@@ -147,8 +185,21 @@ describe('Options UI', () => {
 
     target.querySelector<HTMLButtonElement>('.history-delete')?.click();
     target.querySelector<HTMLButtonElement>('.history-clear')?.click();
+    await tick();
 
     expect(onRemove).toHaveBeenCalledWith(0);
+    expect(onClear).not.toHaveBeenCalled();
+    expect(target.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(target.querySelector('#confirm-dialog-message')?.textContent).toBe('确定清空全部搜索记录吗？');
+
+    target.querySelector<HTMLButtonElement>('.btn-cancel')?.click();
+    await tick();
+    expect(target.querySelector('[role="dialog"]')).toBeNull();
+
+    target.querySelector<HTMLButtonElement>('.history-clear')?.click();
+    await tick();
+    target.querySelector<HTMLButtonElement>('.btn-danger')?.click();
+
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

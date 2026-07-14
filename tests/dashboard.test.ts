@@ -78,21 +78,22 @@ describe('Dashboard', () => {
   it('renders a concise total-blocked data hub with inline units', async () => {
     await setLocale('zh_CN');
     const target = render({
-      totalBlockCount: 128,
+      totalBlockCount: 1284,
       todayBlockCount: 6,
       totalCount: 12,
     });
 
     const total = target.querySelector('.dash-hero-total');
-    const heroMain = target.querySelector('.dash-hero-main');
+    const heroAccent = target.querySelector('.dash-hero-accent');
     const watermark = target.querySelector('.dash-hero-watermark');
     const metrics = target.querySelectorAll('.dash-hero-metric');
     const kpis = target.querySelectorAll('.kpi-card');
     const kpiUnits = target.querySelectorAll('.kpi-unit');
 
-    expect(total?.textContent).toContain('128');
+    expect(total?.textContent).toContain('1,284');
     expect(total?.querySelector('.dash-hero-unit')?.textContent?.trim()).not.toBe('');
-    expect(heroMain?.contains(watermark)).toBe(true);
+    expect(heroAccent).toBeNull();
+    expect(watermark).toBeNull();
     expect(metrics).toHaveLength(2);
     expect(metrics[0]?.textContent).toContain('6');
     expect(metrics[1]?.textContent).toContain('12');

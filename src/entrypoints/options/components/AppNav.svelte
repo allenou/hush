@@ -60,7 +60,7 @@
     background: var(--srb-surface);
     border-bottom: 1px solid var(--srb-border);
     box-shadow: var(--srb-shadow-xs);
-    padding: 0 var(--srb-space-2xl);
+    padding: 0 var(--srb-options-page-gutter);
     position: sticky;
     top: 0;
     z-index: var(--srb-z-nav);
@@ -147,7 +147,6 @@
   }
 
   @media (max-width: 760px) {
-    .nav { padding: 0 var(--srb-space-lg); }
     .nav-left { gap: var(--srb-space-lg); }
     .nav-link { padding: 8px 12px; }
   }
@@ -157,7 +156,6 @@
   }
 
   @media (max-width: 420px) {
-    .nav { padding: 0 var(--srb-space-md); }
     .nav-left { gap: var(--srb-space-sm); }
     .brand-label { display: none; }
     .nav-link { padding-inline: 10px; }

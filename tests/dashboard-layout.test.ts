@@ -36,6 +36,9 @@ describe('Dashboard layout', () => {
     expect(mobileStyles).toMatch(
       /\.dash-kpis,\s*\.detail-grid\s*\{[^}]*grid-template-columns:\s*1fr;/s,
     );
+    expect(mobileStyles).toMatch(
+      /\.range-toolbar\s*\{[^}]*align-items:\s*center;[^}]*flex-direction:\s*row;/s,
+    );
   });
 
   it('uses a compact range dropdown instead of a page heading switch', () => {
@@ -51,8 +54,12 @@ describe('Dashboard layout', () => {
     expect(desktopStyles).toMatch(
       /\.dash-hero\s*\{[^}]*background:\s*var\(--srb-surface\);/s,
     );
+    expect(dashboardSource).not.toContain('dash-hero-accent');
+    expect(dashboardSource).not.toContain('dash-hero-watermark');
+    expect(desktopStyles).not.toContain('.dash-hero::before');
+    expect(desktopStyles).not.toContain('.dash-hero-main::after');
     expect(desktopStyles).toMatch(/\.dash-hero-metrics\s*\{/);
-    expect(desktopStyles).toMatch(/\.dash-hero-watermark\s*\{/);
+    expect(desktopStyles).not.toMatch(/\.dash-hero-metric\s*\{[^}]*border-left:/s);
   });
 
   it('uses one DOM legend for the block breakdown', () => {

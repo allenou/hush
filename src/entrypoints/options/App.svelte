@@ -189,7 +189,6 @@
   }
 
   async function handleClearSearchHistory() {
-    if (!confirm(t('clearHistoryConfirm'))) return;
     await clearSearchHistory();
     await loadData();
   }
@@ -263,6 +262,12 @@
 </div>
 
 <style>
+  .app {
+    --srb-options-page-gutter: var(--srb-space-2xl);
+  }
+  :global(html) {
+    scrollbar-gutter: stable;
+  }
   :global(body) {
     margin: 0;
     min-width: var(--srb-options-min-width);
@@ -274,12 +279,24 @@
   :global(*) { box-sizing: border-box; }
 
   .main {
-    max-width: var(--srb-options-max-width);
+    max-width: calc(
+      var(--srb-options-max-width)
+      + var(--srb-options-page-gutter)
+      + var(--srb-options-page-gutter)
+    );
     margin: 0 auto;
-    padding: var(--srb-space-2xl);
+    padding: var(--srb-space-2xl) var(--srb-options-page-gutter);
   }
 
   @media (max-width: 1100px) {
     :global(body) { min-width: 0; }
+  }
+
+  @media (max-width: 760px) {
+    .app { --srb-options-page-gutter: var(--srb-space-lg); }
+  }
+
+  @media (max-width: 420px) {
+    .app { --srb-options-page-gutter: var(--srb-space-md); }
   }
 </style>

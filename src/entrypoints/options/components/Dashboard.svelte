@@ -1,6 +1,6 @@
 <script lang="ts">
   import ChartCanvas from '@/components/ChartCanvas.svelte';
-  import { t } from '@/utils/locale-store.svelte';
+  import { getLocale, t } from '@/utils/locale-store.svelte';
   import { formatDate } from '@/utils/locale';
   import {
     buildBlockBreakdown,
@@ -63,6 +63,10 @@
       day: 'numeric',
       weekday: 'short',
     });
+  }
+
+  function formatHeroValue(value: number): string {
+    return new Intl.NumberFormat(getLocale() === 'zh_CN' ? 'zh-CN' : 'en-US').format(value);
   }
 
   function chartColor(property: string, fallback: string): string {
@@ -210,26 +214,20 @@
 <div class="dash">
   <section class="dash-hero" aria-labelledby="total-blocked-title">
     <div class="dash-hero-main">
-      <span id="total-blocked-title" class="dash-eyebrow">{t('totalBlocked')}</span>
+      <h1 id="total-blocked-title" class="dash-hero-title">{t('totalBlocked')}</h1>
       <div class="dash-hero-total">
-        <strong class="dash-hero-number">{totalBlockCount}</strong>
+        <strong class="dash-hero-number">{formatHeroValue(totalBlockCount)}</strong>
         <span class="dash-hero-unit">{t('times')}</span>
-      </div>
-      <div class="dash-hero-watermark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="m9 12 2 2 4-4"/>
-        </svg>
       </div>
     </div>
     <div class="dash-hero-metrics">
       <div class="dash-hero-metric">
         <span>{t('today')}</span>
-        <strong>{todayBlockCount}<small>{t('times')}</small></strong>
+        <strong>{formatHeroValue(todayBlockCount)}<small>{t('times')}</small></strong>
       </div>
       <div class="dash-hero-metric">
         <span>{t('tabRules')}</span>
-        <strong>{totalCount}<small>{t('rulesCount')}</small></strong>
+        <strong>{formatHeroValue(totalCount)}<small>{t('rulesCount')}</small></strong>
       </div>
     </div>
   </section>
@@ -415,56 +413,41 @@
 
   .dash-hero {
     display: grid;
-    position: relative;
-    isolation: isolate;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     min-height: 168px;
-    padding: 30px 34px;
-    overflow: hidden;
+    padding: 30px 36px;
     border: 1px solid var(--srb-border);
     border-radius: var(--srb-radius-dialog);
     background: var(--srb-surface);
     box-shadow: var(--srb-shadow-xs);
   }
-  .dash-hero::before {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    width: 280px;
-    height: 280px;
-    left: -150px;
-    top: -170px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--srb-primary) 12%, transparent);
+  .dash-hero-main {
+    min-width: 0;
   }
-  .dash-hero-main,
-  .dash-hero-metrics {
-    position: relative;
-    z-index: 1;
-  }
-  .dash-eyebrow,
+  .dash-hero-title,
   .kpi-label {
     font-size: var(--srb-font-size-xs);
     font-weight: var(--srb-weight-bold);
     letter-spacing: var(--srb-tracking-caps);
     text-transform: uppercase;
   }
-  .dash-eyebrow { color: var(--srb-primary); }
+  .dash-hero-title {
+    margin: 0;
+    color: var(--srb-text-secondary);
+  }
   .dash-hero-total {
     display: flex;
-    position: relative;
-    z-index: 1;
     align-items: baseline;
     gap: var(--srb-space-sm);
-    margin-top: 8px;
+    margin-top: 12px;
   }
   .dash-hero-number {
     color: var(--srb-text-strong);
-    font-size: 56px;
+    font-size: clamp(56px, 6vw, 68px);
     font-weight: var(--srb-weight-heavy);
-    letter-spacing: -0.055em;
-    line-height: 0.95;
+    letter-spacing: -0.06em;
+    line-height: 0.9;
   }
   .dash-hero-unit {
     color: var(--srb-text-muted);
@@ -473,47 +456,36 @@
   }
   .dash-hero-metrics {
     display: grid;
-    grid-template-columns: repeat(2, 132px);
-    gap: var(--srb-space-md);
+    grid-template-columns: repeat(2, minmax(132px, 1fr));
+    min-width: 320px;
   }
   .dash-hero-metric {
     display: flex;
     min-width: 0;
-    padding: 16px 18px;
-    border: 1px solid var(--srb-border-light);
-    border-radius: var(--srb-radius-lg);
-    background: color-mix(in srgb, var(--srb-primary) 5%, var(--srb-bg));
+    min-height: 92px;
+    padding: 8px 28px;
     flex-direction: column;
-    gap: 8px;
+    justify-content: center;
+    gap: 14px;
   }
   .dash-hero-metric > span {
-    color: var(--srb-text-muted);
-    font-size: var(--srb-font-size-xs);
-    font-weight: var(--srb-weight-semibold);
+    color: var(--srb-text-secondary);
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-bold);
   }
   .dash-hero-metric strong {
-    color: var(--srb-text-strong);
-    font-size: 24px;
+    color: var(--srb-primary-action);
+    font-size: 30px;
     line-height: 1;
+    letter-spacing: -0.035em;
   }
   .dash-hero-metric small {
-    margin-left: 5px;
+    margin-left: 6px;
     color: var(--srb-text-muted);
     font-size: var(--srb-font-size-2xs);
     font-weight: var(--srb-weight-semibold);
+    letter-spacing: 0;
   }
-  .dash-hero-watermark {
-    position: absolute;
-    z-index: 0;
-    width: 112px;
-    right: 24px;
-    top: 50%;
-    color: var(--srb-primary);
-    opacity: 0.055;
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-  .dash-hero-watermark svg { display: block; width: 100%; }
 
   .dash-kpis {
     display: grid;
@@ -620,19 +592,22 @@
   }
 
   @media (max-width: 700px) {
-    .range-toolbar { align-items: stretch; flex-direction: column; gap: var(--srb-space-md); }
-    .range-select-shell { align-self: flex-start; }
+    .range-toolbar { align-items: center; flex-direction: row; gap: var(--srb-space-md); }
     .dash-kpis,
     .detail-grid { grid-template-columns: 1fr; }
     .dash-hero {
       grid-template-columns: 1fr;
       min-height: 0;
-      padding: var(--srb-space-xl);
-      gap: var(--srb-space-xl);
+      padding: 26px 22px;
+      gap: 26px;
     }
-    .dash-hero-number { font-size: 46px; }
-    .dash-hero-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-hero-watermark { width: 96px; right: 12px; top: 20px; transform: none; }
+    .dash-hero-number { font-size: 52px; }
+    .dash-hero-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
+    }
+    .dash-hero-metric { min-height: 76px; padding: 0 16px; }
+    .dash-hero-metric:first-child { padding-left: 0; }
     .breakdown-list { align-items: flex-start; flex-direction: column; }
   }
 </style>

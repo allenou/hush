@@ -212,8 +212,6 @@
 
   .empty {
     padding: var(--srb-space-4xl) var(--srb-space-2xl);
-    border: 1px dashed var(--srb-dashed-border);
-    border-radius: var(--srb-radius-xl);
     text-align: center;
   }
   .empty-icon {

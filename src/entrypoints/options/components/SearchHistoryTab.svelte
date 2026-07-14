@@ -3,6 +3,7 @@
   import { SEARCH_ENGINES } from '@/constants';
   import { formatRelativeTime } from '@/utils/time';
   import { t } from '@/utils/locale-store.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let { searchHistory = [], onSearch, onRemove, onClear } = $props<{
     searchHistory: SearchRecord[];
@@ -12,6 +13,7 @@
   }>();
 
   let searchEngineMenus = $state<Record<number, boolean>>({});
+  let showClearConfirm = $state(false);
 
   function toggleEngineMenu(index: number) {
     searchEngineMenus = { ...searchEngineMenus, [index]: !searchEngineMenus[index] };
@@ -24,13 +26,18 @@
   function doSearch(record: SearchRecord, engineHostname?: string) {
     onSearch?.({ record, engineHostname });
   }
+
+  function confirmClearHistory() {
+    showClearConfirm = false;
+    onClear?.();
+  }
 </script>
 
 <section class="search-section">
   <div class="search-section-heading">
     <h2 class="card-title">{t('searchHistory')}</h2>
     {#if searchHistory.length > 0}
-      <button class="history-clear" onclick={() => onClear?.()}>{t('clearHistory')}</button>
+      <button class="history-clear" onclick={() => showClearConfirm = true}>{t('clearHistory')}</button>
     {/if}
   </div>
 
@@ -112,6 +119,16 @@
   {/if}
 </section>
 
+<ConfirmDialog
+  show={showClearConfirm}
+  title={t('clearHistory')}
+  message={t('clearHistoryConfirm')}
+  confirmLabel={t('clearHistory')}
+  cancelLabel={t('cancel')}
+  onConfirm={confirmClearHistory}
+  onClose={() => showClearConfirm = false}
+/>
+
 <style>
   .search-section {
     border: 1px solid var(--srb-border);
@@ -145,8 +162,6 @@
   }
   .empty {
     padding: var(--srb-space-4xl) var(--srb-space-2xl);
-    border: 1px dashed var(--srb-dashed-border);
-    border-radius: var(--srb-radius-xl);
     text-align: center;
   }
   .empty-icon {
