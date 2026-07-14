@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import { SEARCH_ENGINE_MATCH_PATTERNS } from './src/constants/search-hosts';
 
 export default defineConfig({
   srcDir: 'src',
@@ -23,8 +24,8 @@ export default defineConfig({
     description: '__MSG_extDescription__',
     version: '1.0.0',
     default_locale: 'en',
-    permissions: ['storage', 'activeTab'],
-    host_permissions: ['<all_urls>'],
+    permissions: ['storage'],
+    host_permissions: SEARCH_ENGINE_MATCH_PATTERNS,
     action: {
       default_popup: '/popup.html',
       default_title: '__MSG_extName__',
@@ -39,7 +40,7 @@ export default defineConfig({
     web_accessible_resources: [
       {
         resources: ['icons/*', '_locales/*/messages.json'],
-        matches: ['<all_urls>'],
+        matches: SEARCH_ENGINE_MATCH_PATTERNS,
       },
     ],
   },

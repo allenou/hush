@@ -1,9 +1,9 @@
 <script lang="ts">
   import ChartCanvas from '@/components/ChartCanvas.svelte';
   import { get, setEnabled, subscribe } from '@/utils/storage';
-  import { extractDomain } from '@/utils/domain';
+  import { extractDomain, matchesBlockedDomain } from '@/utils/domain';
   import { t, initLocale } from '@/utils/locale-store.svelte';
-  import { formatDate } from '@/utils/locale';
+  import { formatDate, getLocale, setDocumentLocale } from '@/utils/locale';
   import { buildDailySeries, formatLocalDateKey } from '@/utils/statistics';
   import { onMount } from 'svelte';
   import type { ChartConfiguration } from 'chart.js';
@@ -12,6 +12,7 @@
   let todayCount = 0;
   let enabled = true;
   let currentSiteBlocked = false;
+  let currentSiteAvailable = false;
   let stats = buildDailySeries([], 7);
 
   async function loadData() {
@@ -22,6 +23,7 @@
     } else {
       await initLocale();
     }
+    setDocumentLocale(getLocale());
     blockCount = storage.blockCount;
     enabled = storage.enabled;
     stats = buildDailySeries(storage.stats ?? [], 7);
@@ -30,7 +32,13 @@
     todayCount = todayStat?.count ?? 0;
     if (tab?.url) {
       const domain = extractDomain(tab.url);
-      currentSiteBlocked = domain ? storage.urls.includes(domain) : false;
+      currentSiteAvailable = domain !== null;
+      currentSiteBlocked = domain
+        ? matchesBlockedDomain(domain, storage.urls, storage.blockSubdomains ?? true)
+        : false;
+    } else {
+      currentSiteAvailable = false;
+      currentSiteBlocked = false;
     }
   }
 
@@ -154,7 +162,10 @@
 
   <!-- ===== Site Status ===== -->
   <div class="site-status" class:blocked={currentSiteBlocked}>
-    {#if currentSiteBlocked}
+    {#if !currentSiteAvailable}
+      <span class="status-icon">⚪</span>
+      <span>{t('siteUnavailable')}</span>
+    {:else if currentSiteBlocked}
       <span class="status-icon">🔴</span>
       <span>{t('siteBlocked')}</span>
     {:else}

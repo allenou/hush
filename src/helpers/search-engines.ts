@@ -29,7 +29,7 @@ export const BUILT_IN_ENGINES: EngineInfo[] = [
 ];
 
 export function normalizeHostname(hostname: string): string {
-  return hostname.toLowerCase().replace(/^www\./, '');
+  return normalizeSearchHostname(hostname);
 }
 
 export function buildPathnamePattern(pathname: string): string {
@@ -96,3 +96,4 @@ export function getSearchUrl(engineHostname: string, query: string): string {
   // fallback: assume Google-style
   return `https://www.google.com/search?q=${q}`;
 }
+import { normalizeSearchHostname } from '@/constants/search-hosts';

@@ -31,6 +31,7 @@ export interface BlockItem {
   type: 'domain' | 'url' | 'selector';
   value: string;
   index: number;
+  scope?: string;
 }
 
 export interface BlockRule {
@@ -168,22 +169,78 @@ export async function createStorageBackup(): Promise<StorageBackup> {
   };
 }
 
+function isValidBackupData(data: Record<string, unknown>): boolean {
+  const arrayFields = [
+    'urls', 'blockedUrls', 'rules', 'searchHistory', 'customEngines',
+    'blockedSelectors', 'stats', 'blockedDomainStats',
+  ];
+  const booleanFields = ['recordSearchHistory', 'enabled', 'blockAds', 'blockSubdomains'];
+  const numberFields = ['blockCount', 'adBlockCount', 'domainBlockCount'];
+
+  if (arrayFields.some((key) => key in data && !Array.isArray(data[key]))) return false;
+  if (booleanFields.some((key) => key in data && typeof data[key] !== 'boolean')) return false;
+  if (numberFields.some((key) => key in data && typeof data[key] !== 'number')) return false;
+  if ('locale' in data && data.locale !== undefined && typeof data.locale !== 'string') return false;
+
+  if (Array.isArray(data.urls) && !data.urls.every((item) => typeof item === 'string')) return false;
+  if (Array.isArray(data.blockedUrls) && !data.blockedUrls.every((item) => typeof item === 'string')) return false;
+  if (Array.isArray(data.blockedSelectors) && !data.blockedSelectors.every((item) => typeof item === 'string')) return false;
+  if (Array.isArray(data.searchHistory) && !data.searchHistory.every((item) =>
+    isRecord(item)
+      && typeof item.query === 'string'
+      && typeof item.engineName === 'string'
+      && typeof item.engineHostname === 'string'
+      && typeof item.timestamp === 'number')) return false;
+  if (Array.isArray(data.stats) && !data.stats.every((item) =>
+    isRecord(item) && typeof item.date === 'string' && typeof item.count === 'number')) return false;
+  if (Array.isArray(data.blockedDomainStats) && !data.blockedDomainStats.every((item) =>
+    isRecord(item) && typeof item.domain === 'string' && typeof item.count === 'number')) return false;
+  if (Array.isArray(data.rules) && !data.rules.every((item) => normalizeRule(item) !== null)) return false;
+  if (Array.isArray(data.customEngines) && !data.customEngines.every((item) =>
+    isRecord(item)
+      && typeof item.name === 'string'
+      && typeof item.hostname === 'string'
+      && typeof item.containerSelector === 'string'
+      && typeof item.itemSelector === 'string'
+      && typeof item.linkSelector === 'string'
+      && (item.pathnamePattern === undefined || typeof item.pathnamePattern === 'string'))) return false;
+
+  return true;
+}
+
+let mutationQueue: Promise<void> = Promise.resolve();
+
+function mutateStorage<T>(
+  updater: (current: ExtensionStorage) => { next: ExtensionStorage; result: T },
+): Promise<T> {
+  const operation = mutationQueue.then(async (): Promise<T> => {
+    const current = await get();
+    const { next, result } = updater(current);
+    await blockerItem.setValue(next);
+    return result;
+  });
+  mutationQueue = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+
 export async function restoreStorageBackup(value: unknown): Promise<ExtensionStorage> {
   if (!isRecord(value)
     || value.app !== 'SearchKit'
     || value.version !== 1
-    || !isRecord(value.data)) {
+    || !isRecord(value.data)
+    || !isValidBackupData(value.data)) {
     throw new Error('Invalid SearchKit backup');
   }
 
   const normalized = normalizeStorage(value.data as Partial<ExtensionStorage>);
-  await blockerItem.setValue(normalized);
-  return normalized;
+  return mutateStorage(() => ({ next: normalized, result: normalized }));
 }
 
 async function set(partial: Partial<ExtensionStorage>): Promise<void> {
-  const current = await get();
-  await blockerItem.setValue({ ...current, ...partial });
+  await mutateStorage((current) => ({
+    next: { ...current, ...partial },
+    result: undefined,
+  }));
 }
 
 function isBlockRuleSource(value: unknown): value is BlockRule['source'] {
@@ -293,39 +350,48 @@ function deriveCompatibilityLists(rules: BlockRule[]): Pick<ExtensionStorage, 'u
   };
 }
 
-async function setRules(rules: BlockRule[]): Promise<void> {
-  await set({
-    rules,
-    ...deriveCompatibilityLists(rules),
+async function mutateRules(updater: (rules: BlockRule[]) => BlockRule[]): Promise<void> {
+  await mutateStorage((current) => {
+    const rules = updater(current.rules);
+    return {
+      next: {
+        ...current,
+        rules,
+        ...deriveCompatibilityLists(rules),
+      },
+      result: undefined,
+    };
   });
 }
 
 export async function addDomain(domain: string): Promise<void> {
-  const { rules } = await get();
-  if (!rules.some((rule) => rule.type === 'domain' && rule.value === domain)) {
-    await setRules([...rules, createRule('domain', domain, 'manual')]);
-  }
+  await mutateRules((rules) => rules.some((rule) => rule.type === 'domain' && rule.value === domain)
+    ? rules
+    : [...rules, createRule('domain', domain, 'manual')]);
 }
 
 export async function removeDomain(index: number): Promise<void> {
-  const { urls, rules } = await get();
-  const domain = urls[index];
-  if (!domain) return;
-  await setRules(rules.filter((rule) => !(rule.type === 'domain' && rule.value === domain)));
+  await mutateStorage((current) => {
+    const domain = current.urls[index];
+    if (!domain) return { next: current, result: undefined };
+    const rules = current.rules.filter((rule) => !(rule.type === 'domain' && rule.value === domain));
+    return { next: { ...current, rules, ...deriveCompatibilityLists(rules) }, result: undefined };
+  });
 }
 
 export async function addBlockedUrl(url: string): Promise<void> {
-  const { rules } = await get();
-  if (!rules.some((rule) => rule.type === 'url' && rule.value === url)) {
-    await setRules([...rules, createRule('url', url, 'manual')]);
-  }
+  await mutateRules((rules) => rules.some((rule) => rule.type === 'url' && rule.value === url)
+    ? rules
+    : [...rules, createRule('url', url, 'manual')]);
 }
 
 export async function removeBlockedUrl(index: number): Promise<void> {
-  const { blockedUrls, rules } = await get();
-  const url = blockedUrls[index];
-  if (!url) return;
-  await setRules(rules.filter((rule) => !(rule.type === 'url' && rule.value === url)));
+  await mutateStorage((current) => {
+    const url = current.blockedUrls[index];
+    if (!url) return { next: current, result: undefined };
+    const rules = current.rules.filter((rule) => !(rule.type === 'url' && rule.value === url));
+    return { next: { ...current, rules, ...deriveCompatibilityLists(rules) }, result: undefined };
+  });
 }
 
 export async function removeBlockedItem(type: 'domain' | 'url' | 'selector', index: number): Promise<void> {
@@ -344,25 +410,38 @@ export async function getAllBlocked(): Promise<BlockItem[]> {
   const urlItems: BlockItem[] = blockedUrls.map((value, index) => ({ type: 'url', value, index }));
   const selectorItems: BlockItem[] = blockedSelectors.map((s, index) => {
     const sep = s.indexOf('||');
-    return { type: 'selector', value: sep >= 0 ? s.slice(sep + 2) : s, index };
+    return {
+      type: 'selector',
+      value: sep >= 0 ? s.slice(sep + 2) : s,
+      index,
+      ...(sep >= 0 ? { scope: s.slice(0, sep) } : {}),
+    };
   });
   return [...domains, ...urlItems, ...selectorItems];
 }
 
 export async function addBlockedSelector(selector: string): Promise<void> {
   const { scope, value } = parseSelectorEntry(selector);
-  const { rules } = await get();
-  if (!rules.some((rule) => rule.type === 'selector' && rule.scope === scope && rule.value === value)) {
-    await setRules([...rules, createRule('selector', value, 'picker', scope)]);
-  }
+  await mutateRules((rules) => rules.some((rule) =>
+    rule.type === 'selector' && rule.scope === scope && rule.value === value)
+    ? rules
+    : [...rules, createRule('selector', value, 'picker', scope)]);
 }
 
 export async function removeBlockedSelector(index: number): Promise<void> {
-  const { blockedSelectors, rules } = await get();
-  const selector = blockedSelectors[index];
-  if (!selector) return;
-  const { scope, value } = parseSelectorEntry(selector);
-  await setRules(rules.filter((rule) =>
+  await mutateStorage((current) => {
+    const selector = current.blockedSelectors[index];
+    if (!selector) return { next: current, result: undefined };
+    const { scope, value } = parseSelectorEntry(selector);
+    const rules = current.rules.filter((rule) =>
+      !(rule.type === 'selector' && rule.scope === scope && rule.value === value));
+    return { next: { ...current, rules, ...deriveCompatibilityLists(rules) }, result: undefined };
+  });
+}
+
+export async function removeBlockedSelectorEntry(entry: string): Promise<void> {
+  const { scope, value } = parseSelectorEntry(entry);
+  await mutateRules((rules) => rules.filter((rule) =>
     !(rule.type === 'selector' && rule.scope === scope && rule.value === value),
   ));
 }
@@ -372,17 +451,15 @@ export async function addCustomEngine(config: SearchEngineConfig): Promise<void>
   if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(config.hostname))) {
     return;
   }
-  const { customEngines } = await get();
-  const existing = customEngines.findIndex((e) =>
-    normalizeHostname(e.hostname) === normalizeHostname(config.hostname)
-      && (e.pathnamePattern ?? '') === (config.pathnamePattern ?? ''),
-  );
-  if (existing >= 0) {
-    customEngines[existing] = config;
-    await set({ customEngines });
-  } else {
-    await set({ customEngines: [...customEngines, config] });
-  }
+  await mutateStorage((current) => {
+    const customEngines = [...current.customEngines];
+    const existing = customEngines.findIndex((engine) =>
+      normalizeHostname(engine.hostname) === normalizeHostname(config.hostname)
+        && (engine.pathnamePattern ?? '') === (config.pathnamePattern ?? ''));
+    if (existing >= 0) customEngines[existing] = config;
+    else customEngines.push(config);
+    return { next: { ...current, customEngines }, result: undefined };
+  });
 }
 
 export function findMatchingCustomEngine(
@@ -412,66 +489,95 @@ export function hasExactCustomEngine(
 }
 
 export async function removeCustomEngine(index: number): Promise<void> {
-  const { customEngines } = await get();
-  customEngines.splice(index, 1);
-  await set({ customEngines });
+  await mutateStorage((current) => ({
+    next: {
+      ...current,
+      customEngines: current.customEngines.filter((_, itemIndex) => itemIndex !== index),
+    },
+    result: undefined,
+  }));
 }
 
-let recordBlockQueue: Promise<void> = Promise.resolve();
-
 async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<void> {
-  const { blockCount, adBlockCount, domainBlockCount, stats, blockedDomainStats } = await get();
-  const today = formatLocalDateKey(new Date());
-  const existing = stats.find((s) => s.date === today);
-  if (existing) {
-    existing.count++;
-  } else {
-    stats.push({ date: today, count: 1 });
-  }
-  const pruned = stats.slice(-30);
+  await mutateStorage((current) => {
+    const stats = current.stats.map((item) => ({ ...item }));
+    const today = formatLocalDateKey(new Date());
+    const existing = stats.find((item) => item.date === today);
+    if (existing) existing.count++;
+    else stats.push({ date: today, count: 1 });
 
-  const patch: Partial<ExtensionStorage> = {
-    blockCount: blockCount + 1,
-    stats: pruned,
-  };
-
-  if (type === 'ad') {
-    patch.adBlockCount = (adBlockCount ?? 0) + 1;
-  } else if (type === 'domain') {
-    patch.domainBlockCount = (domainBlockCount ?? 0) + 1;
-  }
-
-  if (domain) {
-    const list = blockedDomainStats ?? [];
-    const existingDomain = list.find((d) => d.domain === domain);
-    if (existingDomain) {
-      existingDomain.count++;
-    } else {
-      list.push({ domain, count: 1 });
+    const blockedDomainStats = current.blockedDomainStats.map((item) => ({ ...item }));
+    if (domain) {
+      const existingDomain = blockedDomainStats.find((item) => item.domain === domain);
+      if (existingDomain) existingDomain.count++;
+      else blockedDomainStats.push({ domain, count: 1 });
+      blockedDomainStats.sort((a, b) => b.count - a.count);
     }
-    list.sort((a, b) => b.count - a.count);
-    patch.blockedDomainStats = list.slice(0, 10);
-  }
 
-  await set(patch);
+    return {
+      next: {
+        ...current,
+        blockCount: current.blockCount + 1,
+        adBlockCount: type === 'ad' ? current.adBlockCount + 1 : current.adBlockCount,
+        domainBlockCount: type === 'domain'
+          ? current.domainBlockCount + 1
+          : current.domainBlockCount,
+        stats: stats.slice(-30),
+        blockedDomainStats: domain ? blockedDomainStats.slice(0, 10) : blockedDomainStats,
+      },
+      result: undefined,
+    };
+  });
 }
 
 export function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
-  const operation = recordBlockQueue.then(() => recordBlockNow(type, domain));
-  recordBlockQueue = operation.catch(() => {});
-  return operation;
+  return recordBlockNow(type, domain);
 }
 
 export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {
-  const { searchHistory } = await get();
-  const record: SearchRecord = { query, engineName, engineHostname, timestamp: Date.now() };
-  const updated = [record, ...(searchHistory ?? [])].slice(0, 50);
-  await set({ searchHistory: updated });
+  const normalizedHostname = normalizeHostname(engineHostname);
+  await mutateStorage((current) => {
+    const record: SearchRecord = {
+      query,
+      engineName,
+      engineHostname: normalizedHostname,
+      timestamp: Date.now(),
+    };
+    const first = current.searchHistory[0];
+    const previous = first
+      && first.query === query
+      && normalizeHostname(first.engineHostname) === normalizedHostname
+      ? current.searchHistory.slice(1)
+      : current.searchHistory;
+    return {
+      next: { ...current, searchHistory: [record, ...previous].slice(0, 50) },
+      result: undefined,
+    };
+  });
+}
+
+export async function removeSearchRecord(index: number): Promise<void> {
+  await mutateStorage((current) => ({
+    next: {
+      ...current,
+      searchHistory: current.searchHistory.filter((_, itemIndex) => itemIndex !== index),
+    },
+    result: undefined,
+  }));
+}
+
+export async function clearSearchHistory(): Promise<void> {
+  await mutateStorage((current) => ({
+    next: { ...current, searchHistory: [] },
+    result: undefined,
+  }));
 }
 
 export async function incrementBlockCount(): Promise<void> {
-  const { blockCount } = await get();
-  await set({ blockCount: blockCount + 1 });
+  await mutateStorage((current) => ({
+    next: { ...current, blockCount: current.blockCount + 1 },
+    result: undefined,
+  }));
 }
 
 export async function setEnabled(enabled: boolean): Promise<void> {

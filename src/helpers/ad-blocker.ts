@@ -1,7 +1,8 @@
 import type { SearchEngineConfig } from './search-engines';
-import { removeBlockedItem, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
-import { updateCollapseBar } from './ui';
+import { removeBlockedItem, removeBlockedSelectorEntry, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
+import { removeCollapseBar, updateCollapseBar } from './ui';
 import { t } from '@/utils/i18n';
+import { matchesBlockedDomain } from '@/utils/domain';
 
 // ========== Module State ==========
 
@@ -66,8 +67,8 @@ async function recordBlockOnce(
 function matchBlockedDomain(href: string, domains: string[]): number {
   const hostname = tryParseHostname(href);
   if (!hostname) return -1;
-  return domains.findIndex((d) =>
-    hostname === d || (_state.blockSubdomains && hostname.endsWith('.' + d)),
+  return domains.findIndex((domain) =>
+    matchesBlockedDomain(hostname, [domain], _state.blockSubdomains),
   );
 }
 
@@ -446,6 +447,13 @@ export function applyBlockedSelectors(): void {
         badge.textContent = `🎯 ${t('elementHit')}`;
         badge.title = t('elementBlocked');
         badge.setAttribute('data-entry', entry);
+        badge.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await removeBlockedSelectorEntry(entry);
+          mask.remove();
+          badge.remove();
+          updateCollapseBar();
+        });
         el.appendChild(badge);
       });
     } catch { /* skip */ }
@@ -459,13 +467,16 @@ export function checkSavedSelectors(): void {
 
 // ========== Cleanup ==========
 
-export function clearAllMarkers(): void {
+export function clearAllMarkers(options: { preserveCounts?: boolean; removeCollapse?: boolean } = {}): void {
   document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
-  document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned]').forEach((el) => {
+  document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
     el.removeAttribute('data-srb-ad-scanned');
+    el.removeAttribute('data-srb-ad-badge');
+    if (!options.preserveCounts) el.removeAttribute('data-srb-counted');
   });
-  updateCollapseBar();
+  if (options.removeCollapse !== false) removeCollapseBar();
+  else updateCollapseBar();
 }
 
 // Set by content.ts for container-missing fallback

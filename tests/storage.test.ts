@@ -6,14 +6,14 @@ import {
   get,
   addDomain, removeDomain,
   addBlockedUrl, removeBlockedUrl,
-  addBlockedSelector, removeBlockedSelector,
+  addBlockedSelector, removeBlockedSelector, removeBlockedSelectorEntry,
   getAllBlocked, removeBlockedItem,
   addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
-  recordBlock, incrementBlockCount,
-  setEnabled, subscribe,
+  recordBlock, recordSearch, removeSearchRecord, clearSearchHistory, incrementBlockCount,
+  setEnabled, setBlockAds, subscribe,
   createStorageBackup, restoreStorageBackup,
 } from '@/utils/storage';
-import { initBlocker, injectBlockButton, processItem, syncBlockerState } from '@/helpers/ad-blocker';
+import { applyBlockedSelectors, initBlocker, injectBlockButton, processItem, syncBlockerState } from '@/helpers/ad-blocker';
 import { formatLocalDateKey } from '@/utils/statistics';
 
 beforeEach(() => {
@@ -224,12 +224,46 @@ describe('getAllBlocked', () => {
   it('returns mixed types with correct values', async () => {
     await addDomain('ex.com');
     await addBlockedUrl('https://ex.com/p');
-    await addBlockedSelector('g||.ad');
+    await addBlockedSelector('google.com||.ad');
     const items = await getAllBlocked();
     expect(items).toHaveLength(3);
     expect(items.find(i => i.type === 'domain')!.value).toBe('ex.com');
     expect(items.find(i => i.type === 'url')!.value).toBe('https://ex.com/p');
     expect(items.find(i => i.type === 'selector')!.value).toBe('.ad');
+    expect(items.find(i => i.type === 'selector')!.scope).toBe('google.com');
+  });
+});
+
+describe('selector rule recovery', () => {
+  it('removes the exact selector rule by its compatibility entry', async () => {
+    await addBlockedSelector('google.com||.target');
+    await removeBlockedSelectorEntry('google.com||.target');
+    expect((await get()).blockedSelectors).toEqual([]);
+  });
+
+  it('removes an applied selector rule when its badge is clicked', async () => {
+    await addBlockedSelector('google.com||.target');
+    document.body.innerHTML = '<div class="target">Target</div>';
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: ['google.com||.target'],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+
+    applyBlockedSelectors();
+    (document.querySelector('.srb-blocked-badge') as HTMLElement).click();
+
+    await vi.waitFor(async () => {
+      expect((await get()).blockedSelectors).toEqual([]);
+    });
+    expect(document.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
   });
 });
 
@@ -600,11 +634,47 @@ describe('toggle settings', () => {
   });
 });
 
+describe('search history mutations', () => {
+  it('deduplicates consecutive searches for the same query and engine', async () => {
+    await recordSearch('query', 'Google', 'google.com');
+    await recordSearch('query', 'Google', 'www.google.com');
+
+    expect((await get()).searchHistory).toHaveLength(1);
+  });
+
+  it('removes one record and clears all records', async () => {
+    await recordSearch('one', 'Google', 'google.com');
+    await recordSearch('two', 'Bing', 'bing.com');
+
+    await removeSearchRecord(0);
+    expect((await get()).searchHistory.map((item) => item.query)).toEqual(['one']);
+
+    await clearSearchHistory();
+    expect((await get()).searchHistory).toEqual([]);
+  });
+});
+
 describe('subscribe', () => {
   it('returns an unsubscribe function', () => {
     const unsub = subscribe(() => {});
     expect(typeof unsub).toBe('function');
     unsub();
+  });
+
+  it('notifies every open content-script subscriber after an options rule change', async () => {
+    const firstTab = vi.fn();
+    const secondTab = vi.fn();
+    const unsubscribeFirst = subscribe(firstTab);
+    const unsubscribeSecond = subscribe(secondTab);
+
+    await addDomain('example.com');
+
+    await vi.waitFor(() => {
+      expect(firstTab).toHaveBeenCalledWith(expect.objectContaining({ urls: ['example.com'] }));
+      expect(secondTab).toHaveBeenCalledWith(expect.objectContaining({ urls: ['example.com'] }));
+    });
+    unsubscribeFirst();
+    unsubscribeSecond();
   });
 });
 
@@ -645,5 +715,34 @@ describe('local backup and restore', () => {
   it('rejects invalid backup data', async () => {
     await expect(restoreStorageBackup({ app: 'Other', version: 1, data: {} }))
       .rejects.toThrow('Invalid SearchKit backup');
+  });
+
+  it.each([
+    { urls: 'example.com' },
+    { searchHistory: {} },
+    { stats: '2026-07-13' },
+    { rules: [{ type: 'domain', value: 123 }] },
+    { customEngines: [{ name: 'Broken', hostname: 'example.com' }] },
+  ])('rejects malformed backup data %#', async (data) => {
+    await expect(restoreStorageBackup({
+      app: 'SearchKit',
+      version: 1,
+      data,
+    })).rejects.toThrow('Invalid SearchKit backup');
+  });
+});
+
+describe('concurrent storage mutations', () => {
+  it('retains block, history, and setting changes started together', async () => {
+    await Promise.all([
+      recordBlock('domain', 'example.com'),
+      recordSearch('query', 'Google', 'google.com'),
+      setBlockAds(false),
+    ]);
+
+    const state = await get();
+    expect(state.blockCount).toBe(1);
+    expect(state.searchHistory).toHaveLength(1);
+    expect(state.blockAds).toBe(false);
   });
 });

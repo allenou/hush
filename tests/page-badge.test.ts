@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fakeBrowser } from 'wxt/testing';
 import background from '@/entrypoints/background';
 import { updateCollapseBar } from '@/helpers/ui';
+import { clearPageMarkerCount } from '@/utils/page-badge';
 
 interface TriggerableEvent {
   trigger: (...args: unknown[]) => Promise<unknown[]>;
@@ -13,6 +16,12 @@ beforeEach(() => {
 });
 
 describe('toolbar page badge', () => {
+  it('synchronizes the badge after picker add and undo actions', () => {
+    const pickerSource = readFileSync(resolve(process.cwd(), 'src/helpers/picker.ts'), 'utf8');
+    expect(pickerSource).toContain("import { updateCollapseBar } from './ui'");
+    expect(pickerSource.match(/updateCollapseBar\(\)/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('does not show the cumulative block count globally', async () => {
     await fakeBrowser.storage.local.set({ blocker: { blockCount: 12 } });
 
@@ -59,6 +68,19 @@ describe('toolbar page badge', () => {
 
     expect(listener).toHaveBeenCalledWith(
       { type: 'srb-page-marker-count', count: 2 },
+      expect.anything(),
+    );
+  });
+
+  it('reports zero when marking is disabled', async () => {
+    const listener = vi.fn();
+    fakeBrowser.runtime.onMessage.addListener(listener);
+
+    clearPageMarkerCount();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(listener).toHaveBeenCalledWith(
+      { type: 'srb-page-marker-count', count: 0 },
       expect.anything(),
     );
   });

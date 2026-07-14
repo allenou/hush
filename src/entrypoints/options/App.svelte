@@ -12,13 +12,17 @@
     setBlockAds,
     setBlockSubdomains,
     setRecordSearchHistory,
+    removeSearchRecord,
+    clearSearchHistory,
     subscribe,
   } from '@/utils/storage';
   import { getSearchUrl } from '@/helpers/search-engines';
   import { formatLocalDateKey } from '@/utils/statistics';
+  import { setDocumentLocale } from '@/utils/locale';
   import type { TabId, RuleFilter } from '@/constants';
   import { t, initLocale, setLocale as setAppLocale, getLocale } from '@/utils/locale-store.svelte';
   import { setStoredLocale } from '@/utils/storage';
+  import { parseRuleInput } from '@/utils/rule-input';
 
   import AppNav from './components/AppNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
@@ -63,6 +67,7 @@
   async function handleLocaleChange(newLocale: string) {
     await setAppLocale(newLocale);
     await setStoredLocale(newLocale);
+    setDocumentLocale(newLocale);
   }
 
   function downloadTextFile(filename: string, content: string) {
@@ -103,6 +108,7 @@
     } else {
       await initLocale(storage.locale);
     }
+    setDocumentLocale(getLocale());
     blockedItems = await getAllBlocked();
     enabled = storage.enabled;
     blockAds = storage.blockAds ?? false;
@@ -124,16 +130,13 @@
     errorMsg = '';
     try {
       const { urls, blockedUrls } = await get();
-      if (value.startsWith('http') && new URL(value).pathname !== '/') {
-        if (blockedUrls.includes(value)) { errorMsg = t('errorDuplicateUrl'); return; }
-        await addBlockedUrl(value);
+      const parsed = parseRuleInput(value);
+      if (parsed.type === 'url') {
+        if (blockedUrls.includes(parsed.value)) { errorMsg = t('errorDuplicateUrl'); return; }
+        await addBlockedUrl(parsed.value);
       } else {
-        const domain = value.startsWith('http')
-          ? new URL(value).hostname.replace(/^www\./, '')
-          : value.replace(/^www\./, '');
-        new URL(domain.startsWith('http') ? domain : `https://${domain}`);
-        if (urls.includes(domain)) { errorMsg = t('errorDuplicateDomain'); return; }
-        await addDomain(domain);
+        if (urls.includes(parsed.value)) { errorMsg = t('errorDuplicateDomain'); return; }
+        await addDomain(parsed.value);
       }
       await loadData();
       closeAddDialog();
@@ -180,6 +183,17 @@
     chrome.tabs.create({ url });
   }
 
+  async function handleRemoveSearchRecord(index: number) {
+    await removeSearchRecord(index);
+    await loadData();
+  }
+
+  async function handleClearSearchHistory() {
+    if (!confirm(t('clearHistoryConfirm'))) return;
+    await clearSearchHistory();
+    await loadData();
+  }
+
   let totalCount = $derived(blockedItems.length);
   let domainCount = $derived(blockedItems.filter((item) => item.type === 'domain').length);
   let urlCount = $derived(blockedItems.filter((item) => item.type === 'url').length);
@@ -213,6 +227,7 @@
         {activeFilter} {searchQuery}
         onAddRule={openAddDialog}
         onFilterChange={(filter: RuleFilter) => activeFilter = filter}
+        onSearchQueryChange={(value: string) => searchQuery = value}
         onRemove={(item) => handleRemove(item)}
       />
 
@@ -220,6 +235,8 @@
       <SearchHistoryTab
         {searchHistory}
         onSearch={(detail) => doSearch(detail.record, detail.engineHostname)}
+        onRemove={handleRemoveSearchRecord}
+        onClear={handleClearSearchHistory}
       />
 
     {:else}

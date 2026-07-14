@@ -2,24 +2,34 @@
 
 **Last updated: July 2026**
 
-SearchKit does not collect, transmit, or share any personal data.
+SearchKit processes extension data locally on your device. It does not upload, sell, share, or transmit this data to SearchKit or any third party.
 
-## Data Storage
+## Data processed locally
 
-- All blocked domains, URLs, and CSS selectors are stored locally on your device using `chrome.storage.local`.
-- Block count statistics are stored locally and never sent to any server.
-- No data is collected, transmitted, or shared with third parties.
+SearchKit may store the following data in `chrome.storage.local`:
+
+- Domains, full URLs, and CSS selectors that you choose to mark.
+- Search queries, search engine names, and timestamps when search history is enabled.
+- Marking statistics, preferences, language selection, and supported-engine detection settings.
+- The same local data when you explicitly export a SearchKit backup file.
+
+Search history can be disabled at any time and existing history can be deleted from the extension settings.
+
+## Search page processing
+
+On the explicitly supported Google, Baidu, Bing, and 360 Search domains, SearchKit reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.
+
+SearchKit does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest.
 
 ## Permissions
 
-- `storage`: Used solely to save your block list and preferences locally on your device.
-- `activeTab`: Used to detect the current website's domain for the blocking functionality.
-- `<all_urls>` host permission: Used to inject the blocking UI into search engine result pages. No content is read or transmitted.
+- `storage`: Saves rules, search history, statistics, backups, and preferences locally.
+- Supported search-engine host access: Runs the result-marking Content Script only on the declared Google, Baidu, Bing, and 360 Search root and `www` domains.
 
 ## Changes
 
-This policy may be updated occasionally. Any changes will be reflected here.
+Updates to this policy will be reflected on this page with a revised date.
 
 ## Contact
 
-For questions about this privacy policy, please open an issue on the extension's GitHub repository.
+For privacy or support questions, contact `jskindler@outlook.com`.

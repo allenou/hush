@@ -6,6 +6,33 @@ import {
   isSearchEngine,
   matchEngineConfig,
 } from '@/helpers/search-engines';
+import {
+  SEARCH_ENGINE_MATCH_PATTERNS,
+  isSupportedSearchHostname,
+  normalizeSearchHostname,
+} from '@/constants/search-hosts';
+
+describe('supported search hostnames', () => {
+  it('treats www and the root host as the same supported engine', () => {
+    expect(normalizeSearchHostname('www.google.com')).toBe('google.com');
+    expect(isSupportedSearchHostname('google.com')).toBe(true);
+    expect(isSupportedSearchHostname('www.google.com')).toBe(true);
+  });
+
+  it.each(['m.baidu.com', 'cn.bing.com', 'google.com.hk', 'example.com'])(
+    'rejects non-enumerated hostname %s',
+    (hostname) => expect(isSupportedSearchHostname(hostname)).toBe(false),
+  );
+
+  it('exports eight exact Manifest match patterns', () => {
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).toEqual([
+      '*://google.com/*', '*://www.google.com/*',
+      '*://baidu.com/*', '*://www.baidu.com/*',
+      '*://bing.com/*', '*://www.bing.com/*',
+      '*://so.com/*', '*://www.so.com/*',
+    ]);
+  });
+});
 
 describe('detectSearchEngine', () => {
   it('detects Google from www URL', () => {

@@ -1,11 +1,22 @@
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
-import { addDomain, addBlockedUrl, recordBlock, get, setBlockAds } from '@/utils/storage';
+import { addDomain, addBlockedUrl, recordBlock, setEnabled } from '@/utils/storage';
 import { getHostname } from '@/utils/url';
 import { t } from '@/utils/i18n';
-import { reportPageMarkerCount } from '@/utils/page-badge';
+import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
 
 let floatingBtnInjected = false;
+let floatingMarkingEnabled = true;
+let renderFloatingMenu: (() => void) | null = null;
+
+export function getFloatingActionIds(enabled: boolean): string[] {
+  return enabled ? ['pick', 'domain', 'url'] : ['enable'];
+}
+
+export function setFloatingMarkingEnabled(enabled: boolean): void {
+  floatingMarkingEnabled = enabled;
+  renderFloatingMenu?.();
+}
 
 const STORAGE_KEY = 'srb_float_pos';
 const BTN_SIZE = 40;
@@ -181,6 +192,7 @@ export async function injectFloatingBtn(ctx: ContentScriptContext): Promise<void
     },
     onRemove() {
       floatingBtnInjected = false;
+      renderFloatingMenu = null;
     },
   });
   ui.mount();
@@ -206,10 +218,15 @@ function mountFloatingControls(
   const popup = document.createElement('div');
   popup.id = 'srb-float-popup';
   popup.className = 'srb-float-popup';
-  popup.innerHTML =
-    `<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> ${t('pickAction')}</button>` +
-    `<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> ${t('markDomainAction')}</button>` +
-    `<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> ${t('markUrlAction')}</button>`;
+  function renderMenu(): void {
+    popup.innerHTML = floatingMarkingEnabled
+      ? `<button class="srb-fopt" data-action="pick"><span style="font-size:1.3em">✂️</span> ${t('pickAction')}</button>` +
+        `<button class="srb-fopt" data-action="domain"><span style="font-size:1.3em">🌐</span> ${t('markDomainAction')}</button>` +
+        `<button class="srb-fopt" data-action="url"><span style="font-size:1.3em">🔗</span> ${t('markUrlAction')}</button>`
+      : `<button class="srb-fopt" data-action="enable"><span style="font-size:1.3em">▶️</span> ${t('enableMarkingAction')}</button>`;
+  }
+  renderFloatingMenu = renderMenu;
+  renderMenu();
   let anchoredSide: FloatSide = 'right';
   let anchoredVertical: FloatVertical = 'bottom';
 
@@ -334,6 +351,11 @@ function mountFloatingControls(
     const target = (e.target as HTMLElement).closest('.srb-fopt') as HTMLElement | null;
     if (!target) return;
     const action = target.getAttribute('data-action');
+    if (action === 'enable') {
+      await setEnabled(true);
+      popup.style.display = 'none';
+      return;
+    }
     if (action === 'pick') {
       popup.style.display = 'none';
       document.dispatchEvent(new CustomEvent('srb-start-picker'));
@@ -405,4 +427,11 @@ export function updateCollapseBar(): void {
     _lastCollapseDisplay = display;
   }
   bar.textContent = '🚫 ' + t('markedResults', String(count));
+}
+
+export function removeCollapseBar(): void {
+  document.getElementById('srb-collapse-bar')?.remove();
+  _lastCollapseCount = -1;
+  _lastCollapseDisplay = '';
+  clearPageMarkerCount();
 }

@@ -1,26 +1,29 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { BUILT_IN_ENGINES, normalizeHostname, detectSearchEngine, extractSearchQuery } from '@/helpers/search-engines';
+import { SEARCH_ENGINE_MATCH_PATTERNS, isSupportedSearchHostname } from '@/constants/search-hosts';
+import { BUILT_IN_ENGINES, detectSearchEngine, extractSearchQuery } from '@/helpers/search-engines';
 import type { SearchEngineConfig } from '@/helpers/search-engines';
-import { addCustomEngine, findMatchingCustomEngine, get, subscribe, recordSearch } from '@/utils/storage';
+import { get, subscribe, recordSearch } from '@/utils/storage';
 import { injectStyles } from '@/utils/styles';
 import { activatePicker, deactivatePicker } from '@/helpers/picker';
 import { getHostname, extractResultUrl } from '@/utils/url';
-import { autoDetectSearchResults, shouldPersistAutoDetectedEngine } from '@/helpers/detector';
-import { injectFloatingBtn, injectCollapseBar } from '@/helpers/ui';
+import { autoDetectSearchResults } from '@/helpers/detector';
+import { injectFloatingBtn, injectCollapseBar, setFloatingMarkingEnabled } from '@/helpers/ui';
+import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
   initBlocker, syncBlockerState,
   scanForAds, scanResults,
   applyBlockedSelectors, checkSavedSelectors,
-  restoreBlockedSelectors, clearAllMarkers,
+  clearAllMarkers,
   setOnContainerMissing,
 } from '@/helpers/ad-blocker';
 import { initLocale } from '@/utils/i18n';
 
 export default defineContentScript({
-  matches: ['<all_urls>'],
+  matches: SEARCH_ENGINE_MATCH_PATTERNS,
   runAt: 'document_end',
   main(ctx) {
+    if (!isSupportedSearchHostname(getHostname())) return;
     // ===== 状态 =====
     let blockedDomains: string[] = [];
     let blockedUrls: string[] = [];
@@ -65,18 +68,48 @@ export default defineContentScript({
       pushState();
 
       if (!isEnabled) {
-        disconnectScanObserver();
-        restoreBlockedSelectors();
-        clearAllMarkers();
+        stopMarking();
         return;
       }
 
-      clearAllMarkers();
+      clearAllMarkers({ preserveCounts: true, removeCollapse: false });
       pushState();
-      if (currentEngine) scanResults(currentEngine);
-      else scanForAds();
+      if (currentEngine) {
+        injectCollapseBar(currentEngine.containerSelector);
+        scanResults(currentEngine);
+      } else {
+        autoDetectRetries = 0;
+        void tryAutoDetect();
+        scanForAds();
+      }
       applyBlockedSelectors();
       setupScanObserver();
+    }
+
+    function stopMarking(): void {
+      disconnectScanObserver();
+      deactivatePicker();
+      currentEngine = null;
+      autoDetectRetries = 0;
+      clearAllMarkers({ preserveCounts: true });
+      setFloatingMarkingEnabled(false);
+    }
+
+    function startMarking(): void {
+      if (!isEnabled) return;
+      injectStyles();
+      setFloatingMarkingEnabled(true);
+      autoDetectRetries = 0;
+      pushState();
+      void tryAutoDetect();
+      scanForAds();
+      ctx.setTimeout(() => {
+        if (!isEnabled) return;
+        pushState();
+        scanForAds();
+      }, 1500);
+      setupScanObserver();
+      checkSavedSelectors();
     }
 
     function disconnectScanObserver(): void {
@@ -105,6 +138,10 @@ export default defineContentScript({
       scanObserver = new MutationObserver(() => {
         if (scanTimer) clearTimeout(scanTimer);
         scanTimer = ctx.setTimeout(() => {
+          if (window.location.href !== lastSearchUrl) {
+            handleUrlChange(window.location.href);
+            return;
+          }
           if (!currentEngine) {
             autoDetectRetries = 0;
             void tryAutoDetect();
@@ -121,20 +158,15 @@ export default defineContentScript({
     const MAX_AUTO_DETECT_RETRIES = 6;
 
     async function tryAutoDetect(): Promise<void> {
+      if (!isEnabled) return;
       if (autoDetectRetries >= MAX_AUTO_DETECT_RETRIES) return;
       autoDetectRetries++;
       const detected = autoDetectSearchResults(getHostname);
-      if (!detected) { ctx.setTimeout(() => tryAutoDetect(), 3000); return; }
+      if (!detected) { ctx.setTimeout(() => { if (isEnabled) void tryAutoDetect(); }, 3000); return; }
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {
-        ctx.setTimeout(() => tryAutoDetect(), 3000);
+        ctx.setTimeout(() => { if (isEnabled) void tryAutoDetect(); }, 3000);
         return;
-      }
-      const hostname = getHostname();
-      const isBuiltIn = BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname));
-      if (!isBuiltIn && shouldPersistAutoDetectedEngine(detected)) {
-        const { confidence: _confidence, itemCount: _itemCount, ...engineConfig } = detected;
-        await addCustomEngine(engineConfig);
       }
       currentEngine = detected;
       pushState();
@@ -161,12 +193,16 @@ export default defineContentScript({
     // ===== SPA 导航检测 =====
 
     let lastSearchUrl = window.location.href;
-    ctx.addEventListener(window, 'popstate', () => {
-      if (window.location.href !== lastSearchUrl) {
-        lastSearchUrl = window.location.href;
-        recordCurrentSearch();
-      }
-    });
+    function handleUrlChange(url: string): void {
+      if (url === lastSearchUrl) return;
+      lastSearchUrl = url;
+      recordCurrentSearch();
+      if (!isEnabled) return;
+      disconnectScanObserver();
+      currentEngine = null;
+      clearAllMarkers({ preserveCounts: true });
+      startMarking();
+    }
 
     // ===== 入口 =====
 
@@ -176,43 +212,14 @@ export default defineContentScript({
       } else {
         await initLocale();
       }
-      const hostname = getHostname();
-      injectStyles();
+      setFloatingMarkingEnabled(storage.enabled);
       await injectFloatingBtn(ctx);
       pushState();
       recordCurrentSearch();
-      ctx.addEventListener(document, 'srb-start-picker', () => activatePicker(getHostname));
-
-      // 尝试从已存自定义引擎加载
-      currentEngine = findMatchingCustomEngine(storage.customEngines, {
-        hostname,
-        pathname: window.location.pathname,
+      ctx.addEventListener(document, 'srb-start-picker', () => {
+        if (isEnabled) activatePicker(getHostname);
       });
-      if (currentEngine) {
-        const testContainer = document.querySelector(currentEngine.containerSelector);
-        const testItems = testContainer ? testContainer.querySelectorAll(currentEngine.itemSelector) : [];
-        if (testContainer && testItems.length >= 4) {
-          pushState();
-          injectCollapseBar(currentEngine.containerSelector);
-          scanResults(currentEngine);
-          setupScanObserver();
-          return;
-        }
-        currentEngine = null;
-      }
-
-      // 引擎检测
-      if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(hostname))) {
-        await tryAutoDetect();
-      } else {
-        ctx.setTimeout(() => tryAutoDetect(), 2000);
-      }
-
-      // 首屏扫描 + 兜底扫描
-      pushState();
-      scanForAds();
-      ctx.setTimeout(() => { pushState(); scanForAds(); }, 1500);
-      setupScanObserver();
+      if (isEnabled) startMarking();
     }
     ctx.onInvalidated(() => {
       disconnectScanObserver();
@@ -228,12 +235,30 @@ export default defineContentScript({
     });
     ctx.onInvalidated(unsubscribeStorage);
 
+    const unsubscribeUrlChanges = subscribeToUrlChanges(handleUrlChange);
+    ctx.onInvalidated(unsubscribeUrlChanges);
+
+    ctx.addEventListener(document, 'visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      void get().then((storage) => {
+        applyStorageState(storage);
+        recordCurrentSearch();
+        rescanWithCurrentState();
+      });
+    });
+
+    ctx.addEventListener(window, 'pageshow', () => {
+      void get().then((storage) => {
+        applyStorageState(storage);
+        rescanWithCurrentState();
+      });
+    });
+
     // ===== 启动 =====
 
     get().then((storage) => {
       applyStorageState(storage);
       init(storage);
-      checkSavedSelectors();
     });
   },
 });

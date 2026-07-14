@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
 import App from '@/entrypoints/options/App.svelte';
 import RulesTab from '@/entrypoints/options/components/RulesTab.svelte';
+import SearchHistoryTab from '@/entrypoints/options/components/SearchHistoryTab.svelte';
 
 vi.mock('@/utils/chart', () => ({
   Chart: class {
@@ -84,5 +85,51 @@ describe('Options UI', () => {
     expect(target.querySelector('.search-box')).toBeNull();
     expect(target.querySelector('.filter-tabs')).toBeNull();
     expect(target.querySelector('.add-trigger')).not.toBeNull();
+  });
+
+  it('reports rule search input changes to the parent', () => {
+    const onSearchQueryChange = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(RulesTab, {
+      target,
+      props: {
+        totalCount: 1,
+        filteredItems: [{ type: 'domain', value: 'example.com', index: 0 }],
+        onSearchQueryChange,
+      },
+    });
+
+    const input = target.querySelector<HTMLInputElement>('.search-box')!;
+    input.value = 'example';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(onSearchQueryChange).toHaveBeenCalledWith('example');
+  });
+
+  it('provides single-delete and clear-all search history actions', () => {
+    const onRemove = vi.fn();
+    const onClear = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SearchHistoryTab, {
+      target,
+      props: {
+        searchHistory: [{
+          query: 'query',
+          engineName: 'Google',
+          engineHostname: 'google.com',
+          timestamp: Date.now(),
+        }],
+        onRemove,
+        onClear,
+      },
+    });
+
+    target.querySelector<HTMLButtonElement>('.history-delete')?.click();
+    target.querySelector<HTMLButtonElement>('.history-clear')?.click();
+
+    expect(onRemove).toHaveBeenCalledWith(0);
+    expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

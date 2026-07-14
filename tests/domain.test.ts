@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractDomain } from '@/utils/domain';
+import { extractDomain, matchesBlockedDomain } from '@/utils/domain';
 
 describe('extractDomain', () => {
   it('extracts domain from standard URL', () => {
@@ -56,5 +56,14 @@ describe('extractDomain', () => {
 
   it('handles URLs with trailing slash', () => {
     expect(extractDomain('https://example.com/')).toBe('example.com');
+  });
+
+  it('returns null for non-web URLs', () => {
+    expect(extractDomain('chrome://extensions')).toBeNull();
+  });
+
+  it('matches subdomains only when the setting is enabled', () => {
+    expect(matchesBlockedDomain('sub.example.com', ['example.com'], true)).toBe(true);
+    expect(matchesBlockedDomain('sub.example.com', ['example.com'], false)).toBe(false);
   });
 });

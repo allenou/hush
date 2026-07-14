@@ -10,6 +10,7 @@
     searchQuery = '',
     onAddRule,
     onFilterChange,
+    onSearchQueryChange,
     onRemove,
   }: {
     filteredItems?: any[];
@@ -18,6 +19,7 @@
     searchQuery?: string;
     onAddRule?: () => void;
     onFilterChange?: (filter: RuleFilter) => void;
+    onSearchQueryChange?: (value: string) => void;
     onRemove?: (item: any) => void;
   } = $props();
 
@@ -44,6 +46,10 @@
   function handleRemove(item: any) {
     onRemove?.(item);
   }
+
+  function handleSearchInput(event: Event) {
+    onSearchQueryChange?.((event.currentTarget as HTMLInputElement).value);
+  }
 </script>
 
 <section class="rules-section">
@@ -56,7 +62,8 @@
         <input
           class="search-box"
           type="search"
-          bind:value={searchQuery}
+          value={searchQuery}
+          oninput={handleSearchInput}
           placeholder={t('searchRules')}
         />
         <div class="filter-tabs" role="tablist">
@@ -100,6 +107,9 @@
             </span>
           </span>
           <span class="value-cell">
+            {#if item.type === 'selector' && item.scope}
+              <small>{item.scope}</small>
+            {/if}
             <code>{item.value}</code>
           </span>
           <span class="action-cell">
@@ -270,6 +280,12 @@
     font-family: var(--srb-mono);
     word-break: break-all;
     line-height: var(--srb-line-height-code);
+  }
+  .value-cell small {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--srb-text-muted);
+    font-size: var(--srb-font-size-xs);
   }
   .action-cell { display: flex; justify-content: flex-end; }
 

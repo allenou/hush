@@ -22,7 +22,6 @@
     "wxt": "^0.20.0"
   },
   "dependencies": {
-    "@google/design.md": "^0.3.0",
     "chart.js": "^4.5.1"
   }
 }

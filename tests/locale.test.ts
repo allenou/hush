@@ -2,6 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
 
 describe('content script locale fallback', () => {
+  it('maps extension locales to document language metadata', async () => {
+    vi.resetModules();
+    const { setDocumentLocale } = await import('@/utils/locale');
+
+    setDocumentLocale('zh_CN');
+    expect(document.documentElement.lang).toBe('zh-CN');
+
+    setDocumentLocale('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
+
   it('uses chrome.i18n messages after locale JSON loading fails', async () => {
     vi.resetModules();
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('zh-CN');

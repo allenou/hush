@@ -1,36 +1,40 @@
 # SearchKit - Chrome Web Store Listing
 
 ## Short Description (132 chars max)
-Block unwanted search results, mark ads, and track search history on any search engine.
+Mark unwanted search results and ads, manage local rules, and optionally keep search history on four major search engines.
 
 ## Full Description
 
-Take control of your search experience. SearchKit lets you block unwanted results, mark advertisements, and track your search history across major search engines.
+SearchKit helps you visually mark and cover unwanted results while keeping the original search page layout recoverable.
 
 **Features:**
 
-• **Block by domain** – Hide all results from a specific website (e.g., block example.com on any search engine)
-• **Block by URL** – Block individual pages or links
-• **CSS selector blocking** – Use the visual picker to select elements on the page to block
-• **Ad marking** – Automatically mark sponsored/ad results
-• **Search history** – Record and revisit searches across engines
-• **Statistics** – Track blocks with breakdown charts and 7-day trends
-• **Cross-page persistence** – Blocks persist across pagination and SPA navigation
+• **Domain rules** – Mark results from a selected website
+• **URL rules** – Mark one specific page or result link
+• **Element picker** – Select a page element and save a site-scoped CSS selector rule
+• **Ad marking** – Identify and visually mark sponsored or advertising results
+• **Search history** – Revisit searches, switch engines, delete entries, or turn recording off
+• **Local statistics** – Review marking totals, breakdowns, trends, and frequently matched domains
+• **Local backup** – Export and restore rules, settings, statistics, and search history
 
 **Supported search engines:**
-- Google (google.com)
-- Baidu (baidu.com)
-- Bing (bing.com)
-- 360 Search (so.com)
+
+- Google (`google.com`, `www.google.com`)
+- Baidu (`baidu.com`, `www.baidu.com`)
+- Bing (`bing.com`, `www.bing.com`)
+- 360 Search (`so.com`, `www.so.com`)
+
+Regional, mobile, and other subdomains are not included in the first release.
 
 **How to use:**
 
-1. Click the 🛡 icon in the bottom-right corner of any search results page
-2. Choose "Block this domain" or "Block this link"
-3. The result is immediately hidden and will stay blocked on future searches
-4. Manage all rules, settings, and search history in the options page
+1. Open a supported search results page.
+2. Use the SearchKit shield button or a result-level action to create a domain, URL, or element rule.
+3. Matching results are visually covered and labeled, with nearby controls for recovery.
+4. Manage rules, search history, settings, statistics, and backups from the options page.
 
-All data is stored locally on your device. Nothing is collected or transmitted.
+All processing and storage stay on your device. SearchKit does not transmit page content, search queries, or extension data.
 
 ## Categories
+
 Productivity / Search Tools

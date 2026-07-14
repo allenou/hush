@@ -4,9 +4,11 @@
   import { formatRelativeTime } from '@/utils/time';
   import { t } from '@/utils/locale-store.svelte';
 
-  let { searchHistory = [], onSearch } = $props<{
+  let { searchHistory = [], onSearch, onRemove, onClear } = $props<{
     searchHistory: SearchRecord[];
     onSearch?: (detail: { record: SearchRecord; engineHostname?: string }) => void;
+    onRemove?: (index: number) => void;
+    onClear?: () => void;
   }>();
 
   let searchEngineMenus = $state<Record<number, boolean>>({});
@@ -27,6 +29,9 @@
 <section class="search-section">
   <div class="search-section-heading">
     <h2 class="card-title">{t('searchHistory')}</h2>
+    {#if searchHistory.length > 0}
+      <button class="history-clear" onclick={() => onClear?.()}>{t('clearHistory')}</button>
+    {/if}
   </div>
 
   {#if searchHistory.length === 0}
@@ -63,6 +68,7 @@
           <span class="search-table-time">{formatRelativeTime(record.timestamp)}</span>
           <span class="search-table-actions">
             <button class="btn-ghost" onclick={() => doSearch(record)}>{t('searchAction')}</button>
+            <button class="btn-ghost history-delete" onclick={() => onRemove?.(i)}>{t('deleteHistory')}</button>
             <div class="search-switch-wrapper" role="presentation" onclick={(e) => { e.stopPropagation(); toggleEngineMenu(i); }}>
               <button class="search-switch-btn" aria-label={t('switchEngine')}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -98,7 +104,20 @@
     box-shadow: var(--srb-shadow-xs);
   }
   .search-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-md);
     margin-bottom: 16px;
+  }
+  .history-clear {
+    border: none;
+    background: transparent;
+    color: var(--srb-danger);
+    font: inherit;
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
+    cursor: pointer;
   }
   .card-title {
     margin: 0;
@@ -135,7 +154,7 @@
   }
   .search-table-head {
     display: grid;
-    grid-template-columns: 1fr 80px 100px 120px;
+    grid-template-columns: 1fr 80px 100px 180px;
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
@@ -148,7 +167,7 @@
   }
   .search-table-row {
     display: grid;
-    grid-template-columns: 1fr 80px 100px 120px;
+    grid-template-columns: 1fr 80px 100px 180px;
     gap: 12px;
     align-items: center;
     padding: 12px 16px;

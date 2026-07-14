@@ -46,6 +46,12 @@ export function getLocale(): string {
   return _locale;
 }
 
+/** 同步扩展页面的 HTML 语言属性；Content Script 不应调用。 */
+export function setDocumentLocale(locale: string): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = locale.startsWith('zh') ? 'zh-CN' : 'en';
+}
+
 /** 切换语言并通知所有监听器 */
 export async function setLocale(locale: string): Promise<void> {
   _locale = locale;

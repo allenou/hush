@@ -1,5 +1,6 @@
-import { addBlockedSelector, recordBlock } from '@/utils/storage';
+import { addBlockedSelector, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import { t } from '@/utils/i18n';
+import { updateCollapseBar } from './ui';
 
 // ========== Module State ==========
 
@@ -217,8 +218,17 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
       badge.className = 'srb-blocked-badge';
       badge.textContent = '🎯 ' + t('elementHit');
       badge.title = t('elementBlocked');
-      el.appendChild(badge);
-      overlay.remove();
+      badge.setAttribute('data-entry', full);
+      badge.addEventListener('click', async (event) => {
+        event.stopPropagation();
+         await removeBlockedSelectorEntry(full);
+         mask.remove();
+         badge.remove();
+         updateCollapseBar();
+       });
+       el.appendChild(badge);
+       updateCollapseBar();
+       overlay.remove();
     } catch (err) {
       console.error('[SRB] Failed to block by selector:', err);
       overlay.remove();
