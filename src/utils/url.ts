@@ -3,6 +3,68 @@ export function getHostname(): string {
   return new URL(window.location.href).hostname.replace(/^www\./, '');
 }
 
+/**
+ * 遍历链接的全部属性，提取其中可识别的 HTTP(S) 地址。
+ * 不依赖 data-url 等特定属性名，以兼容不同站点保存真实地址的方式。
+ */
+export function extractAnchorAttributeUrls(link: HTMLAnchorElement): string[] {
+  const urls = new Set<string>();
+  const values = [link.href, ...Array.from(link.attributes, (attribute) => attribute.value)];
+
+  values.forEach((value) => collectUrlsFromAttribute(value, urls));
+  return Array.from(urls);
+}
+
+function collectUrlsFromAttribute(rawValue: string, urls: Set<string>, depth = 0): void {
+  if (!rawValue || depth > 3) return;
+  let value = rawValue.trim().replace(/\\\//g, '/');
+  if (!value) return;
+
+  for (let i = 0; i < 3; i++) {
+    collectUrlCandidate(value, urls, depth);
+    try {
+      const decoded = decodeURIComponent(value);
+      if (decoded === value) break;
+      value = decoded;
+    } catch {
+      break;
+    }
+  }
+}
+
+function collectUrlCandidate(value: string, urls: Set<string>, depth: number): void {
+  const exactUrl = parseHttpUrl(value);
+  if (exactUrl) {
+    urls.add(exactUrl.href);
+    if (depth < 3) {
+      exactUrl.searchParams.forEach((parameter) => {
+        collectUrlsFromAttribute(parameter, urls, depth + 1);
+      });
+    }
+  }
+
+  const embeddedUrls = value.match(/https?:\/\/[^\s"'<>\\]+/gi) ?? [];
+  embeddedUrls.forEach((candidate) => {
+    const parsed = parseHttpUrl(candidate.replace(/[),.;，。]+$/u, ''));
+    if (parsed) urls.add(parsed.href);
+  });
+
+  // 某些站点仅在属性中保存域名，例如 data-domain="example.com"。
+  if (depth === 0 && /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?$/i.test(value)) {
+    const parsed = parseHttpUrl(`https://${value}`);
+    if (parsed) urls.add(parsed.href);
+  }
+}
+
+function parseHttpUrl(value: string): URL | null {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 从搜索结果元素中提取真实 URL（处理搜索引擎跳转链接） */
 export function extractResultUrl(item: Element, linkSelector: string): string {
   const link = item.querySelector<HTMLAnchorElement>(linkSelector);

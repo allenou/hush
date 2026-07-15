@@ -13,7 +13,14 @@ import {
   setEnabled, setBlockAds, subscribe,
   createStorageBackup, restoreStorageBackup,
 } from '@/utils/storage';
-import { applyBlockedSelectors, initBlocker, injectBlockButton, processItem, syncBlockerState } from '@/helpers/ad-blocker';
+import {
+  applyBlockedSelectors,
+  initBlocker,
+  injectBlockButton,
+  processItem,
+  scanBlockedDomains,
+  syncBlockerState,
+} from '@/helpers/ad-blocker';
 import { formatLocalDateKey } from '@/utils/statistics';
 
 beforeEach(() => {
@@ -399,6 +406,23 @@ describe('recordBlock', () => {
     ]));
   });
 
+  it('records daily ad, target-domain, subdomain, and other breakdowns', async () => {
+    await recordBlock('ad', 'ads.example');
+    await recordBlock('domain', 'example.com', 'target');
+    await recordBlock('domain', 'news.example.com', 'subdomain');
+    await recordBlock('url', 'example.com');
+
+    const today = formatLocalDateKey(new Date());
+    const entry = (await get()).stats.find((item) => item.date === today);
+    expect(entry).toMatchObject({
+      count: 4,
+      adCount: 1,
+      targetDomainCount: 1,
+      subdomainCount: 1,
+      otherCount: 1,
+    });
+  });
+
   it('keeps at most 365 days', async () => {
     const past = [];
     for (let i = 0; i < 366; i++) {
@@ -506,6 +530,71 @@ describe('result domain matching', () => {
 
     expect(item.querySelector('.srb-block-btn')).toBeNull();
     expect(item.querySelector('.srb-blocked-badge')).toBeTruthy();
+  });
+
+  it('finds a blocked domain in any attribute of any link before locating its content block', () => {
+    initBlocker({
+      getHostname: () => 'so.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: ['csdn.net'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <ul id="results">
+        <li class="res-list">
+          <h3><a href="https://www.so.com/link?m=opaque" custom-target="https://blog.csdn.net/post/1">CSDN</a></h3>
+          <p>一段足够长的搜索结果摘要，用于表示完整的内容块。</p>
+          <ul>
+            <li id="nested-result">
+              <a arbitrary-url="https://download.csdn.net/file/1">嵌套的 CSDN 下载链接</a>
+              <span>该子项应由外层结果统一屏蔽。</span>
+            </li>
+          </ul>
+        </li>
+        <li class="res-list">
+          <h3><a href="https://example.com/">Example</a></h3>
+          <p>另一个不应该被域名规则标记的搜索结果。</p>
+        </li>
+      </ul>
+    `;
+
+    scanBlockedDomains();
+
+    const items = document.querySelectorAll('li.res-list');
+    expect(items[0].querySelector('.srb-blocked-badge')).toBeTruthy();
+    expect(document.getElementById('nested-result')?.hasAttribute('data-srb-domain-blocked')).toBe(false);
+    expect(items[1].querySelector('.srb-blocked-badge')).toBeNull();
+  });
+
+  it('does not block a search link only because its query text contains a blocked domain', () => {
+    initBlocker({
+      getHostname: () => 'so.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: ['csdn.net'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <li class="suggestion">
+        <a href="https://www.so.com/s?q=blog.csdn.net">搜索 blog.csdn.net</a>
+        <span>搜索建议</span>
+      </li>
+    `;
+
+    scanBlockedDomains();
+
+    expect(document.querySelector('.srb-blocked-badge')).toBeNull();
   });
 
   it('records each newly rendered blocked result once while enabled', async () => {

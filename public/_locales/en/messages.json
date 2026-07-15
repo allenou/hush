@@ -93,6 +93,7 @@
   "siteBlocked": { "message": "Current site is blocked" },
   "siteNormal": { "message": "Current site is normal" },
   "siteUnavailable": { "message": "Unavailable on this page" },
+  "siteUnavailableShort": { "message": "Unavailable" },
   "openSettings": { "message": "Open settings" },
   "markResult": { "message": "Mark this result" },
   "blockDomain": { "message": "Block this domain" },
@@ -132,5 +133,7 @@
   "backupImported": { "message": "Backup imported" },
   "backupImportFailed": { "message": "Import failed. Please choose a valid SearchKit backup file" },
   "backupImportConfirm": { "message": "Importing this backup will replace current SearchKit data. Continue?" },
-  "languageLabel": { "message": "Language" }
+  "languageLabel": { "message": "Language" },
+  "targetDomainLabel": { "message": "Target domain" },
+  "subdomainTrendLabel": { "message": "Subdomain" }
 }

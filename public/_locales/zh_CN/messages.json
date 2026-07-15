@@ -93,6 +93,7 @@
   "siteBlocked": { "message": "当前网站已被标记" },
   "siteNormal": { "message": "当前网站正常" },
   "siteUnavailable": { "message": "当前页面不可用" },
+  "siteUnavailableShort": { "message": "不可用" },
   "openSettings": { "message": "打开设置" },
   "markResult": { "message": "标记此结果" },
   "blockDomain": { "message": "屏蔽此域名" },
@@ -132,5 +133,7 @@
   "backupImported": { "message": "备份已导入" },
   "backupImportFailed": { "message": "导入失败，请选择有效的 SearchKit 备份文件" },
   "backupImportConfirm": { "message": "导入备份会替换当前 SearchKit 数据，是否继续？" },
-  "languageLabel": { "message": "语言" }
+  "languageLabel": { "message": "语言" },
+  "targetDomainLabel": { "message": "目标域名" },
+  "subdomainTrendLabel": { "message": "子域名" }
 }

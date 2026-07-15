@@ -51,9 +51,14 @@ export interface BlockRule {
 export interface BlockStats {
   date: string;
   count: number;
+  adCount?: number;
+  targetDomainCount?: number;
+  subdomainCount?: number;
+  otherCount?: number;
 }
 
 export type BlockRecordType = 'ad' | 'domain' | 'url' | 'selector';
+export type DomainBlockKind = 'target' | 'subdomain';
 
 export interface StorageBackup {
   app: 'SearchKit';
@@ -501,13 +506,33 @@ export async function removeCustomEngine(index: number): Promise<void> {
   }));
 }
 
-async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<void> {
+async function recordBlockNow(
+  type?: BlockRecordType,
+  domain?: string,
+  domainKind: DomainBlockKind = 'target',
+): Promise<void> {
   await mutateStorage((current) => {
     const stats = current.stats.map((item) => ({ ...item }));
     const today = formatLocalDateKey(new Date());
     const existing = stats.find((item) => item.date === today);
-    if (existing) existing.count++;
-    else stats.push({ date: today, count: 1 });
+    if (existing) {
+      existing.count++;
+      if (type === 'ad') existing.adCount = (existing.adCount ?? 0) + 1;
+      else if (type === 'domain' && domainKind === 'subdomain') {
+        existing.subdomainCount = (existing.subdomainCount ?? 0) + 1;
+      } else if (type === 'domain') {
+        existing.targetDomainCount = (existing.targetDomainCount ?? 0) + 1;
+      } else if (type) {
+        existing.otherCount = (existing.otherCount ?? 0) + 1;
+      }
+    } else {
+      const entry: BlockStats = { date: today, count: 1 };
+      if (type === 'ad') entry.adCount = 1;
+      else if (type === 'domain' && domainKind === 'subdomain') entry.subdomainCount = 1;
+      else if (type === 'domain') entry.targetDomainCount = 1;
+      else if (type) entry.otherCount = 1;
+      stats.push(entry);
+    }
     stats.sort((a, b) => a.date.localeCompare(b.date));
 
     const blockedDomainStats = current.blockedDomainStats.map((item) => ({ ...item }));
@@ -534,8 +559,12 @@ async function recordBlockNow(type?: BlockRecordType, domain?: string): Promise<
   });
 }
 
-export function recordBlock(type?: BlockRecordType, domain?: string): Promise<void> {
-  return recordBlockNow(type, domain);
+export function recordBlock(
+  type?: BlockRecordType,
+  domain?: string,
+  domainKind?: DomainBlockKind,
+): Promise<void> {
+  return recordBlockNow(type, domain, domainKind);
 }
 
 export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {

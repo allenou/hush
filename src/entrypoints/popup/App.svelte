@@ -7,12 +7,13 @@
   import { buildDailySeries, formatLocalDateKey } from '@/utils/statistics';
   import { onMount } from 'svelte';
   import type { ChartConfiguration } from 'chart.js';
+  import packageJson from '../../../package.json';
 
   let blockCount = 0;
   let todayCount = 0;
   let enabled = true;
   let currentSiteBlocked = false;
-  let currentSiteAvailable = false;
+  let currentSiteAvailable: boolean | null = null;
   let stats = buildDailySeries([], 7);
 
   async function loadData() {
@@ -140,12 +141,24 @@
       </span>
       <span class="brand-text">SearchKit</span>
     </div>
-    <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
-      <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
-      <span class="toggle-track">
-        <span class="toggle-thumb"></span>
-      </span>
-    </label>
+    <div class="header-actions">
+      {#if currentSiteAvailable === false}
+        <span
+          class="header-unavailable"
+          aria-label={t('siteUnavailable')}
+          title={t('siteUnavailable')}
+        >
+          <span class="header-status-dot" aria-hidden="true"></span>
+          {t('siteUnavailableShort')}
+        </span>
+      {/if}
+      <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
+        <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
+        <span class="toggle-track">
+          <span class="toggle-thumb"></span>
+        </span>
+      </label>
+    </div>
   </header>
 
   <!-- ===== Stats ===== -->
@@ -161,18 +174,17 @@
   </div>
 
   <!-- ===== Site Status ===== -->
-  <div class="site-status" class:blocked={currentSiteBlocked}>
-    {#if !currentSiteAvailable}
-      <span class="status-icon">⚪</span>
-      <span>{t('siteUnavailable')}</span>
-    {:else if currentSiteBlocked}
-      <span class="status-icon">🔴</span>
-      <span>{t('siteBlocked')}</span>
-    {:else}
-      <span class="status-icon">🟢</span>
-      <span>{t('siteNormal')}</span>
-    {/if}
-  </div>
+  {#if currentSiteAvailable === true}
+    <div class="site-status" class:blocked={currentSiteBlocked}>
+      {#if currentSiteBlocked}
+        <span class="status-icon">🔴</span>
+        <span>{t('siteBlocked')}</span>
+      {:else}
+        <span class="status-icon">🟢</span>
+        <span>{t('siteNormal')}</span>
+      {/if}
+    </div>
+  {/if}
 
   <!-- ===== Chart (7-day) ===== -->
   <div class="chart-section">
@@ -190,7 +202,7 @@
     <button class="settings-btn" onclick={openOptions} aria-label={t('openSettings')}>
       <span>⚙️</span>
     </button>
-    <span class="version">v1.0</span>
+    <span class="version">v{packageJson.version}</span>
   </footer>
 </main>
 
@@ -245,6 +257,34 @@
     font-weight: var(--srb-weight-semibold);
     font-size: 15px;
     letter-spacing: 0.01em;
+  }
+  .header-actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--srb-space-sm);
+  }
+  .header-unavailable {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text-muted);
+    font-size: 11px;
+    font-weight: var(--srb-weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .header-status-dot {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-text-muted);
   }
 
   /* ===== Toggle Switch ===== */

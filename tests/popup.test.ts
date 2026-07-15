@@ -4,6 +4,7 @@ import { fakeBrowser } from 'wxt/testing';
 import App from '@/entrypoints/popup/App.svelte';
 import { mountPopup } from '@/entrypoints/popup/bootstrap';
 import { formatLocalDateKey } from '@/utils/statistics';
+import packageJson from '../package.json';
 
 vi.mock('@/utils/chart', () => ({
   Chart: class {
@@ -40,6 +41,8 @@ describe('Popup', () => {
       json: async () => ({
         totalBlockedLabel: { message: 'Total Blocked' },
         todayLabel: { message: 'Today' },
+        siteUnavailable: { message: 'Unavailable on this page' },
+        siteUnavailableShort: { message: 'Unavailable' },
       }),
     } as Response);
 
@@ -52,6 +55,11 @@ describe('Popup', () => {
     expect(summary).toContain('Today');
     expect(summary).not.toContain('全部拦截');
     expect(document.documentElement.lang).toBe('en');
+
+    await vi.waitFor(() => {
+      expect(target.querySelector('.header-unavailable')?.textContent).toContain('Unavailable');
+      expect(target.querySelector('.site-status')).toBeNull();
+    });
   });
 
   it('keeps summary values in the DOM and renders one accessible trend chart', async () => {
@@ -83,6 +91,7 @@ describe('Popup', () => {
     expect(charts).toHaveLength(1);
     expect(charts[0]?.getAttribute('aria-label')).toBe('7-day block trend chart');
     expect(target.querySelector('.bar-wrapper')).toBeNull();
+    expect(target.querySelector('.version')?.textContent).toBe(`v${packageJson.version}`);
   });
 
   it('shows a parent-domain rule as blocked when subdomain matching is enabled', async () => {

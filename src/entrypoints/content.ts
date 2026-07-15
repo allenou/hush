@@ -12,7 +12,7 @@ import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
   initBlocker, syncBlockerState,
-  scanForAds, scanResults,
+  scanBlockedDomains, scanForAds, scanResults,
   applyBlockedSelectors, checkSavedSelectors,
   clearAllMarkers,
   setOnContainerMissing,
@@ -59,6 +59,7 @@ export default defineContentScript({
     function runDynamicScan(engine: SearchEngineConfig | null = currentEngine): void {
       if (!isEnabled) return;
       pushState(engine);
+      scanBlockedDomains();
       if (engine) scanResults(engine);
       else scanForAds();
       applyBlockedSelectors();
@@ -74,6 +75,7 @@ export default defineContentScript({
 
       clearAllMarkers({ preserveCounts: true, removeCollapse: false });
       pushState();
+      scanBlockedDomains();
       if (currentEngine) {
         injectCollapseBar(currentEngine.containerSelector);
         scanResults(currentEngine);
@@ -101,6 +103,7 @@ export default defineContentScript({
       setFloatingMarkingEnabled(true);
       autoDetectRetries = 0;
       pushState();
+      scanBlockedDomains();
       void tryAutoDetect();
       scanForAds();
       ctx.setTimeout(() => {

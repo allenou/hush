@@ -49,6 +49,12 @@
     domainBlockCount,
   ));
   let hasTrendData = $derived(summary.total > 0);
+  let hasTypedTrendData = $derived(dailySeries.some((item) =>
+    (item.adCount ?? 0) > 0
+    || (item.targetDomainCount ?? 0) > 0
+    || (item.subdomainCount ?? 0) > 0
+    || (item.otherCount ?? 0) > 0,
+  ));
   let hasBreakdownData = $derived(
     breakdown.ads > 0 || breakdown.domains > 0 || breakdown.other > 0,
   );
@@ -84,35 +90,80 @@
   let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
     const teal = chartColor('--srb-primary', '#328f7e');
     const fill = chartColor('--srb-chart-teal-soft', 'rgba(50, 143, 126, 0.18)');
+    const datasets = hasTypedTrendData ? [
+      {
+        label: t('adLabel'),
+        data: dailySeries.map((item) => item.adCount ?? 0),
+        borderColor: teal,
+        backgroundColor: teal,
+      },
+      {
+        label: t('targetDomainLabel'),
+        data: dailySeries.map((item) => item.targetDomainCount ?? 0),
+        borderColor: chartColor('--srb-accent', '#9fdd60'),
+        backgroundColor: chartColor('--srb-accent', '#9fdd60'),
+      },
+      {
+        label: t('subdomainTrendLabel'),
+        data: dailySeries.map((item) => item.subdomainCount ?? 0),
+        borderColor: chartColor('--srb-chart-purple', '#898beb'),
+        backgroundColor: chartColor('--srb-chart-purple', '#898beb'),
+      },
+      {
+        label: t('otherLabel'),
+        data: dailySeries.map((item) => Math.max(
+          0,
+          item.count
+            - (item.adCount ?? 0)
+            - (item.targetDomainCount ?? 0)
+            - (item.subdomainCount ?? 0),
+        )),
+        borderColor: chartColor('--srb-text-muted', '#8b8f9c'),
+        backgroundColor: chartColor('--srb-text-muted', '#8b8f9c'),
+      },
+    ].map((dataset) => ({
+      ...dataset,
+      borderWidth: 2,
+      fill: false,
+      pointRadius: rangeDays === 7 ? 3 : 0,
+      pointHoverRadius: 5,
+      tension: 0.32,
+    })) : [{
+      label: t('dailyBlocks'),
+      data: dailySeries.map((item) => item.count),
+      borderColor: teal,
+      backgroundColor: fill,
+      borderWidth: 2,
+      fill: true,
+      pointBackgroundColor: teal,
+      pointBorderColor: chartColor('--srb-surface', '#ffffff'),
+      pointBorderWidth: 2,
+      pointRadius: rangeDays === 7 ? 4 : rangeDays === 30 ? 2 : 0,
+      pointHoverRadius: 5,
+      tension: 0.32,
+    }];
 
     return {
       type: 'line',
       data: {
         labels: dailySeries.map((item) => dateLabel(item.date)),
-        datasets: [{
-          label: t('dailyBlocks'),
-          data: dailySeries.map((item) => item.count),
-          borderColor: teal,
-          backgroundColor: fill,
-          borderWidth: 2,
-          fill: true,
-          pointBackgroundColor: teal,
-          pointBorderColor: chartColor('--srb-surface', '#ffffff'),
-          pointBorderWidth: 2,
-          pointRadius: rangeDays === 7 ? 4 : rangeDays === 30 ? 2 : 0,
-          pointHoverRadius: 5,
-          tension: 0.32,
-        }],
+        datasets,
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { intersect: false, mode: 'index' },
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: hasTypedTrendData,
+            position: 'bottom',
+            labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+          },
           tooltip: {
             callbacks: {
-              label: (context) => `${context.parsed.y ?? 0} ${t('times')}`,
+              label: (context) => hasTypedTrendData
+                ? `${context.dataset.label}: ${context.parsed.y ?? 0} ${t('times')}`
+                : `${context.parsed.y ?? 0} ${t('times')}`,
             },
           },
         },

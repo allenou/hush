@@ -29,7 +29,7 @@ export function buildDailySeries(
   days: number,
   now = new Date(),
 ): BlockStats[] {
-  const countsByDate = new Map(raw.map((item) => [item.date, item.count]));
+  const statsByDate = new Map(raw.map((item) => [item.date, item]));
   const year = now.getFullYear();
   const month = now.getMonth();
   const date = now.getDate();
@@ -38,7 +38,8 @@ export function buildDailySeries(
     const offset = days - index - 1;
     const localDate = new Date(year, month, date - offset);
     const key = formatLocalDateKey(localDate);
-    return { date: key, count: countsByDate.get(key) ?? 0 };
+    const existing = statsByDate.get(key);
+    return existing ? { ...existing } : { date: key, count: 0 };
   });
 }
 

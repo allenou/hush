@@ -1,8 +1,10 @@
 import type { SearchEngineConfig } from './search-engines';
 import { removeBlockedItem, removeBlockedSelectorEntry, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
+import type { DomainBlockKind } from '@/utils/storage';
 import { removeCollapseBar, updateCollapseBar } from './ui';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
+import { extractAnchorAttributeUrls } from '@/utils/url';
 
 // ========== Module State ==========
 
@@ -52,11 +54,12 @@ async function recordBlockOnce(
   item: Element,
   type: 'ad' | 'domain' | 'url',
   domain?: string,
+  domainKind?: DomainBlockKind,
 ): Promise<void> {
   if (item.hasAttribute('data-srb-counted')) return;
   item.setAttribute('data-srb-counted', 'true');
   try {
-    await recordBlock(type, domain);
+    await recordBlock(type, domain, domainKind);
   } catch (error) {
     item.removeAttribute('data-srb-counted');
     throw error;
@@ -91,20 +94,51 @@ export function isAdItem(item: Element): boolean {
 
 /** 从搜索结果项向上查找完整广告容器（而非单行），找不到则返回 null */
 export function findAdContainer(item: Element): Element | null {
-  let cur: HTMLElement | null = item.parentElement;
+  return findContentContainer(item);
+}
+
+/** 从已命中的元素向上查找完整内容块，供广告和域名规则共用 */
+function findContentContainer(source: Element): HTMLElement | null {
+  let cur: HTMLElement | null = source.parentElement;
+  let hintedDiv: HTMLElement | null = null;
+  let fallbackDiv: HTMLElement | null = null;
   let depth = 0;
+
   while (cur && cur !== document.body && depth < 10) {
     const tag = cur.tagName.toLowerCase();
-    const children = cur.children.length;
-    const hasLink = cur.querySelector('a[href]');
-    if (hasLink && children >= 2 && (tag === 'div' || tag === 'li' || tag === 'article' || tag === 'section')) {
-      return cur;
+    if (tag === 'header' || tag === 'nav' || tag === 'footer' || tag === 'aside') break;
+
+    const hasLink = cur.querySelector('a');
+    if (hasLink) {
+      if (['li', 'article', 'section', 'tr', 'dl'].includes(tag) && isReasonableContentSize(cur)) {
+        return cur;
+      }
+      if (cur.hasAttribute('data-srcid') && isReasonableContentSize(cur)) {
+        return cur;
+      }
+      if (tag === 'div') {
+        const cls = cur.className.toLowerCase();
+        if (!hintedDiv && /(^|[-_\s])(result|res|item|card|entry|article|algo)([-_\s]|$)/.test(cls)) {
+          hintedDiv = cur;
+        }
+        if (!fallbackDiv && cur.children.length >= 2 && (cur.textContent ?? '').trim().length >= 20) {
+          fallbackDiv = cur;
+        }
+      }
     }
-    if (cur.hasAttribute('data-srcid')) { return cur; }
+
     cur = cur.parentElement;
     depth++;
   }
-  return null;
+
+  const best = hintedDiv ?? fallbackDiv;
+  return best && isReasonableContentSize(best) ? best : null;
+}
+
+function isReasonableContentSize(element: HTMLElement): boolean {
+  const rect = element.getBoundingClientRect();
+  const viewportArea = window.innerWidth * window.innerHeight;
+  return viewportArea <= 0 || rect.width * rect.height <= viewportArea * 0.6;
 }
 
 // ========== UI Injection ==========
@@ -279,16 +313,53 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
   if (di < 0 && !urlMatch) return false;
 
   const domain = tryParseHostname(href) ?? undefined;
-  void recordBlockOnce(item, di >= 0 ? 'domain' : 'url', domain).catch(() => {});
+  const matchedDomain = di >= 0 ? _state.blockedDomains[di] : undefined;
+  const domainKind = matchedDomain && domain !== matchedDomain ? 'subdomain' : 'target';
+  void recordBlockOnce(item, di >= 0 ? 'domain' : 'url', domain, domainKind).catch(() => {});
   clearActionMarkers(item);
   injectBadge(item, di >= 0, urlMatch, href);
   return true;
+}
+
+/**
+ * 从全部链接的全部属性中查找命中的域名，再向上定位并标记所属内容块。
+ * 该扫描不依赖搜索引擎配置或自动检测结果。
+ */
+export function scanBlockedDomains(): void {
+  if (!_state.isEnabled || _state.blockedDomains.length === 0) return;
+
+  const matchedContainers = new Map<HTMLElement, string>();
+  document.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
+    if (link.closest('.srb-popup, .srb-collapse-bar, .srb-blocked-badge, .srb-cancel-badge')) return;
+    if (link.closest('[data-srb-domain-blocked]')) return;
+
+    const matchedUrl = extractAnchorAttributeUrls(link).find(
+      (url) => matchBlockedDomain(url, _state.blockedDomains) >= 0,
+    );
+    if (!matchedUrl) return;
+
+    const container = findContentContainer(link);
+    if (!container || matchedContainers.has(container)) return;
+    matchedContainers.set(container, matchedUrl);
+  });
+
+  const containers = Array.from(matchedContainers.keys());
+  matchedContainers.forEach((matchedUrl, container) => {
+    // 同一结果中可能嵌套多个命中链接，只标记最外层的完整内容块。
+    if (containers.some((candidate) => candidate !== container && candidate.contains(container))) return;
+    if (applyBlockedRuleMarker(container, matchedUrl)) {
+      container.setAttribute('data-srb-domain-blocked', 'true');
+    }
+  });
+
+  updateCollapseBar();
 }
 
 // ========== Item Processing ==========
 
 export function processItem(item: Element): void {
   if (!_state.isEnabled) return;
+  if (item.closest('[data-srb-domain-blocked]')) return;
   const wasProcessed = item.hasAttribute('data-srb-processed');
   if (!_currentEngine) return;
   const href = _extractResultUrl(item, _currentEngine.linkSelector);
@@ -377,30 +448,7 @@ export function scanForAds(): void {
     if (badge.closest('[data-srb-ad-scanned]')) return;
     badge.setAttribute('data-srb-ad-badge', 'true');
 
-    let best: HTMLElement | null = null;
-    let cur: HTMLElement | null = badge.parentElement;
-    let depth = 0;
-    while (cur && cur !== document.body && depth < 10) {
-      const tag = cur.tagName.toLowerCase();
-      if (cur.querySelector('a[href]') && cur.children.length >= 2) {
-        if (['li', 'section', 'article', 'tr'].includes(tag)) { best = cur; break; }
-        if (tag === 'div' && !best) best = cur;
-      }
-      cur = cur.parentElement;
-      depth++;
-    }
-    if (!best) {
-      let fb: HTMLElement | null = badge.parentElement;
-      while (fb && fb !== document.body) {
-        if (fb.hasAttribute('data-srcid')) { best = fb; break; }
-        fb = fb.parentElement;
-      }
-    }
-    if (best) {
-      const r = best.getBoundingClientRect();
-      const vpArea = window.innerWidth * window.innerHeight;
-      if (r.width * r.height > vpArea * 0.6) best = null;
-    }
+    const best = findContentContainer(badge);
     if (best && !best.hasAttribute('data-srb-ad-scanned')) {
       best.setAttribute('data-srb-ad-scanned', 'true');
       injectAdBadge(best, '');
@@ -468,9 +516,10 @@ export function checkSavedSelectors(): void {
 // ========== Cleanup ==========
 
 export function clearAllMarkers(options: { preserveCounts?: boolean; removeCollapse?: boolean } = {}): void {
-  document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
-  document.querySelectorAll('[data-srb-processed], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted]').forEach((el) => {
+  document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-cancel-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
+  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
+    el.removeAttribute('data-srb-domain-blocked');
     el.removeAttribute('data-srb-ad-scanned');
     el.removeAttribute('data-srb-ad-badge');
     if (!options.preserveCounts) el.removeAttribute('data-srb-counted');

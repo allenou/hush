@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractResultUrl, isSearchEngineRedirect } from '@/utils/url';
+import { extractAnchorAttributeUrls, extractResultUrl, isSearchEngineRedirect } from '@/utils/url';
 
 /** Helper: mock window.location for tests */
 function mockLocation(href: string): void {
@@ -158,5 +158,40 @@ describe('extractResultUrl', () => {
     const container = document.createElement('div');
     container.innerHTML = '<a href="javascript:void(0)">click</a>';
     expect(extractResultUrl(container, 'a[href]')).toBe('javascript:void(0)');
+  });
+});
+
+describe('extractAnchorAttributeUrls', () => {
+  beforeEach(() => {
+    mockLocation('https://www.so.com/s?q=csdn');
+  });
+
+  it('extracts URLs from every attribute without relying on attribute names', () => {
+    const link = document.createElement('a');
+    link.href = 'https://www.so.com/link?m=opaque';
+    link.setAttribute('data-arbitrary-target', 'https://www.csdn.net/');
+    link.setAttribute('custom-payload', '{"target":"https://blog.csdn.net/post/1"}');
+
+    expect(extractAnchorAttributeUrls(link)).toEqual(expect.arrayContaining([
+      'https://www.so.com/link?m=opaque',
+      'https://www.csdn.net/',
+      'https://blog.csdn.net/post/1',
+    ]));
+  });
+
+  it('extracts a domain-only attribute as a comparable URL', () => {
+    const link = document.createElement('a');
+    link.setAttribute('data-anything', 'download.csdn.net');
+
+    expect(extractAnchorAttributeUrls(link)).toContain('https://download.csdn.net/');
+  });
+
+  it('does not treat a domain in a search query as the target hostname', () => {
+    const link = document.createElement('a');
+    link.href = 'https://www.so.com/s?q=blog.csdn.net';
+
+    expect(extractAnchorAttributeUrls(link)).toEqual([
+      'https://www.so.com/s?q=blog.csdn.net',
+    ]);
   });
 });
