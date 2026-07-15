@@ -1,5 +1,4 @@
-import { mount } from 'svelte';
 import '@/styles/theme.css';
-import App from './App.svelte';
+import { mountPopup } from './bootstrap';
 
-mount(App, { target: document.getElementById('app')! });
+void mountPopup(document.getElementById('app')!);

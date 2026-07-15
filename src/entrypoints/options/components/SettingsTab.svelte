@@ -8,8 +8,6 @@
     onToggleAdBlock,
     onToggleSubdomain,
     onToggleRecordSearch,
-    currentLocale = 'zh_CN',
-    onLocaleChange,
     backupStatus = '',
     onExportBackup,
     onImportBackup,
@@ -20,43 +18,12 @@
     onToggleAdBlock?: () => void;
     onToggleSubdomain?: () => void;
     onToggleRecordSearch?: () => void;
-    currentLocale?: string;
-    onLocaleChange?: (locale: string) => void;
     backupStatus?: string;
     onExportBackup?: () => void | Promise<void>;
     onImportBackup?: (file: File) => void | Promise<void>;
   } = $props();
 
   let backupInput: HTMLInputElement | null = null;
-
-  const LOCALE_OPTIONS = [
-    { value: 'zh_CN', label: '中文' },
-    { value: 'en', label: 'English' },
-  ];
-
-  function handleToggleAdBlock() {
-    onToggleAdBlock?.();
-  }
-
-  function handleToggleSubdomain() {
-    onToggleSubdomain?.();
-  }
-
-  function handleToggleRecordSearch() {
-    onToggleRecordSearch?.();
-  }
-
-  function handleLocaleSelect(locale: string) {
-    onLocaleChange?.(locale);
-  }
-
-  function handleExportBackup() {
-    void onExportBackup?.();
-  }
-
-  function handleImportClick() {
-    backupInput?.click();
-  }
 
   function handleBackupFileChange(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
@@ -66,171 +33,194 @@
   }
 </script>
 
-<div class="method-card">
-  <div class="method-heading">
-    <h2 class="card-title">{t('matchingMethod')}</h2>
-  </div>
-  <div class="toggle-list">
-    <div class="toggle-item">
-      <div class="toggle-copy">
-        <strong>{t('adBlockLabel')}</strong>
-        <p>{t('adBlockDesc')}</p>
-      </div>
-      <label class="toggle" aria-label={t('toggleAdBlock')}>
-        <input type="checkbox" checked={blockAds} onchange={handleToggleAdBlock} />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-      </label>
+<div class="settings-page">
+  <section class="settings-card wide" aria-labelledby="matching-heading">
+    <div class="card-heading">
+      <span class="heading-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="14" cy="7" r="2.2" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="17" r="2.2" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+      <h2 id="matching-heading">{t('matchingMethod')}</h2>
     </div>
-    <div class="toggle-item">
-      <div class="toggle-copy">
-        <strong>{t('subdomainLabel')}</strong>
-        <p>{t('subdomainDesc')}</p>
-      </div>
-      <label class="toggle" aria-label={t('toggleSubdomain')}>
-        <input type="checkbox" checked={blockSubdomains} onchange={handleToggleSubdomain} />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-      </label>
-    </div>
-  </div>
-</div>
 
-<div class="method-card">
-  <div class="method-heading">
-    <h2 class="card-title">{t('searchRecordLabel')}</h2>
-  </div>
-  <div class="toggle-list">
-    <div class="toggle-item">
-      <div class="toggle-copy">
+    <div class="setting-list">
+      <label class="setting-row">
+        <span class="setting-copy">
+          <strong>{t('adBlockLabel')}</strong>
+          <span>{t('adBlockDesc')}</span>
+        </span>
+        <span class="toggle">
+          <input data-testid="ad-block-toggle" type="checkbox" checked={blockAds} onchange={() => onToggleAdBlock?.()} />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </span>
+      </label>
+
+      <label class="setting-row">
+        <span class="setting-copy">
+          <strong>{t('subdomainLabel')}</strong>
+          <span>{t('subdomainDesc')}</span>
+        </span>
+        <span class="toggle">
+          <input data-testid="subdomain-toggle" type="checkbox" checked={blockSubdomains} onchange={() => onToggleSubdomain?.()} />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </span>
+      </label>
+    </div>
+  </section>
+
+  <section class="settings-card wide" aria-labelledby="history-heading">
+    <div class="card-heading">
+      <span class="heading-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4 4M8.5 11h5M11 8.5V13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <h2 id="history-heading">{t('searchRecordLabel')}</h2>
+    </div>
+
+    <label class="setting-row compact-row">
+      <span class="setting-copy">
         <strong>{t('recordSearchLabel')}</strong>
-        <p>{t('recordSearchDesc')}</p>
-      </div>
-      <label class="toggle" aria-label={t('toggleRecordSearch')}>
-        <input type="checkbox" checked={recordSearchHistory} onchange={handleToggleRecordSearch} />
+        <span>{t('recordSearchDesc')}</span>
+      </span>
+      <span class="toggle">
+        <input data-testid="search-history-toggle" type="checkbox" checked={recordSearchHistory} onchange={() => onToggleRecordSearch?.()} />
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
-      </label>
+      </span>
+    </label>
+  </section>
+
+  <section class="settings-card wide backup-card" aria-labelledby="backup-heading">
+    <div class="backup-content">
+      <div class="card-heading backup-heading">
+        <span class="heading-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/><path d="M8 4.5V10h7V4.5M8.5 20.5v-6h7v6" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <h2 id="backup-heading">{t('backupLabel')}</h2>
+          <p>{t('backupDesc')}</p>
+        </div>
+      </div>
+
+      {#if backupStatus}
+        <p class="backup-status" role="status">{backupStatus}</p>
+      {/if}
     </div>
-  </div>
-</div>
 
-<div class="method-card">
-  <div class="method-heading">
-    <h2 class="card-title">{t('backupLabel')}</h2>
-    <p class="card-desc">{t('backupDesc')}</p>
-  </div>
-  <div class="backup-actions">
-    <button class="backup-btn primary" onclick={handleExportBackup}>
-      {t('backupExport')}
-    </button>
-    <button class="backup-btn" onclick={handleImportClick}>
-      {t('backupImport')}
-    </button>
-    <input
-      bind:this={backupInput}
-      class="backup-input"
-      type="file"
-      accept="application/json,.json"
-      onchange={handleBackupFileChange}
-    />
-  </div>
-  {#if backupStatus}
-    <p class="backup-status">{backupStatus}</p>
-  {/if}
-</div>
-
-<div class="method-card">
-  <div class="method-heading">
-    <h2 class="card-title">Language / 语言</h2>
-  </div>
-  <div class="locale-selector">
-    {#each LOCALE_OPTIONS as { value, label }}
-      <button
-        class="locale-btn"
-        class:active={currentLocale === value}
-        onclick={() => handleLocaleSelect(value)}
-      >
-        {label}
+    <div class="backup-actions">
+      <button class="backup-btn primary" onclick={() => void onExportBackup?.()}>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 18.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {t('backupExport')}
       </button>
-    {/each}
-  </div>
+      <button class="backup-btn" onclick={() => backupInput?.click()}>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V5m0 0 4 4m-4-4L8 9M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {t('backupImport')}
+      </button>
+      <input
+        bind:this={backupInput}
+        class="backup-input"
+        type="file"
+        accept="application/json,.json"
+        onchange={handleBackupFileChange}
+      />
+    </div>
+  </section>
 </div>
 
 <style>
-  .method-card {
+  .settings-page {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--srb-space-lg);
     width: 100%;
-    padding: var(--srb-space-2xl);
+  }
+  .settings-card {
+    min-width: 0;
+    padding: var(--srb-space-xl);
     border: 1px solid var(--srb-border);
     border-radius: var(--srb-radius-card);
     background: var(--srb-surface);
     box-shadow: var(--srb-shadow-xs);
   }
-  .method-card + .method-card {
-    margin-top: var(--srb-space-lg);
-  }
-  .method-heading {
+  .settings-card.wide { grid-column: 1 / -1; }
+  .card-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--srb-space-md);
     margin-bottom: var(--srb-space-lg);
   }
-
-  .card-title {
+  .heading-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-accent-soft);
+    color: var(--srb-primary);
+  }
+  .heading-icon svg { width: 19px; height: 19px; }
+  .card-heading h2 {
     margin: 0;
+    color: var(--srb-text-strong);
     font-size: var(--srb-font-size-title);
     font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
     line-height: var(--srb-line-height-tight);
   }
-  .card-desc {
+  .card-heading p {
     margin: 4px 0 0;
     color: var(--srb-text-subtle);
     font-size: var(--srb-font-size-sm);
     line-height: var(--srb-line-height-body);
   }
-
-  .toggle-list {
-    border-top: 1px solid var(--srb-divider);
-  }
-  .toggle-item {
+  .setting-list { border-top: 1px solid var(--srb-divider); }
+  .setting-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 14px;
-    padding: 14px 0;
+    justify-content: space-between;
+    gap: var(--srb-space-lg);
+    min-height: 68px;
+    padding: 14px 2px;
     border-bottom: 1px solid var(--srb-divider);
+    cursor: pointer;
   }
-  .toggle-item:last-child {
-    border-bottom: none;
+  .setting-row:last-child { border-bottom: 0; }
+  .compact-row {
+    min-height: 72px;
+    padding: 12px 2px 0;
+    border-top: 1px solid var(--srb-divider);
+    border-bottom: 0;
   }
-  .toggle-copy strong {
-    display: block;
+  .setting-copy strong,
+  .setting-copy span { display: block; }
+  .setting-copy strong {
+    color: var(--srb-text);
     font-size: 15px;
-    margin-bottom: 2px;
+    font-weight: var(--srb-weight-semibold);
   }
-  .toggle-copy p {
-    margin: 0;
+  .setting-copy span {
+    margin-top: 3px;
     color: var(--srb-text-subtle);
     font-size: var(--srb-font-size-sm);
     line-height: var(--srb-line-height-body);
   }
   .toggle {
+    position: relative;
     display: flex;
-    align-items: center;
-    cursor: pointer;
-    flex-shrink: 0;
+    flex: 0 0 auto;
   }
   .toggle input {
     position: absolute;
+    width: 1px;
+    height: 1px;
     opacity: 0;
-    width: 0;
-    height: 0;
   }
   .toggle-track {
     position: relative;
+    display: block;
     width: var(--srb-toggle-width);
     height: var(--srb-toggle-height);
     border-radius: var(--srb-radius-full);
     background: var(--srb-toggle-off);
-    transition: background 0.2s;
-  }
-  .toggle input:checked + .toggle-track {
-    background: var(--srb-engine-google);
+    transition: background var(--srb-transition-base), box-shadow var(--srb-transition-base);
   }
   .toggle-thumb {
     position: absolute;
@@ -241,27 +231,42 @@
     border-radius: var(--srb-radius-full);
     background: var(--srb-surface);
     box-shadow: var(--srb-shadow-sm);
-    transition: transform 0.2s;
+    transition: transform var(--srb-transition-base);
   }
-  .toggle input:checked + .toggle-track .toggle-thumb {
-    transform: translateX(18px);
+  .toggle input:checked + .toggle-track { background: var(--srb-engine-google); }
+  .toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
+  .toggle input:focus-visible + .toggle-track { box-shadow: var(--srb-focus-ring); }
+
+  .backup-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
   }
 
-  .locale-selector {
+  .backup-card {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: var(--srb-space-sm);
-    margin-top: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-2xl);
+  }
+  .backup-content { min-width: 0; }
+  .backup-heading { margin-bottom: 0; }
+  .backup-status {
+    margin: var(--srb-space-sm) 0 0 46px;
+    color: var(--srb-success-text);
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
   }
   .backup-actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex: 0 0 auto;
+    align-items: center;
     gap: var(--srb-space-sm);
   }
   .backup-btn {
-    min-width: 120px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     min-height: var(--srb-button-height);
     padding: 10px 16px;
     border: 1px solid var(--srb-border);
@@ -271,9 +276,11 @@
     font: inherit;
     font-size: var(--srb-font-size-body);
     font-weight: var(--srb-weight-semibold);
+    white-space: nowrap;
     cursor: pointer;
-    transition: all var(--srb-transition-base);
+    transition: border-color var(--srb-transition-base), background var(--srb-transition-base), color var(--srb-transition-base);
   }
+  .backup-btn svg { width: 16px; height: 16px; }
   .backup-btn:hover {
     border-color: var(--srb-engine-google);
     background: var(--srb-success-light);
@@ -283,38 +290,23 @@
     background: var(--srb-engine-google);
     color: var(--srb-on-primary);
   }
-  .backup-btn.primary:hover {
-    background: var(--srb-primary-hover);
+  .backup-btn.primary:hover { background: var(--srb-primary-hover); }
+  .backup-input { display: none; }
+
+  @media (max-width: 820px) {
+    .settings-page { grid-template-columns: 1fr; }
+    .settings-card.wide { grid-column: auto; }
+    .backup-card { align-items: flex-start; flex-direction: column; }
   }
-  .backup-input {
-    display: none;
+
+  @media (max-width: 520px) {
+    .settings-card { padding: var(--srb-space-lg); }
+    .backup-actions { width: 100%; flex-wrap: wrap; }
   }
-  .backup-status {
-    margin: var(--srb-space-sm) 0 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
-  }
-  .locale-btn {
-    min-width: 112px;
-    padding: 10px 16px;
-    border: 2px solid var(--srb-border);
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-surface);
-    color: var(--srb-text);
-    font: inherit;
-    font-size: var(--srb-font-size-body);
-    font-weight: var(--srb-weight-semibold);
-    cursor: pointer;
-    transition: all var(--srb-transition-base);
-  }
-  .locale-btn:hover {
-    border-color: var(--srb-engine-google);
-    background: var(--srb-success-light);
-  }
-  .locale-btn.active {
-    border-color: var(--srb-engine-google);
-    background: var(--srb-engine-google);
-    color: var(--srb-on-primary);
+
+  @media (prefers-reduced-motion: reduce) {
+    .toggle-track,
+    .toggle-thumb,
+    .backup-btn { transition: none; }
   }
 </style>

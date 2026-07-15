@@ -86,8 +86,12 @@ async function loadMessages(locale: string): Promise<MessageMap> {
 export async function initLocale(storedLocale?: string): Promise<void> {
   const ui = chrome.i18n.getUILanguage();
   const fallback = ui.startsWith('zh') ? 'zh_CN' : 'en';
-  _locale = storedLocale && (storedLocale === 'zh_CN' || storedLocale === 'en') ? storedLocale : fallback;
-  _messages = await loadMessages(_locale);
+  const nextLocale = storedLocale && (storedLocale === 'zh_CN' || storedLocale === 'en')
+    ? storedLocale
+    : fallback;
+  if (_locale === nextLocale && _messages !== UNINIT) return;
+  _locale = nextLocale;
+  _messages = await loadMessages(nextLocale);
   _listeners.forEach((fn) => fn());
 }
 

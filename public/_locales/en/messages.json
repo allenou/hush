@@ -131,5 +131,6 @@
   "backupExported": { "message": "Backup file exported" },
   "backupImported": { "message": "Backup imported" },
   "backupImportFailed": { "message": "Import failed. Please choose a valid SearchKit backup file" },
-  "backupImportConfirm": { "message": "Importing this backup will replace current SearchKit data. Continue?" }
+  "backupImportConfirm": { "message": "Importing this backup will replace current SearchKit data. Continue?" },
+  "languageLabel": { "message": "Language" }
 }

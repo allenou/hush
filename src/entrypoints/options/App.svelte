@@ -49,6 +49,7 @@
   let searchHistory = $state<SearchRecord[]>([]);
   let recordSearchHistory = $state(true);
   let backupStatus = $state('');
+  let currentLocale = $state('zh_CN');
 
   function openAddDialog() {
     errorMsg = '';
@@ -65,6 +66,7 @@
   }
 
   async function handleLocaleChange(newLocale: string) {
+    currentLocale = newLocale;
     await setAppLocale(newLocale);
     await setStoredLocale(newLocale);
     setDocumentLocale(newLocale);
@@ -109,6 +111,7 @@
       await initLocale(storage.locale);
     }
     setDocumentLocale(getLocale());
+    currentLocale = getLocale();
     blockedItems = await getAllBlocked();
     enabled = storage.enabled;
     blockAds = storage.blockAds ?? false;
@@ -210,7 +213,13 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="app">
-  <AppNav {activeTab} {enabled} onTabChange={(tab) => activeTab = tab} />
+  <AppNav
+    {activeTab}
+    {enabled}
+    {currentLocale}
+    onTabChange={(tab) => activeTab = tab}
+    onLocaleChange={handleLocaleChange}
+  />
 
   <main class="main">
     {#if activeTab === 'dashboard'}
@@ -241,8 +250,6 @@
     {:else}
       <SettingsTab
         {blockAds} {blockSubdomains} {recordSearchHistory}
-        currentLocale={getLocale()}
-        onLocaleChange={handleLocaleChange}
         onToggleAdBlock={toggleAdBlock}
         onToggleSubdomain={toggleSubdomainBlock}
         onToggleRecordSearch={toggleRecordSearch}

@@ -2,6 +2,7 @@ import { mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
 import App from '@/entrypoints/popup/App.svelte';
+import { mountPopup } from '@/entrypoints/popup/bootstrap';
 import { formatLocalDateKey } from '@/utils/statistics';
 
 vi.mock('@/utils/chart', () => ({
@@ -19,6 +20,38 @@ describe('Popup', () => {
     component = undefined;
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it('renders the stored English locale on the first popup frame', async () => {
+    await fakeBrowser.storage.local.set({
+      blocker: {
+        locale: 'en',
+        blockCount: 0,
+        enabled: true,
+      },
+    });
+    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('zh-CN');
+    vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
+      totalBlockedLabel: '全部拦截',
+      todayLabel: '今日',
+    })[key] ?? key);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      json: async () => ({
+        totalBlockedLabel: { message: 'Total Blocked' },
+        todayLabel: { message: 'Today' },
+      }),
+    } as Response);
+
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = await mountPopup(target);
+
+    const summary = target.querySelector('.stats-grid')?.textContent ?? '';
+    expect(summary).toContain('Total Blocked');
+    expect(summary).toContain('Today');
+    expect(summary).not.toContain('全部拦截');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('keeps summary values in the DOM and renders one accessible trend chart', async () => {

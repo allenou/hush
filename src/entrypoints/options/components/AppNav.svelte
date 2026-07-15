@@ -6,11 +6,15 @@
   let {
     activeTab = 'dashboard' as TabId,
     enabled = true,
+    currentLocale = 'zh_CN',
     onTabChange,
+    onLocaleChange,
   } = $props<{
     activeTab: TabId;
     enabled?: boolean;
+    currentLocale?: string;
     onTabChange?: (tab: TabId) => void;
+    onLocaleChange?: (locale: string) => void;
   }>();
 
   let tabLabel = $derived<Record<TabId, string>>({
@@ -22,6 +26,10 @@
 
   function switchTab(tab: TabId) {
     onTabChange?.(tab);
+  }
+
+  function toggleLocale() {
+    onLocaleChange?.(currentLocale === 'zh_CN' ? 'en' : 'zh_CN');
   }
 </script>
 
@@ -47,6 +55,12 @@
       </div>
     </div>
     <div class="nav-right">
+      <button
+        class="locale-switcher"
+        aria-label={currentLocale === 'zh_CN' ? 'Switch to English' : '切换到中文'}
+        title={currentLocale === 'zh_CN' ? 'Switch to English' : '切换到中文'}
+        onclick={toggleLocale}
+      >{currentLocale === 'zh_CN' ? '中' : 'EN'}</button>
       <span class="rule-badge" class:disabled={!enabled}>
         <span class="badge-dot"></span>
         {t(enabled ? 'enabled' : 'disabled')}
@@ -119,6 +133,32 @@
   .nav-link:hover { color: var(--srb-text-strong); background: var(--srb-control-hover-bg); }
   .nav-link.active { color: var(--srb-text-strong); background: var(--srb-nav-active-bg); }
   .nav-right { display: flex; flex-shrink: 0; align-items: center; gap: 12px; }
+  .locale-switcher {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--srb-border);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-surface);
+    color: var(--srb-text-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: var(--srb-weight-bold);
+    cursor: pointer;
+    transition: border-color var(--srb-transition-base), background var(--srb-transition-base), color var(--srb-transition-base), box-shadow var(--srb-transition-base);
+  }
+  .locale-switcher:hover {
+    border-color: var(--srb-primary);
+    background: var(--srb-accent-soft);
+    color: var(--srb-primary);
+  }
+  .locale-switcher:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
+  }
   .rule-badge {
     display: flex;
     align-items: center;
@@ -152,12 +192,18 @@
   }
 
   @media (max-width: 560px) {
-    .nav-right { display: none; }
+    .rule-badge { display: none; }
+    .nav-right { gap: var(--srb-space-sm); }
   }
 
   @media (max-width: 420px) {
     .nav-left { gap: var(--srb-space-sm); }
     .brand-label { display: none; }
     .nav-link { padding-inline: 10px; }
+    .locale-switcher { flex-shrink: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .locale-switcher { transition: none; }
   }
 </style>

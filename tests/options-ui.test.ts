@@ -76,14 +76,22 @@ describe('Options UI', () => {
     expect(navSource).toContain('padding: 0 var(--srb-options-page-gutter);');
   });
 
-  it('keeps settings cards aligned to the shared options content width', () => {
+  it('keeps settings sections aligned to the shared content width', () => {
     expect(settingsSource).not.toContain('max-width: var(--srb-settings-width);');
-    expect(settingsSource).toMatch(/\.method-card\s*\{[^}]*width:\s*100%;/s);
+    expect(settingsSource).toMatch(/\.settings-page\s*\{[^}]*width:\s*100%;/s);
+    expect(settingsSource).toMatch(/\.settings-card\s*\{[^}]*background:\s*var\(--srb-surface\);/s);
+    expect(settingsSource).toContain('<section class="settings-card wide" aria-labelledby="history-heading">');
   });
 
-  it('keeps backup and language buttons at content width', () => {
+  it('keeps backup buttons at content width', () => {
     expect(settingsSource).not.toMatch(/\.backup-btn\s*\{[^}]*flex:\s*1;/s);
-    expect(settingsSource).not.toMatch(/\.locale-btn\s*\{[^}]*flex:\s*1;/s);
+  });
+
+  it('places the language switcher in the options header', () => {
+    expect(navSource).toContain('class="locale-switcher"');
+    expect(navSource).toContain("onLocaleChange?.(currentLocale === 'zh_CN' ? 'en' : 'zh_CN')");
+    expect(navSource).not.toContain('locale-icon');
+    expect(settingsSource).not.toContain('language-heading');
   });
 
   it('uses only a background for the active nav item', () => {

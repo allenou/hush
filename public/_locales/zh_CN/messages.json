@@ -131,5 +131,6 @@
   "backupExported": { "message": "备份文件已导出" },
   "backupImported": { "message": "备份已导入" },
   "backupImportFailed": { "message": "导入失败，请选择有效的 SearchKit 备份文件" },
-  "backupImportConfirm": { "message": "导入备份会替换当前 SearchKit 数据，是否继续？" }
+  "backupImportConfirm": { "message": "导入备份会替换当前 SearchKit 数据，是否继续？" },
+  "languageLabel": { "message": "语言" }
 }
