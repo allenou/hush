@@ -76,11 +76,11 @@
       datasets: [{
         label: t('weeklyTrend'),
         data: stats.map((item) => item.count),
-        borderColor: chartColor('--srb-primary', '#328f7e'),
-        backgroundColor: chartColor('--srb-chart-teal-soft', 'rgba(50, 143, 126, 0.18)'),
+        borderColor: chartColor('--srb-primary', '#4f5f9f'),
+        backgroundColor: chartColor('--srb-chart-teal-soft', 'rgba(79, 95, 159, 0.16)'),
         borderWidth: 2,
         fill: true,
-        pointBackgroundColor: chartColor('--srb-accent', '#9fdd60'),
+        pointBackgroundColor: chartColor('--srb-accent', '#78d5ca'),
         pointBorderColor: chartColor('--srb-surface', '#ffffff'),
         pointBorderWidth: 2,
         pointRadius: 3,
@@ -134,12 +134,13 @@
   <header>
     <div class="brand">
       <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 12 2 2 4-4" />
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor"/>
+          <path d="M7.5 7v10M16.5 7v10M7.5 12h7" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="17.5" cy="12" r="1.15" fill="#78d5ca"/>
         </svg>
       </span>
-      <span class="brand-text">SearchKit</span>
+      <span class="brand-text">Hush</span>
     </div>
     <div class="header-actions">
       {#if currentSiteAvailable === false}

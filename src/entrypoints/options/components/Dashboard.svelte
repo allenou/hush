@@ -88,20 +88,20 @@
   }
 
   let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
-    const teal = chartColor('--srb-primary', '#328f7e');
-    const fill = chartColor('--srb-chart-teal-soft', 'rgba(50, 143, 126, 0.18)');
+    const primary = chartColor('--srb-primary', '#4f5f9f');
+    const fill = chartColor('--srb-chart-teal-soft', 'rgba(79, 95, 159, 0.16)');
     const datasets = hasTypedTrendData ? [
       {
         label: t('adLabel'),
         data: dailySeries.map((item) => item.adCount ?? 0),
-        borderColor: teal,
-        backgroundColor: teal,
+        borderColor: primary,
+        backgroundColor: primary,
       },
       {
         label: t('targetDomainLabel'),
         data: dailySeries.map((item) => item.targetDomainCount ?? 0),
-        borderColor: chartColor('--srb-accent', '#9fdd60'),
-        backgroundColor: chartColor('--srb-accent', '#9fdd60'),
+        borderColor: chartColor('--srb-accent', '#78d5ca'),
+        backgroundColor: chartColor('--srb-accent', '#78d5ca'),
       },
       {
         label: t('subdomainTrendLabel'),
@@ -131,11 +131,11 @@
     })) : [{
       label: t('dailyBlocks'),
       data: dailySeries.map((item) => item.count),
-      borderColor: teal,
+      borderColor: primary,
       backgroundColor: fill,
       borderWidth: 2,
       fill: true,
-      pointBackgroundColor: teal,
+      pointBackgroundColor: primary,
       pointBorderColor: chartColor('--srb-surface', '#ffffff'),
       pointBorderWidth: 2,
       pointRadius: rangeDays === 7 ? 4 : rangeDays === 30 ? 2 : 0,
@@ -189,8 +189,8 @@
       datasets: [{
         data: [breakdown.ads, breakdown.domains, breakdown.other],
         backgroundColor: [
-          chartColor('--srb-primary', '#328f7e'),
-          chartColor('--srb-accent', '#9fdd60'),
+          chartColor('--srb-primary', '#4f5f9f'),
+          chartColor('--srb-accent', '#78d5ca'),
           chartColor('--srb-chart-purple', '#898beb'),
         ],
         borderColor: chartColor('--srb-surface', '#ffffff'),
@@ -221,9 +221,9 @@
         label: t('topDomains'),
         data: visibleTopDomains.map((item) => item.count),
         backgroundColor: visibleTopDomains.map((_, index) => [
-          chartColor('--srb-primary', '#328f7e'),
+          chartColor('--srb-primary', '#4f5f9f'),
           chartColor('--srb-chart-purple', '#898beb'),
-          chartColor('--srb-accent', '#9fdd60'),
+          chartColor('--srb-accent', '#78d5ca'),
         ][index % 3]),
         borderRadius: 7,
         borderSkipped: false,

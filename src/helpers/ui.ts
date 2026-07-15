@@ -26,16 +26,16 @@ const POPUP_GAP = 12;
 const FLOATING_UI_CSS = `
 :host {
   --srb-surface: #ffffff;
-  --srb-text: #18211d;
-  --srb-border: #dde6e1;
-  --srb-border-light: #e2e9e4;
-  --srb-accent: #059669;
-  --srb-accent-light: #ecfdf5;
-  --srb-accent-mid: #d1fae5;
-  --srb-shadow-sm: 0 1px 4px rgba(24, 33, 29, 0.08);
-  --srb-shadow-md: 0 4px 16px rgba(24, 33, 29, 0.12);
-  --srb-shadow-lg: 0 8px 24px rgba(24, 33, 29, 0.14);
-  --srb-shadow-accent: 0 10px 28px rgba(5, 150, 105, 0.25);
+  --srb-text: #11183f;
+  --srb-border: #e7e9f1;
+  --srb-border-light: #eef0f5;
+  --srb-accent: #4f5f9f;
+  --srb-accent-light: #e9f8f6;
+  --srb-accent-mid: #d4f0ec;
+  --srb-shadow-sm: 0 1px 4px rgba(17, 24, 63, 0.07);
+  --srb-shadow-md: 0 4px 16px rgba(17, 24, 63, 0.1);
+  --srb-shadow-lg: 0 8px 24px rgba(17, 24, 63, 0.12);
+  --srb-shadow-accent: 0 10px 28px rgba(79, 95, 159, 0.2);
   --srb-radius-sm: 6px;
   --srb-radius-md: 10px;
   --srb-font: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;

@@ -61,7 +61,7 @@ export type BlockRecordType = 'ad' | 'domain' | 'url' | 'selector';
 export type DomainBlockKind = 'target' | 'subdomain';
 
 export interface StorageBackup {
-  app: 'SearchKit';
+  app: 'Hush';
   version: 1;
   exportedAt: string;
   data: ExtensionStorage;
@@ -170,7 +170,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export async function createStorageBackup(): Promise<StorageBackup> {
   return {
-    app: 'SearchKit',
+    app: 'Hush',
     version: 1,
     exportedAt: new Date().toISOString(),
     data: await get(),
@@ -233,11 +233,11 @@ function mutateStorage<T>(
 
 export async function restoreStorageBackup(value: unknown): Promise<ExtensionStorage> {
   if (!isRecord(value)
-    || value.app !== 'SearchKit'
+    || (value.app !== 'Hush' && value.app !== 'SearchKit')
     || value.version !== 1
     || !isRecord(value.data)
     || !isValidBackupData(value.data)) {
-    throw new Error('Invalid SearchKit backup');
+    throw new Error('Invalid Hush backup');
   }
 
   const normalized = normalizeStorage(value.data as Partial<ExtensionStorage>);

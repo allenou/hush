@@ -1,0 +1,38 @@
+---
+interface Props {
+  lang: 'en' | 'zh-CN';
+}
+
+const { lang } = Astro.props;
+const isZh = lang === 'zh-CN';
+---
+
+<div class="search-demo" aria-label={isZh ? 'Hush 搜索结果标记演示' : 'Hush search result marking preview'}>
+  <div class="browser-bar">
+    <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="address-bar">search.example.com/results?q=quiet+search</div>
+  </div>
+  <div class="search-page">
+    <div class="demo-search"><span aria-hidden="true">⌕</span>{isZh ? '如何获得更干净的搜索结果' : 'how to get cleaner search results'}</div>
+    <article class="demo-result">
+      <span class="result-source">helpful.example</span>
+      <h3>{isZh ? '一份真正有用的搜索指南' : 'A genuinely useful guide to better search'}</h3>
+      <p>{isZh ? '清晰的步骤、可靠的来源，以及你真正需要的信息。' : 'Clear steps, reliable sources, and the information you actually need.'}</p>
+      <button class="mark-control" type="button" aria-label={isZh ? '标记此结果' : 'Mark this result'}>＋</button>
+    </article>
+    <article class="demo-result covered">
+      <div class="cover-content">
+        <span class="shield-small" aria-hidden="true">✓</span>
+        <div>
+          <strong>{isZh ? '已由 Hush 标记' : 'Marked by Hush'}</strong>
+          <span>{isZh ? '域名规则 · 随时恢复' : 'Domain rule · Recover anytime'}</span>
+        </div>
+        <button type="button">{isZh ? '显示' : 'Show'}</button>
+      </div>
+    </article>
+    <article class="demo-result compact">
+      <span class="result-source">reference.example</span>
+      <h3>{isZh ? '简洁、相关的参考资料' : 'A concise and relevant reference'}</h3>
+    </article>
+  </div>
+</div>

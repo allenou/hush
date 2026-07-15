@@ -777,7 +777,7 @@ describe('local backup and restore', () => {
 
     const backup = await createStorageBackup();
 
-    expect(backup.app).toBe('SearchKit');
+    expect(backup.app).toBe('Hush');
     expect(backup.version).toBe(1);
     expect(new Date(backup.exportedAt).toString()).not.toBe('Invalid Date');
     expect(backup.data.enabled).toBe(false);
@@ -803,9 +803,16 @@ describe('local backup and restore', () => {
     expect((await get()).urls).toEqual(['before.com']);
   });
 
+  it('restores legacy SearchKit backups after the Hush rename', async () => {
+    const backup = await createStorageBackup();
+    const restored = await restoreStorageBackup({ ...backup, app: 'SearchKit' });
+
+    expect(restored).toEqual(backup.data);
+  });
+
   it('rejects invalid backup data', async () => {
     await expect(restoreStorageBackup({ app: 'Other', version: 1, data: {} }))
-      .rejects.toThrow('Invalid SearchKit backup');
+      .rejects.toThrow('Invalid Hush backup');
   });
 
   it.each([
@@ -816,10 +823,10 @@ describe('local backup and restore', () => {
     { customEngines: [{ name: 'Broken', hostname: 'example.com' }] },
   ])('rejects malformed backup data %#', async (data) => {
     await expect(restoreStorageBackup({
-      app: 'SearchKit',
+      app: 'Hush',
       version: 1,
       data,
-    })).rejects.toThrow('Invalid SearchKit backup');
+    })).rejects.toThrow('Invalid Hush backup');
   });
 });
 

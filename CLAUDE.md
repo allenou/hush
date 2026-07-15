@@ -1,4 +1,4 @@
-# SearchKit — Claude Code 行为指令
+# Hush — Claude Code 行为指令
 
 本项目的行为规则和项目上下文见 `AGENTS.md`。
 

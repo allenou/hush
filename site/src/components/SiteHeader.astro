@@ -1,0 +1,32 @@
+---
+import { sitePath } from '../utils/paths';
+
+interface Props {
+  lang: 'en' | 'zh-CN';
+  page: 'home' | 'privacy';
+}
+
+const { lang, page } = Astro.props;
+const isZh = lang === 'zh-CN';
+const homeHref = isZh ? sitePath('zh/') : sitePath();
+const privacyHref = isZh ? sitePath('zh/privacy/') : sitePath('privacy/');
+const switchHref = page === 'privacy'
+  ? (isZh ? sitePath('privacy/') : sitePath('zh/privacy/'))
+  : (isZh ? sitePath() : sitePath('zh/'));
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href={homeHref} aria-label={isZh ? 'Hush 首页' : 'Hush home'}>
+      <span class="brand-mark"><img src={sitePath('icon.svg')} alt="" /></span>
+      <span>Hush</span>
+    </a>
+    <nav aria-label={isZh ? '主导航' : 'Main navigation'}>
+      <a href={homeHref}>{isZh ? '首页' : 'Home'}</a>
+      <a class:list={{ active: page === 'privacy' }} href={privacyHref}>{isZh ? '隐私' : 'Privacy'}</a>
+      <a class="language-link" href={switchHref} hreflang={isZh ? 'en' : 'zh-CN'}>
+        {isZh ? 'English' : '中文'}
+      </a>
+    </nav>
+  </div>
+</header>

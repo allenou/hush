@@ -1,6 +1,6 @@
 {
-  "extName": { "message": "SearchKit" },
-  "extDescription": { "message": "Search result management - block, mark ads, track search history" },
+  "extName": { "message": "Hush" },
+  "extDescription": { "message": "Silence unwanted search results, mark ads, and keep your search history local" },
   "tabDashboard": { "message": "Dashboard" },
   "tabRules": { "message": "Rules" },
   "tabSearch": { "message": "Search History" },
@@ -131,8 +131,8 @@
   "backupImport": { "message": "Import backup" },
   "backupExported": { "message": "Backup file exported" },
   "backupImported": { "message": "Backup imported" },
-  "backupImportFailed": { "message": "Import failed. Please choose a valid SearchKit backup file" },
-  "backupImportConfirm": { "message": "Importing this backup will replace current SearchKit data. Continue?" },
+  "backupImportFailed": { "message": "Import failed. Please choose a valid Hush backup file" },
+  "backupImportConfirm": { "message": "Importing this backup will replace current Hush data. Continue?" },
   "languageLabel": { "message": "Language" },
   "targetDomainLabel": { "message": "Target domain" },
   "subdomainTrendLabel": { "message": "Subdomain" }

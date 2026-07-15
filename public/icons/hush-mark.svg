@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">Hush</title>
+  <desc id="desc">A quiet H mark whose crossbar fades into a soft teal dot.</desc>
+  <rect x="8" y="8" width="84" height="84" rx="25" fill="#4F5F9F"/>
+  <path d="M34 29V71M66 29V71M34 50H59" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="70" cy="50" r="6" fill="#78D5CA"/>
+</svg>

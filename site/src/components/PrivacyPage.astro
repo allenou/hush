@@ -1,0 +1,69 @@
+---
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+
+interface Props {
+  lang: 'en' | 'zh-CN';
+}
+
+const { lang } = Astro.props;
+const isZh = lang === 'zh-CN';
+---
+
+<SiteHeader lang={lang} page="privacy" />
+
+<main class="policy-main">
+  <div class="shell policy-intro">
+    <div class="policy-heading">
+      <h1>{isZh ? '隐私政策' : 'Privacy Policy'}</h1>
+      <p class="policy-date">{isZh ? '最后更新：2026 年 7 月' : 'Last updated: July 2026'}</p>
+    </div>
+  </div>
+
+  <div class="shell policy-layout">
+    <article class="policy-article">
+      <div class="local-first">
+        <span class="shield-small" aria-hidden="true">✓</span>
+        <p>{isZh ? 'Hush 在你的设备上本地处理扩展数据。我们不会上传、出售、分享或向 Hush 及任何第三方传输这些数据。' : 'Hush processes extension data locally on your device. It does not upload, sell, share, or transmit this data to Hush or any third party.'}</p>
+      </div>
+
+      <section id="data">
+        <h2>{isZh ? '本地处理的数据' : 'Data processed locally'}</h2>
+        <p>{isZh ? 'Hush 可能在 chrome.storage.local 中保存以下数据：' : 'Hush may store the following data in chrome.storage.local:'}</p>
+        <ul>
+          <li>{isZh ? '你主动选择标记的域名、完整 URL 和 CSS 选择器。' : 'Domains, full URLs, and CSS selectors that you choose to mark.'}</li>
+          <li>{isZh ? '启用搜索历史后保存的搜索词、搜索引擎名称和时间戳。' : 'Search queries, search engine names, and timestamps when search history is enabled.'}</li>
+          <li>{isZh ? '标记统计、偏好设置、语言选择和支持的搜索引擎检测设置。' : 'Marking statistics, preferences, language selection, and supported-engine detection settings.'}</li>
+          <li>{isZh ? '当你明确导出 Hush 备份文件时，其中包含的相同本地数据。' : 'The same local data when you explicitly export a Hush backup file.'}</li>
+        </ul>
+        <p>{isZh ? '你可以随时关闭搜索历史，并在扩展设置中删除已有记录。' : 'Search history can be disabled at any time and existing history can be deleted from the extension settings.'}</p>
+      </section>
+
+      <section id="processing">
+        <h2>{isZh ? '搜索页面处理' : 'Search page processing'}</h2>
+        <p>{isZh ? '在明确支持的 Google、百度、Bing 和 360 搜索域名上，Hush 会读取 DOM 结构、可见的广告标签和结果链接，以识别并标记搜索结果。所有处理均在浏览器内完成，页面内容和搜索词不会被传输。' : 'On the explicitly supported Google, Baidu, Bing, and 360 Search domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.'}</p>
+        <p>{isZh ? 'Hush 不会在扩展清单所声明的精确搜索引擎域名之外注入或扫描页面。' : 'Hush does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest.'}</p>
+      </section>
+
+      <section id="permissions">
+        <h2>{isZh ? '权限说明' : 'Permissions'}</h2>
+        <dl class="permission-list">
+          <div><dt>storage</dt><dd>{isZh ? '在本地保存规则、搜索历史、统计数据、备份和偏好设置。' : 'Saves rules, search history, statistics, backups, and preferences locally.'}</dd></div>
+          <div><dt>{isZh ? '支持的搜索引擎主机访问权限' : 'Supported search-engine host access'}</dt><dd>{isZh ? '仅在声明的 Google、百度、Bing 和 360 搜索根域名与 www 域名上运行结果标记脚本。' : 'Runs the result-marking Content Script only on the declared Google, Baidu, Bing, and 360 Search root and www domains.'}</dd></div>
+        </dl>
+      </section>
+
+      <section id="changes">
+        <h2>{isZh ? '政策变更' : 'Changes'}</h2>
+        <p>{isZh ? '本政策的更新会发布在此页面，并修订页面顶部的更新日期。' : 'Updates to this policy will be reflected on this page with a revised date.'}</p>
+      </section>
+
+      <section id="contact">
+        <h2>{isZh ? '联系方式' : 'Contact'}</h2>
+        <p>{isZh ? '如有隐私或支持相关问题，请联系' : 'For privacy or support questions, contact'} <a href="mailto:jskindler@outlook.com">jskindler@outlook.com</a>.</p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<SiteFooter lang={lang} />

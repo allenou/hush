@@ -87,7 +87,7 @@
   async function handleExportBackup() {
     const backup = await createStorageBackup();
     const date = backup.exportedAt.slice(0, 10);
-    downloadTextFile(`searchkit-backup-${date}.json`, JSON.stringify(backup, null, 2));
+    downloadTextFile(`hush-backup-${date}.json`, JSON.stringify(backup, null, 2));
     backupStatus = t('backupExported');
   }
 

@@ -13,7 +13,7 @@
 ## 文件结构
 
 ```
-search-result-blocker/
+hush/
 ├── entrypoints/
 │   ├── background.ts              # Service Worker
 │   ├── content.ts                 # 搜索结果页屏蔽脚本
@@ -51,7 +51,7 @@ search-result-blocker/
 
 ```json
 {
-  "name": "search-result-blocker",
+  "name": "hush",
   "private": true,
   "version": "0.2.0",
   "type": "module",

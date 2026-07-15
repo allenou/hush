@@ -3,24 +3,24 @@ const STYLE_ID = 'srb-styles';
 const CSS = `
 /* ===== Design Tokens ===== */
 :root {
-  --srb-primary: #0a5532;
-  --srb-primary-hover: #087654;
-  --srb-primary-active: #066244;
-  --srb-primary-action: #0a7a55;
-  --srb-accent: #059669;
-  --srb-accent-hover: #047857;
-  --srb-accent-light: #ecfdf5;
-  --srb-accent-mid: #d1fae5;
-  --srb-accent-ring: #6ee7b7;
+  --srb-primary: #4f5f9f;
+  --srb-primary-hover: #3f4e89;
+  --srb-primary-active: #344175;
+  --srb-primary-action: #465691;
+  --srb-accent: #78d5ca;
+  --srb-accent-hover: #60c4b8;
+  --srb-accent-light: #e9f8f6;
+  --srb-accent-mid: #d4f0ec;
+  --srb-accent-ring: #9de1d9;
   --srb-on-primary: #ffffff;
   --srb-surface: #ffffff;
-  --srb-bg: #f4f7f5;
-  --srb-text: #18211d;
-  --srb-text-strong: #1a1a2e;
-  --srb-text-secondary: #566861;
-  --srb-text-muted: #9aa8a1;
-  --srb-border: #dde6e1;
-  --srb-border-light: #e2e9e4;
+  --srb-bg: #eef1f8;
+  --srb-text: #11183f;
+  --srb-text-strong: #11183f;
+  --srb-text-secondary: #646981;
+  --srb-text-muted: #6b6f84;
+  --srb-border: #e7e9f1;
+  --srb-border-light: #eef0f5;
   --srb-danger: #c43d3d;
   --srb-danger-strong: #991b1b;
   --srb-danger-light: #fef2f2;
@@ -30,17 +30,17 @@ const CSS = `
   --srb-warning: #92400e;
   --srb-warning-light: #fffbeb;
   --srb-success: #10b981;
-  --srb-accent-border: rgba(5, 150, 105, 0.3);
-  --srb-accent-border-soft: rgba(5, 150, 105, 0.12);
-  --srb-accent-highlight: rgba(5, 150, 105, 0.06);
+  --srb-accent-border: rgba(120, 213, 202, 0.34);
+  --srb-accent-border-soft: rgba(120, 213, 202, 0.2);
+  --srb-accent-highlight: rgba(120, 213, 202, 0.12);
   --srb-overlay-soft: rgba(0, 0, 0, 0.25);
   --srb-on-dark-border: rgba(255, 255, 255, 0.3);
   --srb-on-dark-hover-bg: rgba(255, 255, 255, 0.1);
-  --srb-shadow-xs: 0 1px 3px rgba(24, 33, 29, 0.06);
-  --srb-shadow-sm: 0 1px 4px rgba(24, 33, 29, 0.08);
-  --srb-shadow-md: 0 4px 16px rgba(24, 33, 29, 0.12);
-  --srb-shadow-lg: 0 8px 24px rgba(24, 33, 29, 0.14);
-  --srb-shadow-accent: 0 10px 28px rgba(5, 150, 105, 0.25);
+  --srb-shadow-xs: 0 1px 3px rgba(17, 24, 63, 0.05);
+  --srb-shadow-sm: 0 1px 4px rgba(17, 24, 63, 0.07);
+  --srb-shadow-md: 0 4px 16px rgba(17, 24, 63, 0.1);
+  --srb-shadow-lg: 0 8px 24px rgba(17, 24, 63, 0.12);
+  --srb-shadow-accent: 0 10px 28px rgba(120, 213, 202, 0.2);
   --srb-mask-danger: repeating-linear-gradient(
     -45deg,
     rgba(220, 38, 38, 0.06),

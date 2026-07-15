@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { sitePath } from '../utils/paths';
+---
+
+<BaseLayout title="Page not found — Hush" description="The requested page could not be found." lang="en" canonicalPath="/404.html">
+  <main class="not-found shell">
+    <span>404</span>
+    <h1>Page not found.</h1>
+    <p>The page may have moved, or the address may be incorrect.</p>
+    <a class="button primary" href={sitePath()}>Return home</a>
+  </main>
+</BaseLayout>

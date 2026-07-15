@@ -1,0 +1,101 @@
+---
+import SearchDemo from './SearchDemo.astro';
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+import { sitePath } from '../utils/paths';
+
+interface Props {
+  lang: 'en' | 'zh-CN';
+}
+
+const { lang } = Astro.props;
+const isZh = lang === 'zh-CN';
+
+const features = isZh
+  ? [
+      ['域名与 URL 规则', '标记整个网站，或只处理某一个具体页面。'],
+      ['元素选择器', '直接选择页面元素，创建仅对当前站点生效的规则。'],
+      ['广告标记', '识别并柔和覆盖搜索结果中的广告与赞助内容。'],
+      ['搜索历史', '可选地保存搜索记录，也可随时关闭或清空。'],
+    ]
+  : [
+      ['Domain & URL rules', 'Mark a whole website or target one specific page.'],
+      ['Element picker', 'Select a page element and create a rule scoped to that site.'],
+      ['Ad marking', 'Identify and softly cover advertising and sponsored results.'],
+      ['Search history', 'Optionally keep recent searches, or disable and clear them anytime.'],
+    ];
+
+const steps = isZh
+  ? [['选择结果', '从支持的搜索页面选择一个结果。'], ['创建本地规则', '选择域名、URL 或页面元素作为匹配范围。'], ['随时恢复', '标记不会破坏页面结构，可快速显示或删除规则。']]
+  : [['Choose a result', 'Pick a result on a supported search page.'], ['Create a local rule', 'Target its domain, URL, or a selected page element.'], ['Recover anytime', 'Reveal the result or remove the rule without breaking the page.']];
+---
+
+<SiteHeader lang={lang} page="home" />
+
+<main>
+  <section class="hero">
+    <div class="shell hero-grid">
+      <div class="hero-copy">
+        <h1>{isZh ? '让搜索少一点噪音。' : 'Search with less noise.'}</h1>
+        <p>{isZh ? '标记不需要的搜索结果和广告，在本地管理规则，并让所有数据留在你的设备上。' : 'Mark unwanted results and ads, manage local rules, and keep everything on your device.'}</p>
+        <div class="hero-actions">
+          <a class="button primary" href="https://github.com/allenou/hush/releases">{isZh ? '获取 Hush' : 'Get Hush'}</a>
+          <a class="button secondary" href={isZh ? sitePath('zh/privacy/') : sitePath('privacy/')}>{isZh ? '查看隐私政策' : 'View privacy policy'}</a>
+        </div>
+        <p class="hero-note">{isZh ? '首个版本支持 Google、百度、Bing 与 360 搜索。' : 'The first release supports Google, Baidu, Bing, and 360 Search.'}</p>
+      </div>
+      <SearchDemo lang={lang} />
+    </div>
+  </section>
+
+  <section class="feature-section" id="features">
+    <div class="shell">
+      <div class="section-heading">
+        <h2>{isZh ? '更干净的搜索体验。' : 'A cleaner search experience.'}</h2>
+        <p>{isZh ? '只处理你明确选择的内容，其余搜索页面保持原样。' : 'Act only on what you choose while leaving the rest of the search page intact.'}</p>
+      </div>
+      <div class="feature-rail">
+        {features.map(([title, description], index) => (
+          <article class="feature-item">
+            <span class="feature-number">0{index + 1}</span>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="workflow-section">
+    <div class="shell workflow-grid">
+      <div class="workflow-heading">
+        <h2>{isZh ? '三步获得安静的搜索。' : 'Three steps to a quieter search.'}</h2>
+        <p>{isZh ? '无需账户，无需云端同步，也无需改变你的搜索习惯。' : 'No account, no cloud sync, and no need to change how you search.'}</p>
+      </div>
+      <ol class="steps">
+        {steps.map(([title, description], index) => (
+          <li>
+            <span>{index + 1}</span>
+            <div><h3>{title}</h3><p>{description}</p></div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="privacy-band">
+    <div class="shell privacy-grid">
+      <div class="privacy-symbol" aria-hidden="true">
+        <span class="shield-outline">✓</span>
+        <span class="local-orbit"></span>
+      </div>
+      <div>
+        <h2>{isZh ? '你的搜索，只属于你。' : 'Your searches stay yours.'}</h2>
+        <p>{isZh ? 'Hush 仅在支持的搜索页面本地处理内容，并将扩展数据保存在 chrome.storage.local 中。不会向 Hush 或任何第三方传输页面内容、搜索词或扩展数据。' : 'Hush processes supported search pages locally and stores extension data in chrome.storage.local. It does not transmit page content, search queries, or extension data to Hush or any third party.'}</p>
+        <a class="text-link" href={isZh ? sitePath('zh/privacy/') : sitePath('privacy/')}>{isZh ? '阅读隐私政策' : 'Read our privacy policy'} <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<SiteFooter lang={lang} />

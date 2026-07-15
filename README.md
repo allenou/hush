@@ -1,6 +1,6 @@
-# SearchKit
+# Hush
 
-SearchKit is a local-first Chrome extension for visually marking unwanted search results, advertising results, URLs, domains, and selected page elements.
+Hush is a local-first Chrome extension for visually marking unwanted search results, advertising results, URLs, domains, and selected page elements.
 
 The first release supports the root and `www` domains for Google, Baidu, Bing, and 360 Search. Rules, optional search history, statistics, preferences, and backups remain on the user's device.
 

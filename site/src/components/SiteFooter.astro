@@ -1,0 +1,31 @@
+---
+import { sitePath } from '../utils/paths';
+
+interface Props {
+  lang: 'en' | 'zh-CN';
+}
+
+const { lang } = Astro.props;
+const isZh = lang === 'zh-CN';
+---
+
+<footer class="site-footer">
+  <div class="shell footer-inner">
+    <div>
+      <a class="brand footer-brand" href={isZh ? sitePath('zh/') : sitePath()}>
+        <span class="brand-mark"><img src={sitePath('icon.svg')} alt="" /></span>
+        <span>Hush</span>
+      </a>
+      <p>{isZh ? '让搜索结果更安静、更可控。' : 'A quieter, more controllable search experience.'}</p>
+    </div>
+    <div class="footer-links">
+      <a href={isZh ? sitePath('zh/privacy/') : sitePath('privacy/')}>{isZh ? '隐私政策' : 'Privacy policy'}</a>
+      <a href="mailto:jskindler@outlook.com">{isZh ? '联系支持' : 'Contact support'}</a>
+      <a href="https://github.com/allenou/hush">GitHub</a>
+    </div>
+  </div>
+  <div class="shell footer-bottom">
+    <span>© {new Date().getFullYear()} Hush</span>
+    <span>{isZh ? '所有数据均保存在本地。' : 'All extension data stays local.'}</span>
+  </div>
+</footer>

@@ -1,11 +1,11 @@
-# SearchKit - Chrome Web Store Listing
+# Hush - Chrome Web Store Listing
 
 ## Short Description (132 chars max)
 Mark unwanted search results and ads, manage local rules, and optionally keep search history on four major search engines.
 
 ## Full Description
 
-SearchKit helps you visually mark and cover unwanted results while keeping the original search page layout recoverable.
+Hush helps you visually mark and cover unwanted results while keeping the original search page layout recoverable.
 
 **Features:**
 
@@ -29,11 +29,11 @@ Regional, mobile, and other subdomains are not included in the first release.
 **How to use:**
 
 1. Open a supported search results page.
-2. Use the SearchKit shield button or a result-level action to create a domain, URL, or element rule.
+2. Use the Hush floating button or a result-level action to create a domain, URL, or element rule.
 3. Matching results are visually covered and labeled, with nearby controls for recovery.
 4. Manage rules, search history, settings, statistics, and backups from the options page.
 
-All processing and storage stay on your device. SearchKit does not transmit page content, search queries, or extension data.
+All processing and storage stay on your device. Hush does not transmit page content, search queries, or extension data.
 
 ## Categories
 

@@ -37,11 +37,12 @@
   <div class="nav-inner">
     <div class="nav-left">
       <div class="nav-brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" opacity="0.2"/>
-          <path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor"/>
+          <path d="M7.5 7v10M16.5 7v10M7.5 12h7" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="17.5" cy="12" r="1.15" fill="#78d5ca"/>
         </svg>
-        <span class="brand-label">SearchKit</span>
+        <span class="brand-label">Hush</span>
       </div>
       <div class="nav-links">
         {#each TABS as id}

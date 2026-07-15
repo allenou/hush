@@ -1,6 +1,6 @@
 {
-  "extName": { "message": "SearchKit" },
-  "extDescription": { "message": "搜索结果管理工具：屏蔽指定域名、标记广告、记录搜索历史" },
+  "extName": { "message": "Hush" },
+  "extDescription": { "message": "让不想看到的搜索结果安静下来，并在本地管理广告标记与搜索历史" },
   "tabDashboard": { "message": "概览" },
   "tabRules": { "message": "规则" },
   "tabSearch": { "message": "搜索记录" },
@@ -131,8 +131,8 @@
   "backupImport": { "message": "导入备份" },
   "backupExported": { "message": "备份文件已导出" },
   "backupImported": { "message": "备份已导入" },
-  "backupImportFailed": { "message": "导入失败，请选择有效的 SearchKit 备份文件" },
-  "backupImportConfirm": { "message": "导入备份会替换当前 SearchKit 数据，是否继续？" },
+  "backupImportFailed": { "message": "导入失败，请选择有效的 Hush 备份文件" },
+  "backupImportConfirm": { "message": "导入备份会替换当前 Hush 数据，是否继续？" },
   "languageLabel": { "message": "语言" },
   "targetDomainLabel": { "message": "目标域名" },
   "subdomainTrendLabel": { "message": "子域名" }

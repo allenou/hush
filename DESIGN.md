@@ -1,24 +1,24 @@
 ---
 version: "alpha"
-name: "SearchKit"
-description: "A compact trust-and-control design system for the SearchKit Chrome extension."
+name: "Hush"
+description: "A compact trust-and-control design system for the Hush Chrome extension."
 colors:
-  primary: "#0A5532"
-  primary-hover: "#087654"
-  primary-action: "#0A7A55"
-  accent: "#059669"
-  accent-light: "#ECFDF5"
-  accent-ring: "#6EE7B7"
+  primary: "#4F5F9F"
+  primary-hover: "#3F4E89"
+  primary-action: "#465691"
+  accent: "#78D5CA"
+  accent-light: "#E9F8F6"
+  accent-ring: "#9DE1D9"
   surface: "#FFFFFF"
-  background: "#F4F7F5"
-  popup-background: "#F8F8FA"
-  table-head: "#F5F8F6"
-  text: "#18211D"
+  background: "#EEF1F8"
+  popup-background: "#F6F7FB"
+  table-head: "#F6F7FB"
+  text: "#11183F"
   text-strong: "#1A1A2E"
-  text-secondary: "#566861"
-  text-muted: "#9AA8A1"
-  border: "#DDE6E1"
-  border-light: "#E2E9E4"
+  text-secondary: "#646981"
+  text-muted: "#6B6F84"
+  border: "#E7E9F1"
+  border-light: "#EEF0F5"
   danger: "#C43D3D"
   danger-strong: "#991B1B"
   danger-light: "#FEF2F2"
@@ -217,17 +217,17 @@ components:
 
 ## Overview
 
-SearchKit 的界面气质是“可信、克制、可操作”的搜索结果管理工具。它不是夸张的网络安全视觉，也不是营销型落地页；它应该像一个安静的浏览器控制台，让用户快速理解当前状态、规则数量、拦截趋势，并能放心地添加或撤销屏蔽规则。
+Hush 的界面气质是“可信、克制、可操作”的搜索结果管理工具。它不是夸张的网络安全视觉，也不是营销型落地页；它应该像一个安静的浏览器控制台，让用户快速理解当前状态、规则数量、拦截趋势，并能放心地添加或撤销屏蔽规则。
 
-设计核心是深绿品牌栏、浅绿灰工作台背景、白色操作面板、红色屏蔽反馈。绿色代表启用、信任和可恢复控制；红色只用于已屏蔽、危险、删除或广告标记。所有界面都应优先服务高频扫描、比较和管理，而不是展示性装饰。
+设计核心是雾蓝灰工作台、白色操作面板、克制的靛蓝品牌色与柔和青绿反馈。靛蓝代表安静、边界和可靠控制；青绿只用于逐渐消隐的品牌记忆点与轻量反馈；红色用于已屏蔽、危险、删除或广告标记。所有界面都应优先服务高频扫描、比较和管理，而不是展示性装饰。
 
 ## Colors
 
-主色使用 `primary` 深绿，集中出现在顶部导航、Popup header、关键数字和品牌图标中。操作色使用 `primary-action` 或 `accent`，用于添加、确认、开关启用、图表柱和页面内浮动操作。`primary-action` 是适合作为白字按钮背景的可访问版本；若沿用代码中的较亮绿色，应避免承载小号白字。浅绿色 `accent-light` 用于轻量反馈、标签背景和选中状态，避免大面积高饱和色块。
+主色使用 `primary` 靛蓝，集中出现在顶部导航、Popup header、关键数字和品牌图标中。操作色使用 `primary-action`，用于添加、确认、开关启用、图表柱和页面内浮动操作。柔和青绿 `accent` 对应 H 标志逐渐安静下来的末端，只用于图表辅助序列、轻量反馈和小面积强调。`accent-light` 用于标签背景和选中状态，避免大面积高饱和色块。
 
 中性色承担主要界面结构：`background` 是 options 页的工作台底色，`popup-background` 是 popup 的紧凑底色，`surface` 是表格、面板和弹窗的承载面。文本优先使用 `text`，辅助说明使用 `text-secondary`，空状态、图标和时间信息使用 `text-muted`。
 
-`danger` 与 `danger-strong` 用于删除、屏蔽、广告和错误提示；不要把红色用于普通强调。`warning` 保留给需要用户注意但不是错误的状态。搜索引擎品牌色只出现在搜索历史的引擎标识或菜单点位中，不能替代 SearchKit 的主色系统。
+`danger` 与 `danger-strong` 用于删除、屏蔽、广告和错误提示；不要把红色用于普通强调。`warning` 保留给需要用户注意但不是错误的状态。搜索引擎品牌色只出现在搜索历史的引擎标识或菜单点位中，不能替代 Hush 的主色系统。
 
 ## Typography
 
@@ -247,7 +247,7 @@ Content script 注入的元素使用 `srb-` 前缀，尽量采用绝对定位或
 
 ## Elevation & Depth
 
-深度层级要轻。普通面板使用 1px 绿色灰边框和很轻的阴影；下拉菜单、浮层和注入 popup 使用中等阴影；确认弹窗和 toast 才使用最大阴影。阴影颜色应带一点 `text` 的绿黑倾向，避免纯黑重阴影让工具界面显得笨重。
+深度层级要轻。普通面板使用 1px 蓝灰边框和很轻的阴影；下拉菜单、浮层和注入 popup 使用中等阴影；确认弹窗和 toast 才使用最大阴影。阴影颜色应带一点 `text` 的深蓝倾向，避免纯黑重阴影让工具界面显得笨重。
 
 不要用离散光斑、漂浮渐变球或厚重玻璃效果作为背景。允许在 dashboard hero 或图表柱上使用低对比渐变，但它必须服务状态表达，不能成为装饰主体。
 
@@ -259,17 +259,17 @@ Content script 注入的元素使用 `srb-` 前缀，尽量采用绝对定位或
 
 ## Components
 
-导航栏使用深绿底和白色文字，当前 tab 用半透明白色底表达选中。品牌标识应简洁，优先使用内联 SVG 或图标库中的盾牌/勾选符号，保持 22px 左右的稳定尺寸。
+导航栏使用白色承载面和蓝灰分隔线，当前 tab 用低透明度靛蓝底表达选中。品牌标识统一使用带青绿消隐点的 Hush H，保持 22px 左右的稳定尺寸。
 
 按钮分为三类：主按钮用于添加、确认和启用；幽灵按钮用于删除、打开、切换等低风险操作；图标按钮用于关闭、设置、下拉和结果页快捷操作。主按钮悬停时变深，焦点态使用 `accent-ring` 的 2px 或 3px 外环。
 
 表格是规则和历史的主表达方式。表头使用浅背景、12px 粗体大写标签，行高保持紧凑，hover 只使用极浅背景。URL 和选择器必须使用等宽字体并支持断行。
 
-Toggle 代表二元设置，默认宽 44px、高 26px；Popup 内可用 38px、高 22px 的紧凑版本。开启态为绿色，关闭态为中性灰。开关不要用文字按钮替代。
+Toggle 代表二元设置，默认宽 44px、高 26px；Popup 内可用 38px、高 22px 的紧凑版本。开启态为靛蓝，关闭态为中性灰。开关不要用文字按钮替代。
 
-图表保持轻量：7 天趋势使用窄柱状图，颜色从 `primary-action` 到 `accent-ring`；零值柱使用 `border-light`。分布条用红色表示广告、绿色表示域名规则、灰绿色表示其他。
+图表保持轻量：趋势和主要序列使用 `primary-action`，辅助序列使用 `accent` 或紫色；零值和网格使用 `border-light`。分布条用红色表示广告、青绿色表示域名规则、蓝灰色表示其他。
 
-弹窗由半透明深绿黑遮罩和白色 dialog 组成，宽度约 460px，内边距 24px。关闭按钮是 32px 图标按钮。错误反馈使用红色文字，提示反馈使用辅助文本色。
+弹窗由半透明深蓝遮罩和白色 dialog 组成，宽度约 460px，内边距 24px。关闭按钮是 32px 图标按钮。错误反馈使用红色文字，提示反馈使用辅助文本色。
 
 搜索结果页注入态有三种主要元素：白底圆形屏蔽按钮、红色已屏蔽 badge、斜向浅红遮罩。已屏蔽态应该像文档被标注或盖章，而不是把结果完全抹掉；撤销入口应靠近 badge，保证可恢复感。
 
@@ -278,7 +278,7 @@ Toggle 代表二元设置，默认宽 44px、高 26px；Popup 内可用 38px、�
 Do:
 
 - 保持界面安静、密集、可扫描，让用户能快速管理规则和历史。
-- 使用绿色表达启用和确认，使用红色表达屏蔽、删除和错误。
+- 使用靛蓝表达启用和确认，使用红色表达屏蔽、删除和错误。
 - 为所有固定格式控件设置稳定尺寸，包括 nav、toggle、图表柱、表格列、icon button 和 popup 宽度。
 - 在长域名、URL、选择器上使用等宽字体和断行策略。
 - 让 content script 注入元素独立、可识别、可撤销，并始终使用 `srb-` 前缀。

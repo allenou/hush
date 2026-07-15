@@ -42,7 +42,7 @@
 ## 项目结构
 
 ```
-search-result-blocker/
+hush/
 ├── entrypoints/
 │   ├── background.ts              # Service Worker
 │   ├── content.ts                 # 搜索结果页屏蔽脚本
