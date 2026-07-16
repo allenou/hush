@@ -20,7 +20,14 @@ const chinesePath = canonicalPath.startsWith('/zh/')
   : `/zh${canonicalPath === '/' ? '/' : canonicalPath}`;
 const englishUrl = new URL(sitePath(englishPath), Astro.site);
 const chineseUrl = new URL(sitePath(chinesePath), Astro.site);
-const isPreview = Boolean(process.env.CF_PAGES_URL && !process.env.SITE_URL);
+const cloudflareHostname = process.env.CF_PAGES_URL
+  ? new URL(process.env.CF_PAGES_URL).hostname
+  : '';
+const isPreview = Boolean(
+  !process.env.SITE_URL
+  && cloudflareHostname.endsWith('.pages.dev')
+  && cloudflareHostname.split('.').length > 3
+);
 const isHome = canonicalPath === '/' || canonicalPath === '/zh/';
 const structuredData = {
   '@context': 'https://schema.org',

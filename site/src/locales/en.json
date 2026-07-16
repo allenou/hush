@@ -32,8 +32,7 @@
     "hero": {
       "title": "Search with less noise.",
       "description": "Mark unwanted results and ads, manage local rules, and keep everything on your device.",
-      "getHush": "Get Hush",
-      "privacy": "View privacy policy",
+      "getHush": "GitHub",
       "note": "The first release supports Google, Baidu, Bing, and 360 Search."
     },
     "features": {
@@ -83,7 +82,7 @@
       "items": [
         "Domains, full URLs, and CSS selectors that you choose to mark.",
         "Search queries, search engine names, and timestamps when search history is enabled.",
-        "Marking statistics, preferences, language selection, and supported-engine detection settings.",
+        "Marking statistics, preferences, language selection, ad-marking settings, and subdomain-matching settings.",
         "The same local data when you explicitly export a Hush backup file."
       ],
       "outro": "Search history can be disabled at any time and existing history can be deleted from the extension settings."
@@ -103,6 +102,12 @@
     "changes": {
       "title": "Changes",
       "description": "Updates to this policy will be reflected on this page with a revised date."
+    },
+    "contact": {
+      "title": "Contact",
+      "description": "For privacy or support questions, contact",
+      "email": "jskindler@outlook.com",
+      "punctuation": "."
     }
   },
   "changelog": {
@@ -119,7 +124,7 @@
           "Display a clear badge over marked results and restore them directly from the page.",
           "Detect and mark advertising and sponsored results with an independent settings toggle.",
           "Support Google, Baidu, Bing, and 360 Search out of the box.",
-          "Automatically detect result structures and save configurations for custom search engines.",
+          "Automatically detect result structures on supported search pages as their layouts change.",
           "Keep marking active across dynamically loaded results and search-page navigation.",
           "Quickly block domains, full links, or selected page elements from the browser's native context menu.",
           "Optionally save search history and clear individual records or the full history at any time.",

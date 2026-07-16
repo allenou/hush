@@ -57,6 +57,19 @@ describe('product copy', () => {
     expect(privacyCopy).toContain('search queries');
     expect(privacyCopy).toContain('processed locally');
     expect(privacyCopy).toContain('DOM');
+    expect(privacyCopy).toContain('`contextMenus`');
+    expect(privacyCopy).toContain('jskindler@outlook.com');
+    expect(privacyCopy).not.toContain('supported-engine detection settings');
+  });
+
+  it('keeps the website release notes within the shipped feature set', () => {
+    const englishSiteCopy = readFileSync(resolve(process.cwd(), 'site/src/locales/en.json'), 'utf8');
+    const chineseSiteCopy = readFileSync(resolve(process.cwd(), 'site/src/locales/zh-CN.json'), 'utf8');
+
+    expect(englishSiteCopy).not.toContain('save configurations for custom search engines');
+    expect(chineseSiteCopy).not.toContain('保存自定义搜索引擎配置');
+    expect(englishSiteCopy).toContain('"getHush": "GitHub"');
+    expect(chineseSiteCopy).toContain('"getHush": "GitHub"');
   });
 
   it('removes copy already expressed by the interface', () => {

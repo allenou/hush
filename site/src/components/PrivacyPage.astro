@@ -57,6 +57,11 @@ const messages = getTranslations(lang).privacy;
         <p>{messages.changes.description}</p>
       </section>
 
+      <section id="contact">
+        <h2>{messages.contact.title}</h2>
+        <p>{messages.contact.description} <a href={`mailto:${messages.contact.email}`}>{messages.contact.email}</a>{messages.contact.punctuation}</p>
+      </section>
+
     </article>
   </div>
 </main>

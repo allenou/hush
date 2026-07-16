@@ -26,9 +26,8 @@ Deploy the site with Cloudflare Pages using these settings:
 - Build output directory: `dist`
 - Node.js version: read from `.nvmrc`
 
-Cloudflare provides `CF_PAGES_URL` automatically. When using a custom domain, add a `SITE_URL` environment variable containing the canonical origin, for example `https://hush.example.com` (without a trailing slash). This keeps canonical and alternate-language URLs stable across deployments.
+Cloudflare provides `CF_PAGES_URL` automatically. The production `*.pages.dev` deployment is indexable, while hash-prefixed preview deployments receive `noindex, nofollow` metadata automatically.
 
-`SITE_URL` should only be configured for the production deployment. Cloudflare preview
-deployments without it receive `noindex, nofollow` metadata automatically.
+When using a custom domain, add a production-only `SITE_URL` environment variable containing the canonical origin, for example `https://hush.example.com` (without a trailing slash). This keeps canonical and alternate-language URLs stable across deployments. Do not expose `SITE_URL` to preview deployments, otherwise they will publish the production canonical URL and become indexable.
 
 No Astro Cloudflare adapter or Wrangler configuration is required because the site is built as static files.

@@ -36,9 +36,6 @@
 <div class="settings-page">
   <section class="settings-card wide" aria-labelledby="matching-heading">
     <div class="card-heading">
-      <span class="heading-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="14" cy="7" r="2.2" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="17" r="2.2" stroke="currentColor" stroke-width="1.6"/></svg>
-      </span>
       <h2 id="matching-heading">{t('matchingMethod')}</h2>
     </div>
 
@@ -69,9 +66,6 @@
 
   <section class="settings-card wide" aria-labelledby="history-heading">
     <div class="card-heading">
-      <span class="heading-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4 4M8.5 11h5M11 8.5V13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
       <h2 id="history-heading">{t('searchRecordLabel')}</h2>
     </div>
 
@@ -90,9 +84,6 @@
   <section class="settings-card wide backup-card" aria-labelledby="backup-heading">
     <div class="backup-content">
       <div class="card-heading backup-heading">
-        <span class="heading-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19V4.5Z" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/><path d="M8 4.5V10h7V4.5M8.5 20.5v-6h7v6" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/></svg>
-        </span>
         <div>
           <h2 id="backup-heading">{t('backupLabel')}</h2>
           <p>{t('backupDesc')}</p>
@@ -105,13 +96,13 @@
     </div>
 
     <div class="backup-actions">
-      <button class="backup-btn primary" onclick={() => void onExportBackup?.()}>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 18.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        {t('backupExport')}
-      </button>
       <button class="backup-btn" onclick={() => backupInput?.click()}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V5m0 0 4 4m-4-4L8 9M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         {t('backupImport')}
+      </button>
+      <button class="backup-btn primary" onclick={() => void onExportBackup?.()}>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 18.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {t('backupExport')}
       </button>
       <input
         bind:this={backupInput}
@@ -143,20 +134,8 @@
   .card-heading {
     display: flex;
     align-items: center;
-    gap: var(--srb-space-md);
     margin-bottom: var(--srb-space-lg);
   }
-  .heading-icon {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-accent-soft);
-    color: var(--srb-primary);
-  }
-  .heading-icon svg { width: 19px; height: 19px; }
   .card-heading h2 {
     margin: 0;
     color: var(--srb-text-strong);
@@ -251,7 +230,7 @@
   .backup-content { min-width: 0; }
   .backup-heading { margin-bottom: 0; }
   .backup-status {
-    margin: var(--srb-space-sm) 0 0 46px;
+    margin: var(--srb-space-sm) 0 0;
     color: var(--srb-success-text);
     font-size: var(--srb-font-size-sm);
     font-weight: var(--srb-weight-semibold);

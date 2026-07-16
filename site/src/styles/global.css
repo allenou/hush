@@ -227,6 +227,16 @@ button {
   transform: translateY(-2px);
 }
 
+.github-button {
+  gap: 9px;
+}
+
+.github-button svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
 .button.primary {
   background: var(--color-primary);
   box-shadow: 0 12px 30px rgba(79, 95, 159, 0.22);

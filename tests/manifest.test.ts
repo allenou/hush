@@ -17,4 +17,11 @@ describe('Manifest permissions', () => {
     expect(configSource).toContain("permissions: ['storage', 'contextMenus']");
     expect(configSource).not.toContain("'activeTab'");
   });
+
+  it('provides the standard toolbar and extension-management icon sizes', () => {
+    expect(configSource).toContain("'16': '/icons/icon-16.png'");
+    expect(configSource).toContain("'32': '/icons/icon-32.png'");
+    expect(configSource).toContain("'48': '/icons/icon-48.png'");
+    expect(configSource).toContain("'128': '/icons/icon-128.png'");
+  });
 });
