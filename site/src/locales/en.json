@@ -1,0 +1,131 @@
+{
+  "meta": {
+    "home": {
+      "title": "Hush — Search with less noise",
+      "description": "Mark unwanted search results and ads, manage local rules, and keep everything on your device."
+    },
+    "privacy": {
+      "title": "Privacy Policy — Hush",
+      "description": "Learn how Hush processes extension data locally and protects your search privacy."
+    },
+    "changelog": {
+      "title": "Changelog — Hush",
+      "description": "Follow the development of Hush and see what has changed."
+    }
+  },
+  "header": {
+    "homeAriaLabel": "Hush home",
+    "navigationAriaLabel": "Main navigation",
+    "home": "Home",
+    "changelog": "Changelog",
+    "privacy": "Privacy",
+    "switchLanguage": "中",
+    "switchLanguageAriaLabel": "Switch to Chinese"
+  },
+  "footer": {
+    "tagline": "A quieter, more controllable search experience.",
+    "privacy": "Privacy policy",
+    "changelog": "Changelog",
+    "localData": "All extension data stays local."
+  },
+  "home": {
+    "hero": {
+      "title": "Search with less noise.",
+      "description": "Mark unwanted results and ads, manage local rules, and keep everything on your device.",
+      "getHush": "Get Hush",
+      "privacy": "View privacy policy",
+      "note": "The first release supports Google, Baidu, Bing, and 360 Search."
+    },
+    "features": {
+      "title": "A cleaner search experience.",
+      "description": "Act only on what you choose while leaving the rest of the search page intact.",
+      "items": [
+        { "title": "Domain & URL rules", "description": "Mark a whole website or target one specific page." },
+        { "title": "Element picker", "description": "Select a page element and create a rule scoped to that site." },
+        { "title": "Ad marking", "description": "Identify and softly cover advertising and sponsored results." },
+        { "title": "Search history", "description": "Optionally keep recent searches, or disable and clear them anytime." }
+      ]
+    },
+    "workflow": {
+      "title": "Three steps to a quieter search.",
+      "description": "No account, no cloud sync, and no need to change how you search.",
+      "steps": [
+        { "title": "Choose a result", "description": "Pick a result on a supported search page." },
+        { "title": "Create a local rule", "description": "Target its domain, URL, or a selected page element." },
+        { "title": "Recover anytime", "description": "Reveal the result or remove the rule without breaking the page." }
+      ]
+    },
+    "privacy": {
+      "title": "Your searches stay yours.",
+      "description": "Hush processes supported search pages locally and stores extension data in chrome.storage.local. It does not transmit page content, search queries, or extension data to Hush or any third party.",
+      "link": "Read our privacy policy"
+    }
+  },
+  "searchDemo": {
+    "ariaLabel": "Hush search result marking preview",
+    "query": "how to get cleaner search results",
+    "primaryTitle": "A genuinely useful guide to better search",
+    "primaryDescription": "Clear steps, reliable sources, and the information you actually need.",
+    "markAriaLabel": "Mark this result",
+    "marked": "Marked by Hush",
+    "rule": "Domain rule · Recover anytime",
+    "show": "Show",
+    "secondaryTitle": "A concise and relevant reference"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: July 2026",
+    "summary": "Hush processes extension data locally on your device. It does not upload, sell, share, or transmit this data to Hush or any third party.",
+    "data": {
+      "title": "Data processed locally",
+      "intro": "Hush may store the following data in chrome.storage.local:",
+      "items": [
+        "Domains, full URLs, and CSS selectors that you choose to mark.",
+        "Search queries, search engine names, and timestamps when search history is enabled.",
+        "Marking statistics, preferences, language selection, and supported-engine detection settings.",
+        "The same local data when you explicitly export a Hush backup file."
+      ],
+      "outro": "Search history can be disabled at any time and existing history can be deleted from the extension settings."
+    },
+    "processing": {
+      "title": "Search page processing",
+      "description": "On the explicitly supported Google, Baidu, Bing, and 360 Search domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.",
+      "scope": "Hush does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest."
+    },
+    "permissions": {
+      "title": "Permissions",
+      "storage": "Saves rules, search history, statistics, backups, and preferences locally.",
+      "hostTitle": "Supported search-engine host access",
+      "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, and 360 Search root and www domains."
+    },
+    "changes": {
+      "title": "Changes",
+      "description": "Updates to this policy will be reflected on this page with a revised date."
+    }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Notable changes in each Hush release.",
+    "entries": [
+      {
+        "version": "v1.0.0",
+        "title": "Initial release",
+        "items": [
+          "Mark an entire domain or only one specific URL from a search result.",
+          "Select page elements visually and create site-scoped CSS selector rules.",
+          "Choose whether domain rules also apply to subdomains.",
+          "Display a clear badge over marked results and restore them directly from the page.",
+          "Detect and mark advertising and sponsored results with an independent settings toggle.",
+          "Support Google, Baidu, Bing, and 360 Search out of the box.",
+          "Automatically detect result structures and save configurations for custom search engines.",
+          "Keep marking active across dynamically loaded results and search-page navigation.",
+          "Use a draggable floating control that snaps to the nearest screen edge.",
+          "Optionally save search history and clear individual records or the full history at any time.",
+          "Show marking statistics in the dashboard and the current page count in the browser tab badge.",
+          "Store all rules and preferences locally, with JSON backup and restore support.",
+          "Provide English and Simplified Chinese interfaces with runtime language switching."
+        ]
+      }
+    ]
+  }
+}

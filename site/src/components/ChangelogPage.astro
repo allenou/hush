@@ -1,0 +1,39 @@
+---
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+import { getTranslations, type Locale } from '../utils/i18n';
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const messages = getTranslations(lang).changelog;
+---
+
+<SiteHeader lang={lang} page="changelog" />
+
+<main class="changelog-main">
+  <div class="shell changelog-heading">
+    <h1>{messages.title}</h1>
+    <p>{messages.description}</p>
+  </div>
+
+  <div class="shell changelog-list">
+    {messages.entries.map((entry) => (
+      <article class="changelog-entry">
+        <div class="changelog-meta">
+          <span>{entry.version}</span>
+        </div>
+        <div class="changelog-content">
+          <h2>{entry.title}</h2>
+          <ul>
+            {entry.items.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      </article>
+    ))}
+  </div>
+</main>
+
+<SiteFooter lang={lang} />

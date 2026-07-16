@@ -1,16 +1,51 @@
 ---
 import '../styles/global.css';
+import type { Locale } from '../utils/i18n';
 import { sitePath } from '../utils/paths';
 
 interface Props {
   title: string;
   description: string;
-  lang: 'en' | 'zh-CN';
+  lang: Locale;
   canonicalPath: string;
 }
 
 const { title, description, lang, canonicalPath } = Astro.props;
 const canonical = new URL(sitePath(canonicalPath), Astro.site);
+const englishPath = canonicalPath.startsWith('/zh/')
+  ? canonicalPath.slice(3) || '/'
+  : canonicalPath;
+const chinesePath = canonicalPath.startsWith('/zh/')
+  ? canonicalPath
+  : `/zh${canonicalPath === '/' ? '/' : canonicalPath}`;
+const englishUrl = new URL(sitePath(englishPath), Astro.site);
+const chineseUrl = new URL(sitePath(chinesePath), Astro.site);
+const isPreview = Boolean(process.env.CF_PAGES_URL && !process.env.SITE_URL);
+const isHome = canonicalPath === '/' || canonicalPath === '/zh/';
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      name: 'Hush',
+      url: new URL(sitePath(), Astro.site).href,
+      inLanguage: ['en', 'zh-CN'],
+    },
+    ...(isHome ? [{
+      '@type': 'SoftwareApplication',
+      name: 'Hush',
+      applicationCategory: 'BrowserApplication',
+      operatingSystem: 'Google Chrome',
+      description,
+      url: canonical.href,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+    }] : []),
+  ],
+};
 ---
 
 <!doctype html>
@@ -19,16 +54,15 @@ const canonical = new URL(sitePath(canonicalPath), Astro.site);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="robots" content={isPreview ? 'noindex, nofollow' : 'index, follow'} />
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" type="image/svg+xml" href={sitePath('icon.svg')} />
     <link rel="canonical" href={canonical} />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Hush" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
-    <meta name="twitter:card" content="summary" />
+    <link rel="alternate" hreflang="en" href={englishUrl} />
+    <link rel="alternate" hreflang="zh-CN" href={chineseUrl} />
+    <link rel="alternate" hreflang="x-default" href={englishUrl} />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(structuredData)} />
     <title>{title}</title>
   </head>
   <body>

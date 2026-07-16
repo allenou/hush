@@ -1,13 +1,17 @@
 ---
 import HomePage from '../components/HomePage.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getTranslations } from '../utils/i18n';
+
+const locale = 'en';
+const meta = getTranslations(locale).meta.home;
 ---
 
 <BaseLayout
-  title="Hush — Search with less noise"
-  description="Mark unwanted search results and ads, manage local rules, and keep everything on your device."
-  lang="en"
+  title={meta.title}
+  description={meta.description}
+  lang={locale}
   canonicalPath="/"
 >
-  <HomePage lang="en" />
+  <HomePage lang={locale} />
 </BaseLayout>

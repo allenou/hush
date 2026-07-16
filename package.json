@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
+    "site": "npm --prefix site run dev",
     "build": "wxt build",
     "zip": "wxt zip",
     "wxt-prepare": "wxt prepare",

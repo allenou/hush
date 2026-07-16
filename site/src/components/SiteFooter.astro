@@ -1,12 +1,14 @@
 ---
+import { getTranslations, type Locale } from '../utils/i18n';
 import { sitePath } from '../utils/paths';
 
 interface Props {
-  lang: 'en' | 'zh-CN';
+  lang: Locale;
 }
 
 const { lang } = Astro.props;
 const isZh = lang === 'zh-CN';
+const messages = getTranslations(lang).footer;
 ---
 
 <footer class="site-footer">
@@ -16,16 +18,16 @@ const isZh = lang === 'zh-CN';
         <span class="brand-mark"><img src={sitePath('icon.svg')} alt="" /></span>
         <span>Hush</span>
       </a>
-      <p>{isZh ? '让搜索结果更安静、更可控。' : 'A quieter, more controllable search experience.'}</p>
+      <p>{messages.tagline}</p>
     </div>
     <div class="footer-links">
-      <a href={isZh ? sitePath('zh/privacy/') : sitePath('privacy/')}>{isZh ? '隐私政策' : 'Privacy policy'}</a>
-      <a href="mailto:jskindler@outlook.com">{isZh ? '联系支持' : 'Contact support'}</a>
+      <a href={isZh ? sitePath('zh/privacy/') : sitePath('privacy/')}>{messages.privacy}</a>
+      <a href={isZh ? sitePath('zh/changelog/') : sitePath('changelog/')}>{messages.changelog}</a>
       <a href="https://github.com/allenou/hush">GitHub</a>
     </div>
   </div>
   <div class="shell footer-bottom">
     <span>© {new Date().getFullYear()} Hush</span>
-    <span>{isZh ? '所有数据均保存在本地。' : 'All extension data stays local.'}</span>
+    <span>{messages.localData}</span>
   </div>
 </footer>

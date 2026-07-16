@@ -1,17 +1,17 @@
 ---
-import PrivacyPage from '../../../components/PrivacyPage.astro';
+import ChangelogPage from '../../../components/ChangelogPage.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getTranslations } from '../../../utils/i18n';
 
 const locale = 'zh-CN';
-const meta = getTranslations(locale).meta.privacy;
+const meta = getTranslations(locale).meta.changelog;
 ---
 
 <BaseLayout
   title={meta.title}
   description={meta.description}
   lang={locale}
-  canonicalPath="/zh/privacy/"
+  canonicalPath="/zh/changelog/"
 >
-  <PrivacyPage lang={locale} />
+  <ChangelogPage lang={locale} />
 </BaseLayout>
