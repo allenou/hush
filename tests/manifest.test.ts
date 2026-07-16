@@ -13,8 +13,8 @@ describe('Manifest permissions', () => {
     expect(contentSource).not.toContain("'<all_urls>'");
   });
 
-  it('keeps only the storage permission', () => {
-    expect(configSource).toContain("permissions: ['storage']");
+  it('requests only storage and context menu permissions', () => {
+    expect(configSource).toContain("permissions: ['storage', 'contextMenus']");
     expect(configSource).not.toContain("'activeTab'");
   });
 });

@@ -1,6 +1,7 @@
 {
   "extName": { "message": "Hush" },
   "extDescription": { "message": "Silence unwanted search results, mark ads, and keep your search history local" },
+  "contextMenuTitle": { "message": "Hush - Block unwanted pages" },
   "tabDashboard": { "message": "Dashboard" },
   "tabRules": { "message": "Rules" },
   "tabSearch": { "message": "Search History" },

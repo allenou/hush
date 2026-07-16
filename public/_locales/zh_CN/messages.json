@@ -1,6 +1,7 @@
 {
   "extName": { "message": "Hush" },
   "extDescription": { "message": "让不想看到的搜索结果安静下来，并在本地管理广告标记与搜索历史" },
+  "contextMenuTitle": { "message": "Hush - 屏蔽不想看的网页" },
   "tabDashboard": { "message": "概览" },
   "tabRules": { "message": "规则" },
   "tabSearch": { "message": "搜索记录" },

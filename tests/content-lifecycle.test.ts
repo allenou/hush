@@ -2,17 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { clearAllMarkers } from '@/helpers/ad-blocker';
-import { getFloatingActionIds } from '@/helpers/ui';
 
 describe('marking lifecycle', () => {
   it('checks for page-world SPA URL changes during result mutations', () => {
     const contentSource = readFileSync(resolve(process.cwd(), 'src/entrypoints/content.ts'), 'utf8');
     expect(contentSource).toContain('handleUrlChange(window.location.href)');
-  });
-
-  it('keeps only the enable action in the floating menu while marking is disabled', () => {
-    expect(getFloatingActionIds(false)).toEqual(['enable']);
-    expect(getFloatingActionIds(true)).toEqual(['pick', 'domain', 'url']);
   });
 
   it('removes markers, scan attributes, and the collapse bar', () => {

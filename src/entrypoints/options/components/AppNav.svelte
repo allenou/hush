@@ -37,11 +37,7 @@
   <div class="nav-inner">
     <div class="nav-left">
       <div class="nav-brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor"/>
-          <path d="M7.5 7v10M16.5 7v10M7.5 12h7" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
-          <circle cx="17.5" cy="12" r="1.15" fill="#78d5ca"/>
-        </svg>
+        <img class="brand-icon" src="/icons/icon-32.png" alt="" aria-hidden="true" />
         <span class="brand-label">Hush</span>
       </div>
       <div class="nav-links">
@@ -106,6 +102,11 @@
     font-size: 15px;
     font-weight: var(--srb-weight-bold);
     letter-spacing: -0.01em;
+  }
+  .brand-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
   }
   .brand-label { color: var(--srb-text-strong); white-space: nowrap; }
   .nav-links {

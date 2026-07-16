@@ -7,7 +7,7 @@ import { injectStyles } from '@/utils/styles';
 import { activatePicker, deactivatePicker } from '@/helpers/picker';
 import { getHostname, extractResultUrl } from '@/utils/url';
 import { autoDetectSearchResults } from '@/helpers/detector';
-import { injectFloatingBtn, injectCollapseBar, setFloatingMarkingEnabled } from '@/helpers/ui';
+import { injectCollapseBar } from '@/helpers/ui';
 import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
@@ -94,13 +94,11 @@ export default defineContentScript({
       currentEngine = null;
       autoDetectRetries = 0;
       clearAllMarkers({ preserveCounts: true });
-      setFloatingMarkingEnabled(false);
     }
 
     function startMarking(): void {
       if (!isEnabled) return;
       injectStyles();
-      setFloatingMarkingEnabled(true);
       autoDetectRetries = 0;
       pushState();
       scanBlockedDomains();
@@ -215,12 +213,15 @@ export default defineContentScript({
       } else {
         await initLocale();
       }
-      setFloatingMarkingEnabled(storage.enabled);
-      await injectFloatingBtn(ctx);
       pushState();
       recordCurrentSearch();
       ctx.addEventListener(document, 'srb-start-picker', () => {
         if (isEnabled) activatePicker(getHostname);
+      });
+      chrome.runtime.onMessage.addListener((message) => {
+        if (message?.type === 'srb-start-picker' && isEnabled) {
+          activatePicker(getHostname);
+        }
       });
       if (isEnabled) startMarking();
     }

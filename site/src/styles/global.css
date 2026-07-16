@@ -98,10 +98,6 @@ button {
   width: 36px;
   height: 36px;
   place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: 11px;
-  box-shadow: 0 4px 12px rgba(17, 24, 63, 0.09);
 }
 
 .brand-mark img {
@@ -339,7 +335,7 @@ button {
 .demo-result {
   position: relative;
   margin-top: 22px;
-  padding: 0 34px 0 6px;
+  padding: 0 74px 0 6px;
 }
 
 .result-source {
@@ -367,14 +363,16 @@ button {
   top: 14px;
   right: 0;
   display: grid;
-  width: 28px;
-  height: 28px;
+  min-width: 58px;
+  height: 27px;
+  padding: 0 10px;
   place-items: center;
   border: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--color-primary);
   color: white;
-  font-size: 18px;
+  font-size: 10px;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -581,7 +579,7 @@ button {
 .primary-result {
   width: 76%;
   margin: 34px 0 0 8px;
-  padding-right: 30px;
+  padding-right: 78px;
 }
 
 .primary-result > span {
@@ -607,13 +605,15 @@ button {
   position: absolute;
   top: 14px;
   right: 0;
-  width: 30px;
+  min-width: 62px;
   height: 30px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--color-primary);
   color: white;
-  font-size: 18px;
+  font-size: 10px;
+  font-weight: 720;
 }
 
 .rule-popover {
@@ -622,12 +622,21 @@ button {
   top: 48px;
   right: -92px;
   display: grid;
-  width: 160px;
+  width: 188px;
   padding: 7px;
   border: 1px solid var(--color-border);
   border-radius: 13px;
   background: white;
   box-shadow: 0 18px 42px rgba(17, 24, 63, 0.16);
+}
+
+.rule-popover > strong,
+.journey-menu > strong {
+  padding: 7px 10px 9px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .rule-popover b,
@@ -769,7 +778,7 @@ button {
 
 .journey-result {
   position: relative;
-  padding: 32px 54px 28px 24px;
+  padding: 32px 92px 28px 24px;
 }
 
 .journey-result small {
@@ -790,13 +799,15 @@ button {
   position: absolute;
   top: 54px;
   right: 18px;
-  width: 30px;
+  min-width: 64px;
   height: 30px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--color-primary);
   color: white;
-  font-size: 18px;
+  font-size: 10px;
+  font-weight: 720;
 }
 
 .journey-menu {

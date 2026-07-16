@@ -12,6 +12,13 @@ interface TriggerableEvent {
 
 beforeEach(() => {
   fakeBrowser.reset();
+  vi.spyOn(fakeBrowser.contextMenus, 'removeAll').mockImplementation((callback) => {
+    callback?.();
+    return Promise.resolve();
+  });
+  vi.spyOn(fakeBrowser.contextMenus, 'create').mockImplementation(() => 'srb-test-menu');
+  vi.spyOn(fakeBrowser.contextMenus.onClicked, 'addListener').mockImplementation(() => {});
+  vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => key);
   document.body.innerHTML = '';
 });
 

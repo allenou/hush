@@ -13,7 +13,7 @@ let handlers: {
   onKey: ((e: KeyboardEvent) => void) | null;
 } | null = null;
 
-const PICKER_EXCLUDE_SELECTOR = 'srb-floating-ui, #srb-float-btn, #srb-float-popup, .srb-picker-confirm-overlay, .srb-undo-toast';
+const PICKER_EXCLUDE_SELECTOR = '.srb-picker-confirm-overlay, .srb-undo-toast';
 
 // ========== Selector Generation ==========
 

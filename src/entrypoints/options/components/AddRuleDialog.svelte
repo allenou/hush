@@ -156,7 +156,7 @@
     transition: background var(--srb-transition-base);
   }
   .btn-primary:hover {
-    background: var(--srb-primary-hover);
+    background: var(--srb-primary-action-hover);
   }
   .btn-primary:active {
     background: var(--srb-primary-active);

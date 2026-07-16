@@ -88,8 +88,8 @@
   }
 
   let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
-    const primary = chartColor('--srb-primary', '#4f5f9f');
-    const fill = chartColor('--srb-chart-teal-soft', 'rgba(79, 95, 159, 0.16)');
+    const primary = chartColor('--srb-chart-blue', '#3b82f6');
+    const fill = chartColor('--srb-chart-fill', 'rgba(59, 130, 246, 0.12)');
     const datasets = hasTypedTrendData ? [
       {
         label: t('adLabel'),
@@ -100,14 +100,14 @@
       {
         label: t('targetDomainLabel'),
         data: dailySeries.map((item) => item.targetDomainCount ?? 0),
-        borderColor: chartColor('--srb-accent', '#78d5ca'),
-        backgroundColor: chartColor('--srb-accent', '#78d5ca'),
+        borderColor: chartColor('--srb-chart-purple', '#a855f7'),
+        backgroundColor: chartColor('--srb-chart-purple', '#a855f7'),
       },
       {
         label: t('subdomainTrendLabel'),
         data: dailySeries.map((item) => item.subdomainCount ?? 0),
-        borderColor: chartColor('--srb-chart-purple', '#898beb'),
-        backgroundColor: chartColor('--srb-chart-purple', '#898beb'),
+        borderColor: chartColor('--srb-chart-pink', '#ec4899'),
+        backgroundColor: chartColor('--srb-chart-pink', '#ec4899'),
       },
       {
         label: t('otherLabel'),
@@ -118,8 +118,8 @@
             - (item.targetDomainCount ?? 0)
             - (item.subdomainCount ?? 0),
         )),
-        borderColor: chartColor('--srb-text-muted', '#8b8f9c'),
-        backgroundColor: chartColor('--srb-text-muted', '#8b8f9c'),
+        borderColor: chartColor('--srb-chart-orange', '#f97316'),
+        backgroundColor: chartColor('--srb-chart-orange', '#f97316'),
       },
     ].map((dataset) => ({
       ...dataset,
@@ -189,9 +189,9 @@
       datasets: [{
         data: [breakdown.ads, breakdown.domains, breakdown.other],
         backgroundColor: [
-          chartColor('--srb-primary', '#4f5f9f'),
-          chartColor('--srb-accent', '#78d5ca'),
-          chartColor('--srb-chart-purple', '#898beb'),
+          chartColor('--srb-chart-blue', '#3b82f6'),
+          chartColor('--srb-chart-purple', '#a855f7'),
+          chartColor('--srb-chart-pink', '#ec4899'),
         ],
         borderColor: chartColor('--srb-surface', '#ffffff'),
         borderWidth: 3,
@@ -221,9 +221,9 @@
         label: t('topDomains'),
         data: visibleTopDomains.map((item) => item.count),
         backgroundColor: visibleTopDomains.map((_, index) => [
-          chartColor('--srb-primary', '#4f5f9f'),
-          chartColor('--srb-chart-purple', '#898beb'),
-          chartColor('--srb-accent', '#78d5ca'),
+          chartColor('--srb-chart-blue', '#3b82f6'),
+          chartColor('--srb-chart-purple', '#a855f7'),
+          chartColor('--srb-chart-pink', '#ec4899'),
         ][index % 3]),
         borderRadius: 7,
         borderSkipped: false,
@@ -361,9 +361,9 @@
           />
         </div>
         <div class="breakdown-list">
-          <span><i class="dot teal"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
-          <span><i class="dot lime"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
-          <span><i class="dot lavender"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
+          <span><i class="dot blue"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
+          <span><i class="dot purple"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
+          <span><i class="dot pink"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
         </div>
       {:else}
         <div class="dash-empty">{t('noData')}</div>
@@ -629,9 +629,9 @@
     border-radius: 50%;
     flex: 0 0 auto;
   }
-  .dot.lavender { background: var(--srb-chart-purple); }
-  .dot.teal { background: var(--srb-primary); }
-  .dot.lime { background: var(--srb-accent); }
+  .dot.blue { background: var(--srb-chart-blue); }
+  .dot.purple { background: var(--srb-chart-purple); }
+  .dot.pink { background: var(--srb-chart-pink); }
 
   .dash-empty {
     display: grid;

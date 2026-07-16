@@ -164,7 +164,7 @@
     white-space: nowrap;
     transition: background var(--srb-transition-base);
   }
-  .add-trigger:hover { background: var(--srb-primary-hover); }
+  .add-trigger:hover { background: var(--srb-primary-action-hover); }
 
   .filter-tabs {
     display: inline-flex;

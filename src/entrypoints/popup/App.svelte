@@ -76,11 +76,11 @@
       datasets: [{
         label: t('weeklyTrend'),
         data: stats.map((item) => item.count),
-        borderColor: chartColor('--srb-primary', '#4f5f9f'),
-        backgroundColor: chartColor('--srb-chart-teal-soft', 'rgba(79, 95, 159, 0.16)'),
+        borderColor: chartColor('--srb-chart-blue', '#3b82f6'),
+        backgroundColor: chartColor('--srb-chart-fill', 'rgba(59, 130, 246, 0.12)'),
         borderWidth: 2,
         fill: true,
-        pointBackgroundColor: chartColor('--srb-accent', '#78d5ca'),
+        pointBackgroundColor: chartColor('--srb-chart-blue', '#3b82f6'),
         pointBorderColor: chartColor('--srb-surface', '#ffffff'),
         pointBorderWidth: 2,
         pointRadius: 3,
@@ -134,11 +134,7 @@
   <header>
     <div class="brand">
       <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor"/>
-          <path d="M7.5 7v10M16.5 7v10M7.5 12h7" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
-          <circle cx="17.5" cy="12" r="1.15" fill="#78d5ca"/>
-        </svg>
+        <img src="/icons/icon-32.png" alt="" />
       </span>
       <span class="brand-text">Hush</span>
     </div>
@@ -246,13 +242,13 @@
     place-items: center;
     width: 28px;
     height: 28px;
-    border-radius: var(--srb-radius-md);
-    color: var(--srb-primary);
-    background: var(--srb-status-bg);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-brand-soft);
   }
-  .brand-icon svg {
-    width: 17px;
-    height: 17px;
+  .brand-icon img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
   }
   .brand-text {
     font-weight: var(--srb-weight-semibold);
@@ -309,7 +305,7 @@
     transition: background 0.2s;
   }
   .toggle input:checked + .toggle-track {
-    background: var(--srb-primary);
+    background: var(--srb-accent-hover);
   }
   .toggle-thumb {
     position: absolute;
@@ -320,7 +316,7 @@
     background: var(--srb-surface);
     border-radius: var(--srb-radius-full);
     transition: transform 0.2s;
-    box-shadow: var(--srb-shadow-xs);
+    box-shadow: 0 0 0 1px rgba(41, 39, 38, 0.12), var(--srb-shadow-xs);
   }
   .toggle input:checked + .toggle-track .toggle-thumb {
     transform: translateX(16px);

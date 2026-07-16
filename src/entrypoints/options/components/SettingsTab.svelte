@@ -230,10 +230,10 @@
     height: var(--srb-toggle-thumb-size);
     border-radius: var(--srb-radius-full);
     background: var(--srb-surface);
-    box-shadow: var(--srb-shadow-sm);
+    box-shadow: 0 0 0 1px rgba(41, 39, 38, 0.12), var(--srb-shadow-sm);
     transition: transform var(--srb-transition-base);
   }
-  .toggle input:checked + .toggle-track { background: var(--srb-engine-google); }
+  .toggle input:checked + .toggle-track { background: var(--srb-accent-hover); }
   .toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
   .toggle input:focus-visible + .toggle-track { box-shadow: var(--srb-focus-ring); }
 
@@ -282,15 +282,20 @@
   }
   .backup-btn svg { width: 16px; height: 16px; }
   .backup-btn:hover {
-    border-color: var(--srb-engine-google);
-    background: var(--srb-success-light);
+    border-color: var(--srb-accent);
+    background: var(--srb-accent-soft);
+    color: var(--srb-primary);
   }
   .backup-btn.primary {
-    border-color: var(--srb-engine-google);
-    background: var(--srb-engine-google);
+    border-color: var(--srb-primary-action);
+    background: var(--srb-primary-action);
     color: var(--srb-on-primary);
   }
-  .backup-btn.primary:hover { background: var(--srb-primary-hover); }
+  .backup-btn.primary:hover {
+    border-color: var(--srb-primary-action-hover);
+    background: var(--srb-primary-action-hover);
+    color: var(--srb-on-primary);
+  }
   .backup-input { display: none; }
 
   @media (max-width: 820px) {

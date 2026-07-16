@@ -24,7 +24,7 @@ export default defineConfig({
     description: '__MSG_extDescription__',
     version: '1.0.0',
     default_locale: 'en',
-    permissions: ['storage'],
+    permissions: ['storage', 'contextMenus'],
     host_permissions: SEARCH_ENGINE_MATCH_PATTERNS,
     action: {
       default_popup: '/popup.html',

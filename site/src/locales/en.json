@@ -40,7 +40,7 @@
       "title": "A cleaner search experience.",
       "description": "Act only on what you choose while leaving the rest of the search page intact.",
       "items": [
-        { "title": "Domain & URL rules", "description": "Mark a whole website or target one specific page." },
+        { "title": "Quick right-click blocking", "description": "Right-click on any webpage to block a whole domain or one specific link." },
         { "title": "Element picker", "description": "Select a page element and create a rule scoped to that site." },
         { "title": "Ad marking", "description": "Identify and softly cover advertising and sponsored results." },
         { "title": "Search history", "description": "Optionally keep recent searches, or disable and clear them anytime." }
@@ -50,8 +50,8 @@
       "title": "Three steps to a quieter search.",
       "description": "No account, no cloud sync, and no need to change how you search.",
       "steps": [
-        { "title": "Choose a result", "description": "Pick a result on a supported search page." },
-        { "title": "Create a local rule", "description": "Target its domain, URL, or a selected page element." },
+        { "title": "Right-click a target", "description": "Open the browser context menu on a webpage or search-result link." },
+        { "title": "Create a local rule", "description": "Use the Hush menu to target a domain, URL, or selected page element." },
         { "title": "Recover anytime", "description": "Reveal the result or remove the rule without breaking the page." }
       ]
     },
@@ -66,7 +66,8 @@
     "query": "how to get cleaner search results",
     "primaryTitle": "A genuinely useful guide to better search",
     "primaryDescription": "Clear steps, reliable sources, and the information you actually need.",
-    "markAriaLabel": "Mark this result",
+    "markAriaLabel": "Right-click to open the Hush menu",
+    "contextAction": "Right-click",
     "marked": "Marked by Hush",
     "rule": "Domain rule · Recover anytime",
     "show": "Show",
@@ -95,6 +96,7 @@
     "permissions": {
       "title": "Permissions",
       "storage": "Saves rules, search history, statistics, backups, and preferences locally.",
+      "contextMenus": "Adds actions to block domains, block links, and pick page elements to the browser context menu.",
       "hostTitle": "Supported search-engine host access",
       "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, and 360 Search root and www domains."
     },
@@ -119,7 +121,7 @@
           "Support Google, Baidu, Bing, and 360 Search out of the box.",
           "Automatically detect result structures and save configurations for custom search engines.",
           "Keep marking active across dynamically loaded results and search-page navigation.",
-          "Use a draggable floating control that snaps to the nearest screen edge.",
+          "Quickly block domains, full links, or selected page elements from the browser's native context menu.",
           "Optionally save search history and clear individual records or the full history at any time.",
           "Show marking statistics in the dashboard and the current page count in the browser tab badge.",
           "Store all rules and preferences locally, with JSON backup and restore support.",
