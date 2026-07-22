@@ -1,3 +1,4 @@
+import { getSearchEngineRule } from './search-engines';
 import type { SearchEngineConfig } from './search-engines';
 import { removeBlockedItem, removeBlockedSelectorEntry, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
 import type { DomainBlockKind } from '@/utils/storage';
@@ -79,15 +80,24 @@ function matchBlockedDomain(href: string, domains: string[]): number {
 
 /** 判断搜索结果项是否包含广告标记 */
 export function isAdItem(item: Element): boolean {
-  if (item.querySelector('[class*="ad-label" i], [aria-label*="ad" i], [aria-label*="sponsor" i], [class*="tuiguang" i], [class*="e-pc-li-131-1" i], [class*="ad-results" i]')) return true;
+  const engine = getSearchEngineRule(_getHostname());
+  if (!engine) return false;
+
+  if (engine.isAdItem?.(item)) return true;
+
+  if (engine.adItemSelectors?.some((selector) =>
+    item.matches(selector) || Boolean(item.querySelector(selector)),
+  )) return true;
+
   const cls = (item.className as string).toLowerCase();
-  if (/\b(?:ad|sponsor)\b/.test(cls) || /tuiguang/i.test(cls) || cls.includes('e-pc-li-131-1') || cls.includes('ad-results')) return true;
+  if (/\b(?:ad|sponsor)\b/.test(cls)) return true;
+
+  const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
   for (const el of item.querySelectorAll('span, small, label, em, b, i, div, a, strong, p')) {
     if (el.children.length > 3) continue;
     const t = (el.textContent ?? '').trim();
     if (t.length === 0 || t.length > 20) continue;
-    const lower = t.toLowerCase();
-    if (lower.includes('广告') || lower.includes('推广') || lower === 'ad' || lower === 'sponsored') { return true; }
+    if (adLabels.has(t.toLowerCase())) return true;
   }
   return false;
 }
@@ -388,51 +398,34 @@ export function scanResults(engine: SearchEngineConfig): void {
   updateCollapseBar();
 }
 
-// ========== Ad Scanning — 3 层策略 ==========
+// ========== Ad Scanning ==========
 
-/** 广告扫描 — 优先从上层容器特征找广告，回退从文字标签向上找 */
+/** 广告扫描 — 引擎提供命中特征，公共层负责标记和从标签向上定位容器。 */
 export function scanForAds(): void {
   if (!_state.blockAds || !_state.isEnabled) {
     updateCollapseBar();
     return;
   }
 
-  const host = _getHostname();
-
-  // === 策略 1（从上往下）：百度广告容器有 display:block !important;visibility:visible !important; ===
-  if (host === 'baidu.com') {
-    document.querySelectorAll<HTMLElement>(
-      'div[style*="display:block"][style*="visibility:visible"], ' +
-      'li[style*="display:block"][style*="visibility:visible"], ' +
-      'section[style*="display:block"][style*="visibility:visible"], ' +
-      'table[style*="display:block"][style*="visibility:visible"]'
-    ).forEach((el) => {
-      if (el.hasAttribute('data-srb-ad-scanned')) return;
-      if (!el.querySelector('.ec-tuiguang') &&
-          !el.textContent?.includes('广告') &&
-          !el.textContent?.includes('推广')) return;
-      el.setAttribute('data-srb-ad-scanned', 'true');
-      injectAdBadge(el, '');
-    });
+  const engine = getSearchEngineRule(_getHostname());
+  if (!engine) {
+    updateCollapseBar();
+    return;
   }
 
-  // === 策略 2：搜索引擎特色类名直接命中 ===
-  if (host === 'so.com') {
-    document.querySelectorAll<HTMLElement>('.e-pc-li-131-1').forEach((el) => {
-      if (el.hasAttribute('data-srb-ad-scanned')) return;
-      el.setAttribute('data-srb-ad-scanned', 'true');
-      injectAdBadge(el, '');
-    });
-  }
-  if (host === 'sogou.com') {
-    document.querySelectorAll<HTMLElement>('.ad-results').forEach((el) => {
-      if (el.hasAttribute('data-srb-ad-scanned')) return;
-      el.setAttribute('data-srb-ad-scanned', 'true');
-      injectAdBadge(el, '');
-    });
+  engine.findAdContainers?.(document).forEach((element) => {
+    if (element.hasAttribute('data-srb-ad-scanned')) return;
+    element.setAttribute('data-srb-ad-scanned', 'true');
+    injectAdBadge(element, '');
+  });
+
+  const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
+  if (adLabels.size === 0) {
+    updateCollapseBar();
+    return;
   }
 
-  // === 策略 3（从下往上）：通过"广告"短文本标签向上找容器（Google/Bing 等）===
+  // 通用定位算法：通过当前引擎定义的短文本标签向上查找结果容器。
   document.querySelectorAll<HTMLElement>(
     'span, small, label, em, i, b, strong, a, ' +
     '[class*="ad-label"], [class*="ad-badge"], [class*="badge"]',
@@ -442,9 +435,7 @@ export function scanForAds(): void {
     if (t.length === 0 || t.length > 20) return;
     if (badge.children.length > 3) return;
 
-    const lower = t.toLowerCase();
-    const isAdLabel = t === '广告' || t === '推广' || lower === 'ad' || lower === 'sponsored';
-    if (!isAdLabel) return;
+    if (!adLabels.has(t.toLowerCase())) return;
     if (badge.closest('[data-srb-ad-scanned]')) return;
     badge.setAttribute('data-srb-ad-badge', 'true');
 

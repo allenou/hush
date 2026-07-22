@@ -1,6 +1,11 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { SEARCH_ENGINE_MATCH_PATTERNS, isSupportedSearchHostname } from '@/constants/search-hosts';
-import { BUILT_IN_ENGINES, detectSearchEngine, extractSearchQuery } from '@/helpers/search-engines';
+import {
+  BUILT_IN_ENGINES,
+  detectBuiltInSearchResults,
+  detectSearchEngine,
+  extractSearchQuery,
+} from '@/helpers/search-engines';
 import type { SearchEngineConfig } from '@/helpers/search-engines';
 import { get, subscribe, recordSearch } from '@/utils/storage';
 import { injectStyles } from '@/utils/styles';
@@ -162,7 +167,8 @@ export default defineContentScript({
       if (!isEnabled) return;
       if (autoDetectRetries >= MAX_AUTO_DETECT_RETRIES) return;
       autoDetectRetries++;
-      const detected = autoDetectSearchResults(getHostname);
+      const detected = detectBuiltInSearchResults(window.location.href)
+        ?? autoDetectSearchResults(getHostname);
       if (!detected) { ctx.setTimeout(() => { if (isEnabled) void tryAutoDetect(); }, 3000); return; }
       const containerEl = document.querySelector(detected.containerSelector);
       if (!containerEl || containerEl.querySelectorAll(detected.itemSelector).length < 2) {

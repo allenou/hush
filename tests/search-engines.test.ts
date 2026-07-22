@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPathnamePattern,
   BUILT_IN_ENGINES,
+  detectBuiltInSearchResults,
   detectSearchEngine,
+  extractSearchQuery,
+  getSearchEngineRule,
+  getSearchUrl,
   isSearchEngine,
   matchEngineConfig,
 } from '@/helpers/search-engines';
@@ -154,6 +158,69 @@ describe('BUILT_IN_ENGINES', () => {
       expect(engine.hostname).toBeTruthy();
       expect(engine.linkSelector).toBe('a[href]');
     }
+  });
+});
+
+describe('engine-specific rules', () => {
+  it('keeps each engine result selector in its own registry entry', () => {
+    expect(getSearchEngineRule('google.com')?.resultSelectors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ containerSelector: '#search', itemSelector: '.g' }),
+      ]),
+    );
+    expect(getSearchEngineRule('baidu.com')?.resultSelectors).toEqual([
+      expect.objectContaining({ containerSelector: '#content_left' }),
+    ]);
+    expect(getSearchEngineRule('bing.com')?.resultSelectors).toEqual([
+      expect.objectContaining({ containerSelector: '#b_results', itemSelector: '.b_algo' }),
+    ]);
+    expect(getSearchEngineRule('so.com')?.resultSelectors).toEqual([
+      expect.objectContaining({ containerSelector: '#main', itemSelector: '.res-list' }),
+    ]);
+  });
+
+  it('does not use another engine result selector', () => {
+    document.body.innerHTML = `
+      <ol id="b_results">
+        <li class="b_algo"><a href="https://a.example">A</a></li>
+        <li class="b_algo"><a href="https://b.example">B</a></li>
+      </ol>
+    `;
+
+    expect(detectBuiltInSearchResults('https://www.google.com/search?q=test')).toBeNull();
+    expect(detectBuiltInSearchResults('https://www.bing.com/search?q=test')).toEqual(
+      expect.objectContaining({
+        name: 'Bing',
+        containerSelector: '#b_results',
+        itemSelector: '.b_algo',
+      }),
+    );
+  });
+
+  it('uses only the current engine query parameters', () => {
+    expect(extractSearchQuery('https://www.baidu.com/s?q=wrong&wd=正确')).toBe('正确');
+    expect(extractSearchQuery('https://www.google.com/search?wd=wrong')).toBeNull();
+  });
+
+  it('delegates search URL creation to the current engine', () => {
+    expect(getSearchUrl('baidu.com', '中文 搜索')).toBe(
+      'https://www.baidu.com/s?wd=%E4%B8%AD%E6%96%87%20%E6%90%9C%E7%B4%A2',
+    );
+    expect(getSearchUrl('bing.com', 'test')).toBe('https://www.bing.com/search?q=test');
+  });
+
+  it('requires a child ad label for 360 ad candidate containers', () => {
+    document.body.innerHTML = `
+      <div id="ordinary" class="e-pc-li-131-1"><span>普通搜索结果</span></div>
+      <div id="advertisement" class="e-pc-li-131-1"><span>广告</span></div>
+    `;
+
+    const rule = getSearchEngineRule('so.com')!;
+    expect(rule.isAdItem?.(document.querySelector('#ordinary')!)).toBe(false);
+    expect(rule.isAdItem?.(document.querySelector('#advertisement')!)).toBe(true);
+    expect(rule.findAdContainers?.(document).map((element) => element.id)).toEqual([
+      'advertisement',
+    ]);
   });
 });
 

@@ -1,3 +1,7 @@
+import { normalizeSearchHostname } from '@/constants/search-hosts';
+import { getSearchEngineRule, SEARCH_ENGINE_RULES } from './search-engines/index';
+import type { SearchEngineRule } from './search-engines/index';
+
 export interface SearchEngineConfig {
   name: string;
   hostname: string;
@@ -20,13 +24,11 @@ export interface EngineInfo {
   linkSelector: string;
 }
 
-/** 内置搜索引擎列表：仅用于识别和提取链接，DOM 结构由自动检测生成 */
-export const BUILT_IN_ENGINES: EngineInfo[] = [
-  { name: 'Google', hostname: 'google.com', linkSelector: 'a[href]' },
-  { name: 'Baidu', hostname: 'baidu.com', linkSelector: 'a[href]' },
-  { name: 'Bing', hostname: 'bing.com', linkSelector: 'a[href]' },
-  { name: '360搜索', hostname: 'so.com', linkSelector: 'a[href]' },
-];
+/** 内置搜索引擎列表，具体规则位于 search-engines/ 下的对应模块。 */
+export const BUILT_IN_ENGINES: readonly SearchEngineRule[] = SEARCH_ENGINE_RULES;
+
+export { getSearchEngineRule, SEARCH_ENGINE_RULES } from './search-engines/index';
+export type { SearchEngineRule, SearchResultSelectorRule } from './search-engines/index';
 
 export function normalizeHostname(hostname: string): string {
   return normalizeSearchHostname(hostname);
@@ -63,7 +65,7 @@ export function rankEngineConfigMatch(
 export function detectSearchEngine(url: string): EngineInfo | null {
   try {
     const hostname = normalizeHostname(new URL(url).hostname);
-    return BUILT_IN_ENGINES.find((e) => e.hostname === hostname) ?? null;
+    return getSearchEngineRule(hostname);
   } catch {
     return null;
   }
@@ -73,13 +75,50 @@ export function isSearchEngine(url: string): boolean {
   return detectSearchEngine(url) !== null;
 }
 
+/** 优先使用所属搜索引擎明确维护的 DOM 规则识别结果列表。 */
+export function detectBuiltInSearchResults(
+  url: string,
+  root: ParentNode = document,
+): SearchEngineConfig | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  const engine = getSearchEngineRule(parsed.hostname);
+  if (!engine) return null;
+
+  for (const rule of engine.resultSelectors) {
+    const container = root.querySelector(rule.containerSelector);
+    if (!container) continue;
+    const itemCount = container.querySelectorAll(rule.itemSelector).length;
+    if (itemCount < (rule.minimumItems ?? 2)) continue;
+    return {
+      name: engine.name,
+      hostname: engine.hostname,
+      pathnamePattern: buildPathnamePattern(parsed.pathname),
+      containerSelector: rule.containerSelector,
+      itemSelector: rule.itemSelector,
+      linkSelector: rule.linkSelector,
+    };
+  }
+
+  return null;
+}
+
 /** 从 URL 中提取搜索关键词 */
 export function extractSearchQuery(url: string): string | null {
   try {
     const u = new URL(url);
-    const params = u.searchParams;
-    // Google: q=xxx, Bing: q=xxx, Baidu: wd=xxx or word=xxx, 360: q=xxx
-    return params.get('q') || params.get('wd') || params.get('word') || null;
+    const engine = getSearchEngineRule(u.hostname);
+    if (!engine) return null;
+    for (const name of engine.queryParameterNames) {
+      const query = u.searchParams.get(name);
+      if (query) return query;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -87,13 +126,6 @@ export function extractSearchQuery(url: string): string | null {
 
 /** 根据搜索引擎和关键词构建搜索 URL */
 export function getSearchUrl(engineHostname: string, query: string): string {
-  const host = normalizeHostname(engineHostname);
-  const q = encodeURIComponent(query);
-  if (host.includes('google')) return `https://www.google.com/search?q=${q}`;
-  if (host.includes('bing')) return `https://www.bing.com/search?q=${q}`;
-  if (host.includes('baidu')) return `https://www.baidu.com/s?wd=${q}`;
-  if (host.includes('so.com')) return `https://www.so.com/s?q=${q}`;
-  // fallback: assume Google-style
-  return `https://www.google.com/search?q=${q}`;
+  const engine = getSearchEngineRule(engineHostname) ?? getSearchEngineRule('google.com');
+  return engine!.buildSearchUrl(query);
 }
-import { normalizeSearchHostname } from '@/constants/search-hosts';
