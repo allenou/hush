@@ -1,5 +1,8 @@
 const STYLE_ID = 'srb-styles';
 
+const BADGE_FONT_SIZE = '11px';
+const BADGE_LINE_HEIGHT = '15px';
+
 const CSS = `
 /* ===== Design Tokens ===== */
 :root {
@@ -144,7 +147,8 @@ const CSS = `
   border-radius: 4px;
   background: var(--srb-danger-light);
   color: var(--srb-danger);
-  font-size: 11px;
+  font-size: 11px !important;
+  line-height: 15px !important;
   font-weight: 600;
   font-family: var(--srb-font);
   cursor: pointer;
@@ -166,10 +170,10 @@ const CSS = `
   z-index: 10000;
   padding: 3px 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 11px !important;
   font-weight: 600;
   font-family: var(--srb-font);
-  line-height: normal;
+  line-height: 15px !important;
   letter-spacing: 0.02em;
   cursor: pointer;
   user-select: none;
@@ -200,7 +204,8 @@ const CSS = `
   border-radius: 4px;
   background: var(--srb-danger-light);
   color: var(--srb-danger);
-  font-size: 11px;
+  font-size: 11px !important;
+  line-height: 15px !important;
   font-weight: 600;
   font-family: var(--srb-font);
   cursor: pointer;
@@ -381,4 +386,10 @@ export function injectStyles(): void {
   style.id = STYLE_ID;
   style.textContent = CSS;
   document.head.appendChild(style);
+}
+
+/** 锁定注入 badge 的字号，避免被宿主页面的高优先级样式覆盖。 */
+export function lockBadgeTypography(element: HTMLElement): void {
+  element.style.setProperty('font-size', BADGE_FONT_SIZE, 'important');
+  element.style.setProperty('line-height', BADGE_LINE_HEIGHT, 'important');
 }

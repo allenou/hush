@@ -6,6 +6,7 @@ import { removeCollapseBar, updateCollapseBar } from './ui';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
 import { extractAnchorAttributeUrls } from '@/utils/url';
+import { lockBadgeTypography } from '@/utils/styles';
 
 // ========== Module State ==========
 
@@ -211,6 +212,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
   const badge = document.createElement('div');
   badge.className = 'srb-blocked-badge';
+  lockBadgeTypography(badge);
   if (domainMatch) {
     badge.textContent = `🌐 ${t('domainHit')}`;
     badge.title = t('domainBlocked');
@@ -228,6 +230,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
   function makeCancelBadge(text: string, onClick: () => Promise<void>): HTMLDivElement {
     const el = document.createElement('div');
     el.className = 'srb-cancel-badge';
+    lockBadgeTypography(el);
     el.textContent = text;
     el.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -301,6 +304,7 @@ export function injectAdBadge(item: Element, href: string): void {
 
   const badge = document.createElement('div');
   badge.className = 'srb-ad-badge';
+  lockBadgeTypography(badge);
   badge.textContent = `📢 ${t('adBadge')}`;
   badge.title = t('adBadgeTitle');
   badge.addEventListener('click', () => {
@@ -483,6 +487,7 @@ export function applyBlockedSelectors(): void {
         el.appendChild(mask);
         const badge = document.createElement('div');
         badge.className = 'srb-blocked-badge';
+        lockBadgeTypography(badge);
         badge.textContent = `🎯 ${t('elementHit')}`;
         badge.title = t('elementBlocked');
         badge.setAttribute('data-entry', entry);

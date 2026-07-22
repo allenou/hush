@@ -515,7 +515,17 @@ describe('result domain matching', () => {
   });
 
   it('upgrades an already processed result when a later domain rule matches it', () => {
+    const hostileStyle = document.createElement('style');
+    hostileStyle.textContent = `
+      #host-result .srb-blocked-badge {
+        font-size: 48px !important;
+        line-height: 80px !important;
+      }
+    `;
+    document.head.appendChild(hostileStyle);
+
     const item = document.createElement('div');
+    item.id = 'host-result';
     item.innerHTML = '<a href="https://sub.example.com/page">Example</a>';
     document.body.appendChild(item);
 
@@ -529,7 +539,16 @@ describe('result domain matching', () => {
     processItem(item);
 
     expect(item.querySelector('.srb-block-btn')).toBeNull();
-    expect(item.querySelector('.srb-blocked-badge')).toBeTruthy();
+    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge');
+    expect(badge).toBeTruthy();
+    expect(badge?.style.getPropertyValue('font-size')).toBe('11px');
+    expect(badge?.style.getPropertyPriority('font-size')).toBe('important');
+    expect(badge?.style.getPropertyValue('line-height')).toBe('15px');
+    expect(badge?.style.getPropertyPriority('line-height')).toBe('important');
+    expect(getComputedStyle(badge!).fontSize).toBe('11px');
+    expect(getComputedStyle(badge!).lineHeight).toBe('15px');
+
+    hostileStyle.remove();
   });
 
   it('finds a blocked domain in any attribute of any link before locating its content block', () => {

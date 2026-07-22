@@ -1,5 +1,6 @@
 import { addBlockedSelector, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import { t } from '@/utils/i18n';
+import { lockBadgeTypography } from '@/utils/styles';
 import { updateCollapseBar } from './ui';
 
 // ========== Module State ==========
@@ -216,6 +217,7 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
       el.appendChild(mask);
       const badge = document.createElement('div');
       badge.className = 'srb-blocked-badge';
+      lockBadgeTypography(badge);
       badge.textContent = '🎯 ' + t('elementHit');
       badge.title = t('elementBlocked');
       badge.setAttribute('data-entry', full);
