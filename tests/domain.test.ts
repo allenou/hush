@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractDomain, matchesBlockedDomain } from '@/utils/domain';
+import { extractDomain, findMatchingBlockedDomainIndex, matchesBlockedDomain } from '@/utils/domain';
 
 describe('extractDomain', () => {
   it('extracts domain from standard URL', () => {
@@ -65,5 +65,13 @@ describe('extractDomain', () => {
   it('matches subdomains only when the setting is enabled', () => {
     expect(matchesBlockedDomain('sub.example.com', ['example.com'], true)).toBe(true);
     expect(matchesBlockedDomain('sub.example.com', ['example.com'], false)).toBe(false);
+  });
+
+  it('returns the actual parent-domain rule index for an included subdomain', () => {
+    expect(findMatchingBlockedDomainIndex(
+      'sub.example.com',
+      ['other.com', 'example.com'],
+      true,
+    )).toBe(1);
   });
 });

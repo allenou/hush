@@ -114,6 +114,7 @@ describe('Popup', () => {
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       siteBlocked: 'Current site is blocked',
       siteNormal: 'Current site is normal',
+      unblockDomain: 'Unblock this domain',
     })[key] ?? key);
 
     const target = document.createElement('div');
@@ -122,6 +123,16 @@ describe('Popup', () => {
 
     await vi.waitFor(() => {
       expect(target.querySelector('.site-status')?.textContent).toContain('Current site is blocked');
+    });
+
+    const unblockButton = target.querySelector<HTMLButtonElement>('.unblock-site-btn');
+    expect(unblockButton?.textContent).toContain('Unblock this domain');
+    unblockButton?.click();
+
+    await vi.waitFor(async () => {
+      const stored = await fakeBrowser.storage.local.get('blocker');
+      expect(stored.blocker.urls).toEqual([]);
+      expect(target.querySelector('.site-status')?.textContent).toContain('Current site is normal');
     });
   });
 });

@@ -5,7 +5,7 @@ import type { DomainBlockKind } from '@/utils/storage';
 import { removeCollapseBar, updateCollapseBar } from './ui';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
-import { extractAnchorAttributeUrls } from '@/utils/url';
+import { extractAnchorAttributeUrls, isDomainHomepageUrl } from '@/utils/url';
 import { lockBadgeTypography } from '@/utils/styles';
 
 // ========== Module State ==========
@@ -154,8 +154,20 @@ function isReasonableContentSize(element: HTMLElement): boolean {
 
 // ========== UI Injection ==========
 
+function rememberTargetUrl(item: Element, href: string): void {
+  try {
+    const url = new URL(href);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      item.setAttribute('data-srb-target-url', url.href);
+    }
+  } catch {
+    // 无效链接不记录。
+  }
+}
+
 export function injectBlockButton(item: Element, href: string): void {
   if (item.querySelector('.srb-block-btn')) return;
+  rememberTargetUrl(item, href);
   const btn = document.createElement('button');
   btn.className = 'srb-block-btn';
   btn.textContent = '⊕';
@@ -165,11 +177,10 @@ export function injectBlockButton(item: Element, href: string): void {
   const popup = document.createElement('div');
   popup.className = 'srb-popup';
   try {
-    const u = new URL(href);
-    const isRoot = u.pathname === '/' && !u.hash && !u.search;
-    popup.innerHTML = isRoot
+    popup.innerHTML = isDomainHomepageUrl(href)
       ? `<button class="srb-opt" data-action="domain">🌐 ${t('blockDomain')}</button>`
-      : `<button class="srb-opt" data-action="url">🔗 ${t('blockUrl')}</button>`;
+      : `<button class="srb-opt" data-action="domain">🌐 ${t('blockDomain')}</button>`
+        + `<button class="srb-opt" data-action="url">🔗 ${t('blockUrl')}</button>`;
   } catch {
     popup.innerHTML =
       `<button class="srb-opt" data-action="domain">🌐 ${t('markDomain')}</button>` +
@@ -206,6 +217,7 @@ export function injectBlockButton(item: Element, href: string): void {
 
 export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boolean, href: string): void {
   if (item.querySelector('.srb-blocked-badge')) return;
+  rememberTargetUrl(item, href);
   const mask = document.createElement('div');
   mask.className = 'srb-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
@@ -292,6 +304,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
 export function injectAdBadge(item: Element, href: string): void {
   if (item.querySelector('.srb-ad-badge')) return;
+  if (href) rememberTargetUrl(item, href);
   const adHref = href || item.querySelector<HTMLAnchorElement>('a[href]')?.href || '';
   const parsedDomain = tryParseHostname(adHref);
   const domain = parsedDomain && !isSearchEngineTrackingDomain(parsedDomain)
@@ -513,11 +526,12 @@ export function checkSavedSelectors(): void {
 
 export function clearAllMarkers(options: { preserveCounts?: boolean; removeCollapse?: boolean } = {}): void {
   document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-cancel-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
-  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted]').forEach((el) => {
+  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
     el.removeAttribute('data-srb-domain-blocked');
     el.removeAttribute('data-srb-ad-scanned');
     el.removeAttribute('data-srb-ad-badge');
+    el.removeAttribute('data-srb-target-url');
     if (!options.preserveCounts) el.removeAttribute('data-srb-counted');
   });
   if (options.removeCollapse !== false) removeCollapseBar();

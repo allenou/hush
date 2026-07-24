@@ -1,7 +1,7 @@
 <script lang="ts">
   import ChartCanvas from '@/components/ChartCanvas.svelte';
-  import { get, setEnabled, subscribe } from '@/utils/storage';
-  import { extractDomain, matchesBlockedDomain } from '@/utils/domain';
+  import { get, removeBlockedItem, setEnabled, subscribe } from '@/utils/storage';
+  import { extractDomain, findMatchingBlockedDomainIndex } from '@/utils/domain';
   import { t, initLocale } from '@/utils/locale-store.svelte';
   import { formatDate, getLocale, setDocumentLocale } from '@/utils/locale';
   import { buildDailySeries, formatLocalDateKey } from '@/utils/statistics';
@@ -13,7 +13,9 @@
   let todayCount = 0;
   let enabled = true;
   let currentSiteBlocked = false;
+  let currentSiteBlockIndex = -1;
   let currentSiteAvailable: boolean | null = null;
+  let unblockingCurrentSite = false;
   let stats = buildDailySeries([], 7);
 
   async function loadData() {
@@ -34,18 +36,32 @@
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       currentSiteAvailable = domain !== null;
-      currentSiteBlocked = domain
-        ? matchesBlockedDomain(domain, storage.urls, storage.blockSubdomains ?? true)
-        : false;
+      currentSiteBlockIndex = domain
+        ? findMatchingBlockedDomainIndex(domain, storage.urls, storage.blockSubdomains ?? true)
+        : -1;
+      currentSiteBlocked = currentSiteBlockIndex >= 0;
     } else {
       currentSiteAvailable = false;
       currentSiteBlocked = false;
+      currentSiteBlockIndex = -1;
     }
   }
 
   async function toggleEnabled() {
     enabled = !enabled;
     await setEnabled(enabled);
+  }
+
+  async function unblockCurrentSite() {
+    if (currentSiteBlockIndex < 0 || unblockingCurrentSite) return;
+    unblockingCurrentSite = true;
+    try {
+      await removeBlockedItem('domain', currentSiteBlockIndex);
+      currentSiteBlocked = false;
+      currentSiteBlockIndex = -1;
+    } finally {
+      unblockingCurrentSite = false;
+    }
   }
 
   function openOptions() {
@@ -176,6 +192,13 @@
       {#if currentSiteBlocked}
         <span class="status-icon">🔴</span>
         <span>{t('siteBlocked')}</span>
+        <button
+          class="unblock-site-btn"
+          disabled={unblockingCurrentSite}
+          onclick={unblockCurrentSite}
+        >
+          {t('unblockDomain')}
+        </button>
       {:else}
         <span class="status-icon">🟢</span>
         <span>{t('siteNormal')}</span>
@@ -376,6 +399,25 @@
   }
   .status-icon {
     font-size: 8px;
+  }
+  .unblock-site-btn {
+    margin-left: auto;
+    padding: 3px 8px;
+    border: 1px solid currentColor;
+    border-radius: var(--srb-radius-full);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .unblock-site-btn:hover {
+    background: var(--srb-surface);
+  }
+  .unblock-site-btn:disabled {
+    cursor: wait;
+    opacity: 0.6;
   }
 
   /* ===== Chart ===== */

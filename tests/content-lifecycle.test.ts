@@ -12,7 +12,7 @@ describe('marking lifecycle', () => {
   it('removes markers, scan attributes, and the collapse bar', () => {
     document.body.innerHTML = `
       <div id="srb-collapse-bar"></div>
-      <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge>
+      <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge data-srb-target-url="https://example.com/">
         <div class="srb-blocked-badge"></div>
         <div class="srb-cancel-badge"></div>
         <div class="srb-ad-badge"></div>
@@ -23,6 +23,6 @@ describe('marking lifecycle', () => {
 
     expect(document.querySelector('.srb-blocked-badge, .srb-cancel-badge, .srb-ad-badge')).toBeNull();
     expect(document.getElementById('srb-collapse-bar')).toBeNull();
-    expect(document.querySelector('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge]')).toBeNull();
+    expect(document.querySelector('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-target-url]')).toBeNull();
   });
 });

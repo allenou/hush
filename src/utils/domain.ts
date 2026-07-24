@@ -17,8 +17,16 @@ export function matchesBlockedDomain(
   blockedDomains: string[],
   includeSubdomains: boolean,
 ): boolean {
+  return findMatchingBlockedDomainIndex(hostname, blockedDomains, includeSubdomains) >= 0;
+}
+
+export function findMatchingBlockedDomainIndex(
+  hostname: string,
+  blockedDomains: string[],
+  includeSubdomains: boolean,
+): number {
   const current = hostname.toLowerCase().replace(/^www\./, '');
-  return blockedDomains.some((domain) => {
+  return blockedDomains.findIndex((domain) => {
     const rule = domain.toLowerCase().replace(/^www\./, '');
     return current === rule || (includeSubdomains && current.endsWith(`.${rule}`));
   });

@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractAnchorAttributeUrls, extractResultUrl, isSearchEngineRedirect } from '@/utils/url';
+import {
+  extractAnchorAttributeUrls,
+  extractResultUrl,
+  isDomainHomepageUrl,
+  isSearchEngineRedirect,
+  resolveContextTargetUrl,
+} from '@/utils/url';
 
 /** Helper: mock window.location for tests */
 function mockLocation(href: string): void {
@@ -25,6 +31,55 @@ function mockLocation(href: string): void {
     configurable: true,
   });
 }
+
+describe('isDomainHomepageUrl', () => {
+  it('treats a plain root URL as a domain homepage', () => {
+    expect(isDomainHomepageUrl('https://example.com/')).toBe(true);
+  });
+
+  it('ignores common tracking parameters on a homepage', () => {
+    expect(isDomainHomepageUrl(
+      'https://example.com/?utm_source=search&gclid=123&ref=home',
+    )).toBe(true);
+  });
+
+  it('treats meaningful query parameters as a specific URL', () => {
+    expect(isDomainHomepageUrl('https://example.com/?article=123')).toBe(false);
+  });
+
+  it('treats paths and hashes as specific URLs', () => {
+    expect(isDomainHomepageUrl('https://example.com/article')).toBe(false);
+    expect(isDomainHomepageUrl('https://example.com/#pricing')).toBe(false);
+  });
+});
+
+describe('resolveContextTargetUrl', () => {
+  it('restores the original result URL when right-clicking an injected badge', () => {
+    const item = document.createElement('div');
+    item.dataset.srbTargetUrl = 'https://sub.example.com/article';
+    const badge = document.createElement('div');
+    badge.className = 'srb-blocked-badge';
+    item.appendChild(badge);
+
+    expect(resolveContextTargetUrl(
+      badge,
+      'https://www.google.com/search?q=test',
+    )).toBe('https://sub.example.com/article');
+  });
+
+  it('prefers the exact clicked link inside a marked result', () => {
+    const item = document.createElement('div');
+    item.dataset.srbTargetUrl = 'https://example.com/primary';
+    const link = document.createElement('a');
+    link.href = 'https://example.com/sitelink';
+    item.appendChild(link);
+
+    expect(resolveContextTargetUrl(
+      link,
+      'https://www.google.com/search?q=test',
+    )).toBe('https://example.com/sitelink');
+  });
+});
 
 // ========== isSearchEngineRedirect ==========
 

@@ -440,7 +440,7 @@ describe('recordBlock', () => {
 });
 
 describe('manual result block statistics', () => {
-  async function clickInjectedBlockOption(href: string): Promise<void> {
+  async function clickInjectedBlockOption(href: string, action: 'domain' | 'url'): Promise<void> {
     initBlocker({
       getHostname: () => 'google.com',
       extractResultUrl: () => href,
@@ -458,12 +458,28 @@ describe('manual result block statistics', () => {
     document.body.appendChild(item);
     injectBlockButton(item, href);
     item.querySelector<HTMLButtonElement>('.srb-block-btn')!.click();
-    item.querySelector<HTMLButtonElement>('.srb-opt')!.click();
+    item.querySelector<HTMLButtonElement>(`.srb-opt[data-action="${action}"]`)!.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
+  it('shows only the domain option for a homepage with tracking parameters', () => {
+    const item = document.createElement('div');
+    injectBlockButton(item, 'https://example.com/?utm_source=search&gclid=123');
+
+    expect(Array.from(item.querySelectorAll<HTMLElement>('.srb-opt'), (option) =>
+      option.dataset.action)).toEqual(['domain']);
+  });
+
+  it('shows both domain and URL options for a deep link', () => {
+    const item = document.createElement('div');
+    injectBlockButton(item, 'https://example.com/article');
+
+    expect(Array.from(item.querySelectorAll<HTMLElement>('.srb-opt'), (option) =>
+      option.dataset.action)).toEqual(['domain', 'url']);
+  });
+
   it('records root-result manual blocks as domain blocks, not ads', async () => {
-    await clickInjectedBlockOption('https://example.com/');
+    await clickInjectedBlockOption('https://example.com/', 'domain');
 
     const s = await get();
 
@@ -473,7 +489,7 @@ describe('manual result block statistics', () => {
   });
 
   it('records deep-link manual blocks without incrementing ad count', async () => {
-    await clickInjectedBlockOption('https://example.com/page');
+    await clickInjectedBlockOption('https://example.com/page', 'url');
 
     const s = await get();
 
@@ -541,6 +557,7 @@ describe('result domain matching', () => {
     expect(item.querySelector('.srb-block-btn')).toBeNull();
     const badge = item.querySelector<HTMLElement>('.srb-blocked-badge');
     expect(badge).toBeTruthy();
+    expect(item.getAttribute('data-srb-target-url')).toBe('https://sub.example.com/page');
     expect(badge?.style.getPropertyValue('font-size')).toBe('11px');
     expect(badge?.style.getPropertyPriority('font-size')).toBe('important');
     expect(badge?.style.getPropertyValue('line-height')).toBe('15px');

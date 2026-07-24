@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 const configSource = readFileSync(resolve(process.cwd(), 'wxt.config.ts'), 'utf8');
 const contentSource = readFileSync(resolve(process.cwd(), 'src/entrypoints/content.ts'), 'utf8');
+const contextMenuGuardSource = readFileSync(
+  resolve(process.cwd(), 'src/entrypoints/context-menu-guard.content.ts'),
+  'utf8',
+);
 
 describe('Manifest permissions', () => {
   it('uses the shared exact search engine match patterns', () => {
@@ -16,6 +20,13 @@ describe('Manifest permissions', () => {
   it('requests only storage and context menu permissions', () => {
     expect(configSource).toContain("permissions: ['storage', 'contextMenus']");
     expect(configSource).not.toContain("'activeTab'");
+  });
+
+  it('guards search engines and local web pages without requesting all URLs', () => {
+    expect(contextMenuGuardSource).toContain('SEARCH_ENGINE_MATCH_PATTERNS');
+    expect(contextMenuGuardSource).toContain('LOCAL_PAGE_MATCH_PATTERNS');
+    expect(contextMenuGuardSource).toContain('hideContextMenu();');
+    expect(contextMenuGuardSource).not.toContain("'<all_urls>'");
   });
 
   it('provides the standard toolbar and extension-management icon sizes', () => {

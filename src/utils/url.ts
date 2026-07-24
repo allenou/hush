@@ -3,6 +3,39 @@ export function getHostname(): string {
   return new URL(window.location.href).hostname.replace(/^www\./, '');
 }
 
+const HOMEPAGE_TRACKING_PARAMS = new Set([
+  'fbclid', 'gclid', 'igshid', 'mc_cid', 'mc_eid', 'msclkid', 'ref', 'referrer',
+]);
+
+/** 判断 URL 是否仅指向域名首页；常见追踪参数不视为具体页面。 */
+export function isDomainHomepageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (url.pathname !== '/' || url.hash) return false;
+    return Array.from(url.searchParams.keys()).every((key) =>
+      key.toLowerCase().startsWith('utm_') || HOMEPAGE_TRACKING_PARAMS.has(key.toLowerCase()),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** 从右键事件目标恢复实际链接；注入徽标会通过 data 属性保存原始结果 URL。 */
+export function resolveContextTargetUrl(target: Element | null, pageUrl: string): string {
+  const linkUrl = target?.closest<HTMLAnchorElement>('a[href]')?.href;
+  const storedUrl = target
+    ?.closest<HTMLElement>('[data-srb-target-url]')
+    ?.dataset.srbTargetUrl;
+
+  for (const candidate of [linkUrl, storedUrl, pageUrl]) {
+    if (!candidate) continue;
+    const parsed = parseHttpUrl(candidate);
+    if (parsed) return parsed.href;
+  }
+  return pageUrl;
+}
+
 /**
  * 遍历链接的全部属性，提取其中可识别的 HTTP(S) 地址。
  * 不依赖 data-url 等特定属性名，以兼容不同站点保存真实地址的方式。
