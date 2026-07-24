@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   extractAnchorAttributeUrls,
+  extractAnchorSpanUrls,
   extractResultUrl,
   isDomainHomepageUrl,
   isSearchEngineRedirect,
@@ -203,6 +204,45 @@ describe('extractResultUrl', () => {
     expect(extractResultUrl(container, 'a[href]')).toBe('https://found-in-item.com');
   });
 
+  it('extracts Sogou target URL only from link child span text', () => {
+    mockLocation('https://www.sogou.com/web?query=csdn');
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <h3>
+        <a
+          href="/link?url=opaque"
+          linkurl="https://wrong.example/from-link-attribute"
+        >
+          CSDN
+          <span>官网</span>
+        </a>
+      </h3>
+      <a
+        class="citeLinkClass"
+        href="/link?url=another-opaque-value"
+        data-url="https://wrong.example/from-data-attribute"
+      >
+        <span>CSDN</span>
+        <span>https://www.csdn.net/</span>
+      </a>
+    `;
+
+    expect(extractResultUrl(container, 'a')).toBe('https://www.csdn.net/');
+  });
+
+  it('does not use Sogou link or item attributes when span URL is absent', () => {
+    mockLocation('https://www.sogou.com/web?query=csdn');
+    const container = document.createElement('div');
+    container.setAttribute('data-url', 'https://wrong.example/from-item-attribute');
+    container.innerHTML = `
+      <a href="https://wrong.example/from-href" linkurl="https://wrong.example/from-linkurl">
+        <span>CSDN</span>
+      </a>
+    `;
+
+    expect(extractResultUrl(container, 'a')).toBe('');
+  });
+
   it('returns empty string when no link found', () => {
     const container = document.createElement('div');
     container.textContent = 'no link here';
@@ -248,5 +288,19 @@ describe('extractAnchorAttributeUrls', () => {
     expect(extractAnchorAttributeUrls(link)).toEqual([
       'https://www.so.com/s?q=blog.csdn.net',
     ]);
+  });
+});
+
+describe('extractAnchorSpanUrls', () => {
+  it('uses only link child span text', () => {
+    const link = document.createElement('a');
+    link.href = 'https://wrong.example/from-href';
+    link.setAttribute('linkurl', 'https://wrong.example/from-linkurl');
+    link.innerHTML = `
+      <span>CSDN</span>
+      <span>https://www.csdn.net/</span>
+    `;
+
+    expect(extractAnchorSpanUrls(link)).toEqual(['https://www.csdn.net/']);
   });
 });

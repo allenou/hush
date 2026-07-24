@@ -12,6 +12,7 @@ describe('context menu availability', () => {
     expect(isRestrictedContextMenuUrl('https://www.google.com/search?q=hush')).toBe(true);
     expect(isRestrictedContextMenuUrl('https://bing.com/search?q=hush')).toBe(true);
     expect(isRestrictedContextMenuUrl('https://www.so.com/s?q=hush')).toBe(true);
+    expect(isRestrictedContextMenuUrl('https://www.sogou.com/web?query=hush')).toBe(true);
   });
 
   it('allows ordinary external web pages', () => {

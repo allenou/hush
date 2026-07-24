@@ -1,11 +1,14 @@
 import { getSearchEngineRule } from './search-engines';
 import type { SearchEngineConfig } from './search-engines';
-import { removeBlockedItem, removeBlockedSelectorEntry, addDomain, addBlockedUrl, recordBlock } from '@/utils/storage';
+import { get, removeBlockedItem, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import type { DomainBlockKind } from '@/utils/storage';
 import { removeCollapseBar, updateCollapseBar } from './ui';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
-import { extractAnchorAttributeUrls, isDomainHomepageUrl } from '@/utils/url';
+import {
+  extractAnchorAttributeUrls,
+  extractAnchorSpanUrls,
+} from '@/utils/url';
 import { lockBadgeTypography } from '@/utils/styles';
 
 // ========== Module State ==========
@@ -69,11 +72,11 @@ async function recordBlockOnce(
 }
 
 /** 在域名列表中查找匹配，返回 index 或 -1 */
-function matchBlockedDomain(href: string, domains: string[]): number {
+function matchBlockedDomain(href: string, domains: string[], includeSubdomains = _state.blockSubdomains): number {
   const hostname = tryParseHostname(href);
   if (!hostname) return -1;
   return domains.findIndex((domain) =>
-    matchesBlockedDomain(hostname, [domain], _state.blockSubdomains),
+    matchesBlockedDomain(hostname, [domain], includeSubdomains),
   );
 }
 
@@ -165,56 +168,6 @@ function rememberTargetUrl(item: Element, href: string): void {
   }
 }
 
-export function injectBlockButton(item: Element, href: string): void {
-  if (item.querySelector('.srb-block-btn')) return;
-  rememberTargetUrl(item, href);
-  const btn = document.createElement('button');
-  btn.className = 'srb-block-btn';
-  btn.textContent = '⊕';
-  btn.title = t('markResult');
-  (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
-
-  const popup = document.createElement('div');
-  popup.className = 'srb-popup';
-  try {
-    popup.innerHTML = isDomainHomepageUrl(href)
-      ? `<button class="srb-opt" data-action="domain">🌐 ${t('blockDomain')}</button>`
-      : `<button class="srb-opt" data-action="domain">🌐 ${t('blockDomain')}</button>`
-        + `<button class="srb-opt" data-action="url">🔗 ${t('blockUrl')}</button>`;
-  } catch {
-    popup.innerHTML =
-      `<button class="srb-opt" data-action="domain">🌐 ${t('markDomain')}</button>` +
-      `<button class="srb-opt" data-action="url">🔗 ${t('markUrl')}</button>`;
-  }
-
-  item.addEventListener('mouseenter', () => { btn.style.display = 'flex'; });
-  item.addEventListener('mouseleave', (e) => {
-    const me = e as MouseEvent;
-    if (!popup.contains(me.relatedTarget as Node) && me.relatedTarget !== btn) {
-      btn.style.display = 'none';
-      popup.style.display = 'none';
-    }
-  });
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
-  });
-  popup.addEventListener('click', async (e) => {
-    const t = e.target as HTMLElement;
-    const domain = new URL(href).hostname.replace(/^www\./, '');
-    const isDomain = t.getAttribute('data-action') === 'domain';
-    if (isDomain) await addDomain(domain);
-    else await addBlockedUrl(href);
-    await recordBlockOnce(item, isDomain ? 'domain' : 'url', domain);
-    popup.remove();
-    btn.remove();
-    injectBadge(item, isDomain, !isDomain, href);
-    updateCollapseBar();
-  });
-  item.appendChild(btn);
-  item.appendChild(popup);
-}
-
 export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boolean, href: string): void {
   if (item.querySelector('.srb-blocked-badge')) return;
   rememberTargetUrl(item, href);
@@ -224,82 +177,73 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
   const badge = document.createElement('div');
   badge.className = 'srb-blocked-badge';
+  badge.setAttribute('role', 'button');
+  badge.tabIndex = 0;
   lockBadgeTypography(badge);
-  if (domainMatch) {
-    badge.textContent = `🌐 ${t('domainHit')}`;
-    badge.title = t('domainBlocked');
-  } else {
-    badge.textContent = `🔗 ${t('urlHit')}`;
-    badge.title = t('urlBlocked');
+
+  function renderRuleBadge(type: 'domain' | 'url'): void {
+    const cancelText = type === 'domain' ? t('cancelDomain') : t('cancelUrl');
+    badge.dataset.ruleType = type;
+    badge.textContent = type === 'domain'
+      ? `🌐 ${t('domainHit')}`
+      : `🔗 ${t('urlHit')}`;
+    badge.title = cancelText;
+    badge.setAttribute('aria-label', cancelText);
   }
 
-  // Hover 时在 badge 正上方显示取消标记小 badge
-  const di = matchBlockedDomain(href, _state.blockedDomains);
-  const ui = _state.blockedUrls.indexOf(href);
+  renderRuleBadge(domainMatch ? 'domain' : 'url');
 
-  const cancelBadges: HTMLDivElement[] = [];
+  let removing = false;
+  badge.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    if (removing) return;
+    removing = true;
+    badge.setAttribute('aria-disabled', 'true');
+    try {
+      const current = await get();
+      const includeSubdomains = current.blockSubdomains ?? true;
+      const domainIndex = matchBlockedDomain(href, current.urls, includeSubdomains);
+      const urlIndex = current.blockedUrls.indexOf(href);
+      const ruleType = badge.dataset.ruleType === 'url' ? 'url' : 'domain';
 
-  function makeCancelBadge(text: string, onClick: () => Promise<void>): HTMLDivElement {
-    const el = document.createElement('div');
-    el.className = 'srb-cancel-badge';
-    lockBadgeTypography(el);
-    el.textContent = text;
-    el.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await onClick();
-    });
-    return el;
-  }
+      if (ruleType === 'domain' && domainIndex >= 0) {
+        await removeBlockedItem('domain', domainIndex);
+      } else if (ruleType === 'url' && urlIndex >= 0) {
+        await removeBlockedItem('url', urlIndex);
+      }
 
-  if (di >= 0) {
-    cancelBadges.push(makeCancelBadge(t('cancelDomain'), async () => {
-      await removeBlockedItem('domain', di);
-      mask.remove();
-      badge.remove();
-      cancelBadges.forEach((b) => b.remove());
-      updateCollapseBar();
-    }));
-  }
-  if (ui >= 0) {
-    cancelBadges.push(makeCancelBadge(t('cancelUrl'), async () => {
-      await removeBlockedItem('url', ui);
-      if (di < 0) {
+      const latest = await get();
+      const hasDomainRule = matchBlockedDomain(
+        href,
+        latest.urls,
+        latest.blockSubdomains ?? true,
+      ) >= 0;
+      const hasUrlRule = latest.blockedUrls.includes(href);
+
+      if (!hasDomainRule) item.removeAttribute('data-srb-domain-blocked');
+      if (hasDomainRule) {
+        renderRuleBadge('domain');
+      } else if (hasUrlRule) {
+        renderRuleBadge('url');
+      } else {
         mask.remove();
         badge.remove();
-        cancelBadges.forEach((b) => b.remove());
-      } else {
-        badge.textContent = `🌐 ${t('domainHit')}`;
-        badge.title = t('domainBlocked');
-        // 移除对应的取消链接 badge
-        cancelBadges.pop()?.remove();
       }
       updateCollapseBar();
-    }));
-  }
-
-  let hideTimer: ReturnType<typeof setTimeout>;
-  badge.addEventListener('mouseenter', () => {
-    clearTimeout(hideTimer);
-    cancelBadges.forEach((b) => { b.style.display = 'block'; });
+    } finally {
+      removing = false;
+      if (badge.isConnected) badge.removeAttribute('aria-disabled');
+    }
   });
-  badge.addEventListener('mouseleave', () => {
-    hideTimer = setTimeout(() => {
-      const anyHovered = cancelBadges.some((b) => b.matches(':hover'));
-      if (!anyHovered) cancelBadges.forEach((b) => { b.style.display = 'none'; });
-    }, 150);
-  });
-  cancelBadges.forEach((b) => {
-    b.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-    b.addEventListener('mouseleave', () => { b.style.display = 'none'; });
+  badge.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    badge.click();
   });
 
   item.appendChild(mask);
   item.appendChild(badge);
-  // 从主 badge 上方往上叠，每个 cancel badge 间隔 26px
-  cancelBadges.forEach((b, i) => {
-    b.style.bottom = (34 + i * 26) + 'px';
-    item.appendChild(b);
-  });
 }
 
 export function injectAdBadge(item: Element, href: string): void {
@@ -323,7 +267,6 @@ export function injectAdBadge(item: Element, href: string): void {
   badge.addEventListener('click', () => {
     mask.remove();
     badge.remove();
-    if (href) injectBlockButton(item, href);
     updateCollapseBar();
   });
   item.appendChild(mask);
@@ -349,23 +292,38 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
 }
 
 /**
- * 从全部链接的全部属性中查找命中的域名，再向上定位并标记所属内容块。
+ * 从结果链接中查找命中的域名，再向上定位并标记所属内容块。
+ * 搜狗仅使用链接子 span 的可见地址文本，其他引擎继续遍历链接属性。
  * 该扫描不依赖搜索引擎配置或自动检测结果。
  */
 export function scanBlockedDomains(): void {
   if (!_state.isEnabled || _state.blockedDomains.length === 0) return;
 
+  const currentHostname = _getHostname().replace(/^www\./, '');
+  const isSogouPage = currentHostname === 'sogou.com';
+  const preferredResultSelector = isSogouPage
+    ? '.vrwrap'
+    : currentHostname === 'so.com'
+      ? '.res-list'
+      : null;
   const matchedContainers = new Map<HTMLElement, string>();
   document.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
-    if (link.closest('.srb-popup, .srb-collapse-bar, .srb-blocked-badge, .srb-cancel-badge')) return;
+    if (link.closest('.srb-popup, .srb-collapse-bar, .srb-blocked-badge')) return;
     if (link.closest('[data-srb-domain-blocked]')) return;
 
-    const matchedUrl = extractAnchorAttributeUrls(link).find(
+    const candidateUrls = isSogouPage
+      ? extractAnchorSpanUrls(link)
+      : extractAnchorAttributeUrls(link);
+    const matchedUrl = candidateUrls.find(
       (url) => matchBlockedDomain(url, _state.blockedDomains) >= 0,
     );
     if (!matchedUrl) return;
 
-    const container = findContentContainer(link);
+    // 搜狗和 360 优先遮罩各自的完整结果容器，找不到时再使用通用定位。
+    const container = (preferredResultSelector
+      ? link.closest<HTMLElement>(preferredResultSelector)
+      : null)
+      ?? findContentContainer(link);
     if (!container || matchedContainers.has(container)) return;
     matchedContainers.set(container, matchedUrl);
   });
@@ -403,7 +361,6 @@ export function processItem(item: Element): void {
     if (adContainer) { injectAdBadge(adContainer, href); }
     else { injectAdBadge(item, href); }
   }
-  else injectBlockButton(item, href);
 }
 
 export function scanResults(engine: SearchEngineConfig): void {
@@ -431,7 +388,9 @@ export function scanForAds(): void {
   }
 
   engine.findAdContainers?.(document).forEach((element) => {
-    if (element.hasAttribute('data-srb-ad-scanned')) return;
+    // 搜索引擎可能异步重写广告容器内容，导致已注入的遮罩被移除，
+    // 但容器上的扫描标记仍保留；此时需要重新注入。
+    if (element.querySelector('.srb-ad-mask, .srb-ad-badge')) return;
     element.setAttribute('data-srb-ad-scanned', 'true');
     injectAdBadge(element, '');
   });
@@ -525,7 +484,7 @@ export function checkSavedSelectors(): void {
 // ========== Cleanup ==========
 
 export function clearAllMarkers(options: { preserveCounts?: boolean; removeCollapse?: boolean } = {}): void {
-  document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-cancel-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
+  document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
   document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
     el.removeAttribute('data-srb-domain-blocked');

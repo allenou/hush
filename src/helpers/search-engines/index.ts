@@ -3,6 +3,7 @@ import { baiduSearchEngine } from './baidu';
 import { bingSearchEngine } from './bing';
 import { googleSearchEngine } from './google';
 import { soSearchEngine } from './so';
+import { sogouSearchEngine } from './sogou';
 import type { SearchEngineRule } from './types';
 
 /**
@@ -14,6 +15,7 @@ export const SEARCH_ENGINE_RULES: readonly SearchEngineRule[] = [
   baiduSearchEngine,
   bingSearchEngine,
   soSearchEngine,
+  sogouSearchEngine,
 ];
 
 export function getSearchEngineRule(hostname: string): SearchEngineRule | null {

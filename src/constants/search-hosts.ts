@@ -3,6 +3,7 @@ export const SEARCH_ENGINE_HOSTS = [
   'baidu.com',
   'bing.com',
   'so.com',
+  'sogou.com',
 ] as const;
 
 export const SEARCH_ENGINE_MATCH_PATTERNS = SEARCH_ENGINE_HOSTS.flatMap((hostname) => [

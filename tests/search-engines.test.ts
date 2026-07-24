@@ -21,19 +21,22 @@ describe('supported search hostnames', () => {
     expect(normalizeSearchHostname('www.google.com')).toBe('google.com');
     expect(isSupportedSearchHostname('google.com')).toBe(true);
     expect(isSupportedSearchHostname('www.google.com')).toBe(true);
+    expect(isSupportedSearchHostname('sogou.com')).toBe(true);
+    expect(isSupportedSearchHostname('www.sogou.com')).toBe(true);
   });
 
-  it.each(['m.baidu.com', 'cn.bing.com', 'google.com.hk', 'example.com'])(
+  it.each(['m.baidu.com', 'cn.bing.com', 'wap.sogou.com', 'google.com.hk', 'example.com'])(
     'rejects non-enumerated hostname %s',
     (hostname) => expect(isSupportedSearchHostname(hostname)).toBe(false),
   );
 
-  it('exports eight exact Manifest match patterns', () => {
+  it('exports ten exact Manifest match patterns', () => {
     expect(SEARCH_ENGINE_MATCH_PATTERNS).toEqual([
       '*://google.com/*', '*://www.google.com/*',
       '*://baidu.com/*', '*://www.baidu.com/*',
       '*://bing.com/*', '*://www.bing.com/*',
       '*://so.com/*', '*://www.so.com/*',
+      '*://sogou.com/*', '*://www.sogou.com/*',
     ]);
   });
 });
@@ -69,6 +72,13 @@ describe('detectSearchEngine', () => {
     const result = detectSearchEngine('https://www.so.com/s?q=test');
     expect(result).not.toBeNull();
     expect(result!.name).toBe('360搜索');
+  });
+
+  it('detects 搜狗搜索 (sogou.com)', () => {
+    const result = detectSearchEngine('https://www.sogou.com/web?query=test');
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('搜狗搜索');
+    expect(result!.hostname).toBe('sogou.com');
   });
 
   it('returns null for unknown search engine', () => {
@@ -115,6 +125,10 @@ describe('isSearchEngine', () => {
     expect(isSearchEngine('https://www.baidu.com/')).toBe(true);
   });
 
+  it('returns true for Sogou', () => {
+    expect(isSearchEngine('https://www.sogou.com/web?query=test')).toBe(true);
+  });
+
   it('returns false for unknown site', () => {
     expect(isSearchEngine('https://www.example.com/')).toBe(false);
   });
@@ -135,6 +149,7 @@ describe('BUILT_IN_ENGINES', () => {
     expect(hostnames).toContain('baidu.com');
     expect(hostnames).toContain('bing.com');
     expect(hostnames).toContain('so.com');
+    expect(hostnames).toContain('sogou.com');
   });
 
   it('no longer contains DuckDuckGo', () => {
@@ -156,7 +171,7 @@ describe('BUILT_IN_ENGINES', () => {
     for (const engine of BUILT_IN_ENGINES) {
       expect(engine.name).toBeTruthy();
       expect(engine.hostname).toBeTruthy();
-      expect(engine.linkSelector).toBe('a[href]');
+      expect(engine.linkSelector).toBe(engine.hostname === 'sogou.com' ? 'a' : 'a[href]');
     }
   });
 });
@@ -177,6 +192,11 @@ describe('engine-specific rules', () => {
     expect(getSearchEngineRule('so.com')?.resultSelectors).toEqual([
       expect.objectContaining({ containerSelector: '#main', itemSelector: '.res-list' }),
     ]);
+    expect(getSearchEngineRule('sogou.com')?.resultSelectors).toEqual([
+      expect.objectContaining({ containerSelector: '#main', itemSelector: '.vrwrap', linkSelector: 'a' }),
+      expect.objectContaining({ containerSelector: '#main', itemSelector: '.rb', linkSelector: 'a' }),
+    ]);
+    expect(getSearchEngineRule('sogou.com')?.adItemSelectors).toContain('.ad-results');
   });
 
   it('does not use another engine result selector', () => {
@@ -200,6 +220,7 @@ describe('engine-specific rules', () => {
   it('uses only the current engine query parameters', () => {
     expect(extractSearchQuery('https://www.baidu.com/s?q=wrong&wd=正确')).toBe('正确');
     expect(extractSearchQuery('https://www.google.com/search?wd=wrong')).toBeNull();
+    expect(extractSearchQuery('https://www.sogou.com/web?query=搜狗')).toBe('搜狗');
   });
 
   it('delegates search URL creation to the current engine', () => {
@@ -207,6 +228,26 @@ describe('engine-specific rules', () => {
       'https://www.baidu.com/s?wd=%E4%B8%AD%E6%96%87%20%E6%90%9C%E7%B4%A2',
     );
     expect(getSearchUrl('bing.com', 'test')).toBe('https://www.bing.com/search?q=test');
+    expect(getSearchUrl('sogou.com', '中文 搜索')).toBe(
+      'https://www.sogou.com/web?query=%E4%B8%AD%E6%96%87%20%E6%90%9C%E7%B4%A2',
+    );
+  });
+
+  it('detects Sogou result containers', () => {
+    document.body.innerHTML = `
+      <main id="main">
+        <div class="vrwrap"><h3><a href="https://a.example">A</a></h3></div>
+        <div class="vrwrap"><h3><a href="https://b.example">B</a></h3></div>
+      </main>
+    `;
+
+    expect(detectBuiltInSearchResults('https://www.sogou.com/web?query=test')).toEqual(
+      expect.objectContaining({
+        name: '搜狗搜索',
+        containerSelector: '#main',
+        itemSelector: '.vrwrap',
+      }),
+    );
   });
 
   it('requires a child ad label for 360 ad candidate containers', () => {
@@ -218,6 +259,18 @@ describe('engine-specific rules', () => {
     const rule = getSearchEngineRule('so.com')!;
     expect(rule.isAdItem?.(document.querySelector('#ordinary')!)).toBe(false);
     expect(rule.isAdItem?.(document.querySelector('#advertisement')!)).toBe(true);
+    expect(rule.findAdContainers?.(document).map((element) => element.id)).toEqual([
+      'advertisement',
+    ]);
+  });
+
+  it('finds standalone Sogou ad containers', () => {
+    document.body.innerHTML = `
+      <div id="ordinary" class="vrwrap">普通搜索结果</div>
+      <div id="advertisement" class="ad-results">搜狗广告结果</div>
+    `;
+
+    const rule = getSearchEngineRule('sogou.com')!;
     expect(rule.findAdContainers?.(document).map((element) => element.id)).toEqual([
       'advertisement',
     ]);

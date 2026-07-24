@@ -190,6 +190,8 @@ describe('Options UI', () => {
     }));
     expect(searchGroup.querySelector('.search-engine-menu')).not.toBeNull();
     expect(searchGroup.querySelector('.search-engine-opt.current')).not.toBeNull();
+    expect(Array.from(searchGroup.querySelectorAll('.search-engine-opt'))
+      .some((option) => option.textContent?.includes('搜狗'))).toBe(true);
 
     target.querySelector<HTMLButtonElement>('.history-delete')?.click();
     target.querySelector<HTMLButtonElement>('.history-clear')?.click();

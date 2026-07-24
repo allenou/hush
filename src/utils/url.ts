@@ -48,6 +48,16 @@ export function extractAnchorAttributeUrls(link: HTMLAnchorElement): string[] {
   return Array.from(urls);
 }
 
+/** 仅从链接子 span 的可见文本中提取 HTTP(S) 地址，不读取链接属性。 */
+export function extractAnchorSpanUrls(link: HTMLAnchorElement): string[] {
+  const urls = new Set<string>();
+  link.querySelectorAll('span').forEach((span) => {
+    const parsed = parseHttpUrl((span.textContent ?? '').trim());
+    if (parsed) urls.add(parsed.href);
+  });
+  return Array.from(urls);
+}
+
 function collectUrlsFromAttribute(rawValue: string, urls: Set<string>, depth = 0): void {
   if (!rawValue || depth > 3) return;
   let value = rawValue.trim().replace(/\\\//g, '/');
@@ -100,13 +110,17 @@ function parseHttpUrl(value: string): URL | null {
 
 /** 从搜索结果元素中提取真实 URL（处理搜索引擎跳转链接） */
 export function extractResultUrl(item: Element, linkSelector: string): string {
+  const currentHost = new URL(window.location.href).hostname.replace(/^www\./, '');
+  if (currentHost === 'sogou.com') {
+    return extractSogouResultUrl(item, linkSelector);
+  }
+
   const link = item.querySelector<HTMLAnchorElement>(linkSelector);
   const href = link?.href ?? '';
   if (!href) return '';
   if (!isSearchEngineRedirect(href)) return href;
 
   // 跳转链接 → 遍历所有属性找真实 URL
-  const currentHost = new URL(window.location.href).hostname.replace(/^www\./, '');
   const redirectTarget = extractRedirectTargetUrl(href, currentHost);
   if (redirectTarget) return redirectTarget;
 
@@ -128,6 +142,19 @@ export function extractResultUrl(item: Element, linkSelector: string): string {
   if (citeUrl) return citeUrl;
 
   return href;
+}
+
+/**
+ * 搜狗的跳转地址和属性不作为目标依据，只读取结果链接子 span 中展示的访问地址。
+ * 例如：<a class="citeLinkClass"><span>CSDN</span><span>https://www.csdn.net/</span></a>
+ */
+function extractSogouResultUrl(item: Element, linkSelector: string): string {
+  const links = item.querySelectorAll<HTMLAnchorElement>(linkSelector);
+  for (const link of links) {
+    const [url] = extractAnchorSpanUrls(link);
+    if (url) return url;
+  }
+  return '';
 }
 
 /** 判断 URL 是否为搜索引擎内部跳转链接 */

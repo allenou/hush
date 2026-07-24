@@ -16,9 +16,11 @@ import {
 import {
   applyBlockedSelectors,
   initBlocker,
-  injectBlockButton,
+  injectBadge,
+  isAdItem,
   processItem,
   scanBlockedDomains,
+  scanForAds,
   syncBlockerState,
 } from '@/helpers/ad-blocker';
 import { formatLocalDateKey } from '@/utils/statistics';
@@ -295,6 +297,82 @@ describe('removeBlockedItem', () => {
   });
 });
 
+describe('result hit badge recovery', () => {
+  const href = 'https://example.com/article';
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => href,
+    });
+  });
+
+  it('removes a domain rule by clicking the domain-hit badge', async () => {
+    await addDomain('example.com');
+    syncBlockerState({
+      blockedDomains: ['example.com'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    const item = document.createElement('div');
+    document.body.appendChild(item);
+
+    injectBadge(item, true, false, href);
+
+    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge')!;
+    expect(badge.dataset.ruleType).toBe('domain');
+    expect(item.querySelector('.srb-cancel-badge')).toBeNull();
+    badge.click();
+
+    await vi.waitFor(async () => {
+      expect((await get()).urls).toEqual([]);
+    });
+    expect(item.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+  });
+
+  it('switches from domain hit to URL hit when both rules matched', async () => {
+    await addDomain('example.com');
+    await addBlockedUrl(href);
+    syncBlockerState({
+      blockedDomains: ['example.com'],
+      blockedUrls: [href],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    const item = document.createElement('div');
+    item.setAttribute('data-srb-domain-blocked', 'true');
+    document.body.appendChild(item);
+
+    injectBadge(item, true, true, href);
+
+    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge')!;
+    expect(badge.dataset.ruleType).toBe('domain');
+    badge.click();
+
+    await vi.waitFor(async () => {
+      const storage = await get();
+      expect(storage.urls).toEqual([]);
+      expect(storage.blockedUrls).toEqual([href]);
+      expect(badge.dataset.ruleType).toBe('url');
+    });
+    expect(item.querySelector('.srb-mask')).toBeTruthy();
+    expect(item.hasAttribute('data-srb-domain-blocked')).toBe(false);
+
+    badge.click();
+
+    await vi.waitFor(async () => {
+      expect((await get()).blockedUrls).toEqual([]);
+    });
+    expect(item.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+  });
+});
+
 describe('addCustomEngine', () => {
   it('adds a custom engine', async () => {
     await addCustomEngine({ name: 'My', hostname: 'my.com', containerSelector: '#r', itemSelector: '.i', linkSelector: 'a[href]' });
@@ -439,67 +517,6 @@ describe('recordBlock', () => {
   });
 });
 
-describe('manual result block statistics', () => {
-  async function clickInjectedBlockOption(href: string, action: 'domain' | 'url'): Promise<void> {
-    initBlocker({
-      getHostname: () => 'google.com',
-      extractResultUrl: () => href,
-    });
-    syncBlockerState({
-      blockedDomains: [],
-      blockedUrls: [],
-      blockedSelectors: [],
-      isEnabled: true,
-      blockAds: true,
-      blockSubdomains: true,
-    }, null);
-
-    const item = document.createElement('div');
-    document.body.appendChild(item);
-    injectBlockButton(item, href);
-    item.querySelector<HTMLButtonElement>('.srb-block-btn')!.click();
-    item.querySelector<HTMLButtonElement>(`.srb-opt[data-action="${action}"]`)!.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-
-  it('shows only the domain option for a homepage with tracking parameters', () => {
-    const item = document.createElement('div');
-    injectBlockButton(item, 'https://example.com/?utm_source=search&gclid=123');
-
-    expect(Array.from(item.querySelectorAll<HTMLElement>('.srb-opt'), (option) =>
-      option.dataset.action)).toEqual(['domain']);
-  });
-
-  it('shows both domain and URL options for a deep link', () => {
-    const item = document.createElement('div');
-    injectBlockButton(item, 'https://example.com/article');
-
-    expect(Array.from(item.querySelectorAll<HTMLElement>('.srb-opt'), (option) =>
-      option.dataset.action)).toEqual(['domain', 'url']);
-  });
-
-  it('records root-result manual blocks as domain blocks, not ads', async () => {
-    await clickInjectedBlockOption('https://example.com/', 'domain');
-
-    const s = await get();
-
-    expect(s.urls).toEqual(['example.com']);
-    expect(s.adBlockCount).toBe(0);
-    expect(s.domainBlockCount).toBe(1);
-  });
-
-  it('records deep-link manual blocks without incrementing ad count', async () => {
-    await clickInjectedBlockOption('https://example.com/page', 'url');
-
-    const s = await get();
-
-    expect(s.blockedUrls).toEqual(['https://example.com/page']);
-    expect(s.adBlockCount).toBe(0);
-    expect(s.domainBlockCount).toBe(0);
-    expect(s.blockCount).toBe(1);
-  });
-});
-
 describe('result domain matching', () => {
   function makeEngine() {
     return {
@@ -548,13 +565,13 @@ describe('result domain matching', () => {
     syncForDomains([]);
     processItem(item);
 
-    expect(item.querySelector('.srb-block-btn')).toBeTruthy();
+    expect(item.querySelector('.srb-block-btn, .srb-popup')).toBeNull();
     expect(item.querySelector('.srb-blocked-badge')).toBeNull();
 
     syncForDomains(['example.com']);
     processItem(item);
 
-    expect(item.querySelector('.srb-block-btn')).toBeNull();
+    expect(item.querySelector('.srb-block-btn, .srb-popup')).toBeNull();
     const badge = item.querySelector<HTMLElement>('.srb-blocked-badge');
     expect(badge).toBeTruthy();
     expect(item.getAttribute('data-srb-target-url')).toBe('https://sub.example.com/page');
@@ -608,6 +625,39 @@ describe('result domain matching', () => {
     expect(items[1].querySelector('.srb-blocked-badge')).toBeNull();
   });
 
+  it('prefers the full 360 res-list container for domain matches', () => {
+    initBlocker({
+      getHostname: () => 'so.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: ['csdn.net'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <div class="res-list" id="full-360-result">
+        <div class="result-card" id="inner-result-card">
+          <a custom-target="https://blog.csdn.net/post/1">CSDN</a>
+          <p>内层容器同样符合通用定位特征，但应优先标记外层 res-list。</p>
+        </div>
+      </div>
+    `;
+
+    scanBlockedDomains();
+
+    const fullResult = document.querySelector<HTMLElement>('#full-360-result')!;
+    const innerResult = document.querySelector<HTMLElement>('#inner-result-card')!;
+    expect(fullResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(Array.from(fullResult.children).some((child) =>
+      child.classList.contains('srb-mask'))).toBe(true);
+    expect(Array.from(innerResult.children).some((child) =>
+      child.classList.contains('srb-mask'))).toBe(false);
+  });
+
   it('does not block a search link only because its query text contains a blocked domain', () => {
     initBlocker({
       getHostname: () => 'so.com',
@@ -631,6 +681,84 @@ describe('result domain matching', () => {
     scanBlockedDomains();
 
     expect(document.querySelector('.srb-blocked-badge')).toBeNull();
+  });
+
+  it('uses only link child span text for Sogou domain matching', () => {
+    initBlocker({
+      getHostname: () => 'sogou.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: ['csdn.net'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <div class="vrwrap" id="span-match">
+        <h3>
+          <a href="/link?url=opaque" linkurl="https://wrong.example/">
+            <span>CSDN</span>
+          </a>
+        </h3>
+        <p>一段足够长的搜索结果摘要，用于表示完整的内容块。</p>
+        <a class="citeLinkClass" href="/link?url=opaque">
+          <span>CSDN</span>
+          <span>https://www.csdn.net/</span>
+        </a>
+      </div>
+      <div class="vrwrap" id="attribute-only">
+        <h3>
+          <a href="/link?url=opaque" linkurl="https://www.csdn.net/">
+            <span>属性中的目标地址不应生效</span>
+          </a>
+        </h3>
+        <p>另一个不应该被域名规则标记的搜索结果。</p>
+      </div>
+    `;
+
+    scanBlockedDomains();
+
+    const matchedResult = document.querySelector<HTMLElement>('#span-match')!;
+    expect(matchedResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(Array.from(matchedResult.children).some((child) =>
+      child.classList.contains('srb-mask'))).toBe(true);
+    expect(Array.from(matchedResult.children).some((child) =>
+      child.classList.contains('srb-blocked-badge'))).toBe(true);
+    expect(document.querySelector('#attribute-only .srb-blocked-badge')).toBeNull();
+  });
+
+  it('falls back to generic container lookup for Sogou results without vrwrap', () => {
+    initBlocker({
+      getHostname: () => 'sogou.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: ['csdn.net'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <article id="fallback-result">
+        <a class="citeLinkClass">
+          <span>CSDN</span>
+          <span>https://www.csdn.net/</span>
+        </a>
+        <p>没有 vrwrap 时由通用容器定位逻辑处理完整结果。</p>
+      </article>
+    `;
+
+    scanBlockedDomains();
+
+    const fallbackResult = document.querySelector<HTMLElement>('#fallback-result')!;
+    expect(fallbackResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(Array.from(fallbackResult.children).some((child) =>
+      child.classList.contains('srb-mask'))).toBe(true);
   });
 
   it('records each newly rendered blocked result once while enabled', async () => {
@@ -741,6 +869,81 @@ describe('result domain matching', () => {
 
     expect((await get()).blockCount).toBe(0);
     expect(item.querySelector('.srb-blocked-badge')).toBeNull();
+  });
+});
+
+describe('search engine ad detection', () => {
+  it('recognizes the Sogou ad-results class on an item or its descendants', () => {
+    initBlocker({
+      getHostname: () => 'sogou.com',
+      extractResultUrl: () => '',
+    });
+
+    const directAd = document.createElement('div');
+    directAd.className = 'ad-results';
+    const nestedAd = document.createElement('div');
+    nestedAd.innerHTML = '<div class="ad-results">广告内容</div>';
+    const ordinaryResult = document.createElement('div');
+    ordinaryResult.className = 'vrwrap';
+
+    expect(isAdItem(directAd)).toBe(true);
+    expect(isAdItem(nestedAd)).toBe(true);
+    expect(isAdItem(ordinaryResult)).toBe(false);
+  });
+
+  it('marks standalone Sogou ad-results containers during the global ad scan', () => {
+    initBlocker({
+      getHostname: () => 'sogou.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = `
+      <div class="vrwrap">普通搜索结果</div>
+      <div class="ad-results">搜狗广告结果</div>
+    `;
+
+    scanForAds();
+
+    expect(document.querySelector('.ad-results .srb-ad-badge')).toBeTruthy();
+    expect(document.querySelector('.vrwrap .srb-ad-badge')).toBeNull();
+  });
+
+  it('reinjects Sogou ad markers after the site rewrites an already scanned container', () => {
+    initBlocker({
+      getHostname: () => 'sogou.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+    }, null);
+    document.body.innerHTML = '<div class="ad-results"></div>';
+
+    scanForAds();
+    const adContainer = document.querySelector<HTMLElement>('.ad-results')!;
+    expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
+    expect(adContainer.querySelector('.srb-ad-badge')).toBeTruthy();
+
+    // 模拟搜狗异步渲染通过 innerHTML 覆盖 Hush 注入的子节点。
+    adContainer.innerHTML = '<div class="ad_result">重新渲染的广告内容</div>';
+    expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
+    expect(adContainer.querySelector('.srb-ad-badge')).toBeNull();
+
+    scanForAds();
+
+    expect(adContainer.querySelector('.srb-ad-mask')).toBeTruthy();
+    expect(adContainer.querySelector('.srb-ad-badge')).toBeTruthy();
   });
 });
 

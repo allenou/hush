@@ -27,6 +27,7 @@ export const SEARCH_ENGINES: EngineOption[] = [
   { hostname: 'bing.com', label: 'Bing', color: '#0078d4' },
   { hostname: 'baidu.com', label: '百度', color: '#2932e1' },
   { hostname: 'so.com', label: '360搜索', color: '#f60' },
+  { hostname: 'sogou.com', label: '搜狗', color: '#fb6022' },
 ];
 
 export const SEARCH_ENGINE_MAP = new Map(SEARCH_ENGINES.map((e) => [e.hostname, e]));

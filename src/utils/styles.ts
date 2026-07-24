@@ -61,74 +61,6 @@ const CSS = `
   --srb-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
 }
 
-/* ===== Block Button (on each result item) ===== */
-.srb-block-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 9999;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--srb-surface);
-  border: 1px solid var(--srb-border);
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  color: var(--srb-text-secondary);
-  box-shadow: var(--srb-shadow-sm);
-  transition: all 0.12s;
-  font-family: var(--srb-font);
-}
-.srb-block-btn:hover {
-  border-color: var(--srb-accent);
-  color: var(--srb-accent);
-  box-shadow: var(--srb-shadow-accent);
-}
-
-/* Block action popup */
-.srb-popup {
-  position: absolute;
-  top: 32px;
-  right: 0;
-  z-index: 10000;
-  background: var(--srb-surface);
-  border: 1px solid var(--srb-border);
-  border-radius: var(--srb-radius-sm);
-  box-shadow: var(--srb-shadow-md);
-  display: none;
-  flex-direction: column;
-  min-width: 150px;
-  overflow: hidden;
-  padding: 4px;
-}
-.srb-opt {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  font-size: 12px;
-  color: var(--srb-text);
-  font-family: var(--srb-font);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.1s;
-}
-.srb-opt:hover {
-  background: var(--srb-accent-light);
-  color: var(--srb-accent);
-}
-.srb-opt:active {
-  background: var(--srb-accent-mid);
-}
-
 /* ===== Blocked Badge (redacted-document style) ===== */
 .srb-mask {
   position: absolute;
@@ -159,31 +91,6 @@ const CSS = `
 }
 .srb-blocked-badge:hover {
   background: var(--srb-danger-hover);
-}
-
-/* ===== Cancel Badge (hover 显示在 badge 上方) ===== */
-.srb-cancel-badge {
-  display: none;
-  position: absolute;
-  bottom: 34px;
-  right: 6px;
-  z-index: 10000;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 11px !important;
-  font-weight: 600;
-  font-family: var(--srb-font);
-  line-height: 15px !important;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  user-select: none;
-  border: 1px solid var(--srb-accent-border);
-  background: var(--srb-accent-light);
-  color: var(--srb-accent);
-  transition: background 0.12s;
-}
-.srb-cancel-badge:hover {
-  background: var(--srb-accent-mid);
 }
 
 /* ===== Ad Badge — 样式与域名屏蔽一致，仅 badge 文字区分 ===== */

@@ -33,7 +33,7 @@
       "title": "Search with less noise.",
       "description": "Mark unwanted results and ads, manage local rules, and keep everything on your device.",
       "getHush": "GitHub",
-      "note": "The first release supports Google, Baidu, Bing, and 360 Search."
+      "note": "The first release supports Google, Baidu, Bing, 360 Search, and Sogou."
     },
     "features": {
       "title": "A cleaner search experience.",
@@ -89,7 +89,7 @@
     },
     "processing": {
       "title": "Search page processing",
-      "description": "On the explicitly supported Google, Baidu, Bing, and 360 Search domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.",
+      "description": "On the explicitly supported Google, Baidu, Bing, 360 Search, and Sogou domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.",
       "scope": "Hush does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest."
     },
     "permissions": {
@@ -97,7 +97,7 @@
       "storage": "Saves rules, search history, statistics, backups, and preferences locally.",
       "contextMenus": "Adds actions to block domains, block links, and pick page elements to the browser context menu.",
       "hostTitle": "Supported search-engine host access",
-      "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, and 360 Search root and www domains."
+      "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, 360 Search, and Sogou root and www domains."
     },
     "changes": {
       "title": "Changes",
@@ -123,7 +123,7 @@
           "Choose whether domain rules also apply to subdomains.",
           "Display a clear badge over marked results and restore them directly from the page.",
           "Detect and mark advertising and sponsored results with an independent settings toggle.",
-          "Support Google, Baidu, Bing, and 360 Search out of the box.",
+          "Support Google, Baidu, Bing, 360 Search, and Sogou out of the box.",
           "Automatically detect result structures on supported search pages as their layouts change.",
           "Keep marking active across dynamically loaded results and search-page navigation.",
           "Quickly block domains, full links, or selected page elements from the browser's native context menu.",
