@@ -2,7 +2,7 @@
   import type { SearchRecord } from '@/utils/storage';
   import { SEARCH_ENGINES } from '@/constants';
   import { formatRelativeTime } from '@/utils/time';
-  import { t } from '@/utils/locale-store.svelte';
+  import { getSearchEngineDisplayName, t } from '@/utils/locale-store.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   let { searchHistory = [], onSearch, onRemove, onClear } = $props<{
@@ -70,7 +70,9 @@
             <span>{record.query}</span>
           </span>
           <span>
-            <span class="search-engine-tag">{record.engineName}</span>
+            <span class="search-engine-tag">
+              {getSearchEngineDisplayName(record.engineHostname, record.engineName)}
+            </span>
           </span>
           <span class="search-table-time">{formatRelativeTime(record.timestamp)}</span>
           <span class="search-table-actions">
@@ -99,7 +101,7 @@
                         onclick={() => { doSearch(record, engine.hostname); closeEngineMenu(i); }}
                       >
                         <span class="se-dot" style="background:{engine.color}"></span>
-                        <span>{engine.label}</span>
+                        <span>{getSearchEngineDisplayName(engine.hostname, engine.label)}</span>
                         {#if engine.hostname === record.engineHostname}
                           <svg class="current-engine-check" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12"/>

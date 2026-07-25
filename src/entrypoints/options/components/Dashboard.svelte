@@ -1,6 +1,11 @@
 <script lang="ts">
   import ChartCanvas from '@/components/ChartCanvas.svelte';
-  import { getLocale, t } from '@/utils/locale-store.svelte';
+  import { BUILT_IN_ENGINES } from '@/helpers/search-engines';
+  import {
+    getLocale,
+    getSearchEngineDisplayName,
+    t,
+  } from '@/utils/locale-store.svelte';
   import { formatDate } from '@/utils/locale';
   import {
     buildBlockBreakdown,
@@ -8,14 +13,11 @@
     summarizeDailySeries,
     truncateDomainLabel,
   } from '@/utils/statistics';
-  import type { BlockStats } from '@/utils/storage';
+  import type { BlockedDomainStat, BlockStats } from '@/utils/storage';
   import type { StatisticsRange } from '@/utils/statistics';
   import type { ChartConfiguration } from 'chart.js';
 
-  interface DomainStat {
-    domain: string;
-    count: number;
-  }
+  type BreakdownFilter = 'all' | 'ad' | 'domain' | 'other';
 
   interface Props {
     dailyStats?: BlockStats[];
@@ -25,7 +27,7 @@
     totalCount?: number;
     adBlockCount?: number;
     domainBlockCount?: number;
-    topBlockedDomains?: DomainStat[];
+    topBlockedDomains?: BlockedDomainStat[];
   }
 
   let {
@@ -40,9 +42,56 @@
   }: Props = $props();
 
   let rangeDays = $state<StatisticsRange>(30);
-  let dailySeries = $derived(buildDailySeries(dailyStats, rangeDays, now));
+  let engineFilter = $state('all');
+  let selectedBreakdownFilter = $state<BreakdownFilter>('all');
+  let filteredDailyStats = $derived.by((): BlockStats[] => {
+    if (engineFilter === 'all') return dailyStats;
+    return dailyStats.map((item) => {
+      const engineStats = item.engineStats?.[engineFilter];
+      return {
+        date: item.date,
+        count: engineStats?.count ?? 0,
+        adCount: engineStats?.adCount ?? 0,
+        targetDomainCount: engineStats?.targetDomainCount ?? 0,
+        subdomainCount: engineStats?.subdomainCount ?? 0,
+        otherCount: engineStats?.otherCount ?? 0,
+      };
+    });
+  });
+  let dailySeries = $derived(buildDailySeries(filteredDailyStats, rangeDays, now));
   let summary = $derived(summarizeDailySeries(dailySeries));
-  let visibleTopDomains = $derived(topBlockedDomains.slice(0, 10));
+  let visibleTopDomains = $derived.by(() => topBlockedDomains
+    .map((item) => ({
+      ...item,
+      count: selectedBreakdownFilter === 'ad'
+        ? item.adCount ?? 0
+        : selectedBreakdownFilter === 'domain'
+          ? item.domainCount ?? 0
+          : selectedBreakdownFilter === 'other'
+            ? item.otherCount ?? 0
+            : item.count,
+    }))
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10));
+  let selectedBreakdownLabel = $derived(
+    selectedBreakdownFilter === 'ad'
+      ? t('adLabel')
+      : selectedBreakdownFilter === 'domain'
+        ? t('domainLabel')
+        : selectedBreakdownFilter === 'other'
+          ? t('otherLabel')
+          : t('filterAll'),
+  );
+  let domainRankingTitle = $derived(
+    selectedBreakdownFilter === 'ad'
+      ? t('adDomainRanking')
+      : selectedBreakdownFilter === 'domain'
+        ? t('domainRuleRanking')
+        : selectedBreakdownFilter === 'other'
+          ? t('otherDomainRanking')
+          : t('topDomains'),
+  );
   let breakdown = $derived(buildBlockBreakdown(
     totalBlockCount,
     adBlockCount,
@@ -85,6 +134,10 @@
     } catch {
       return fallback;
     }
+  }
+
+  function toggleBreakdownFilter(filter: Exclude<BreakdownFilter, 'all'>): void {
+    selectedBreakdownFilter = selectedBreakdownFilter === filter ? 'all' : filter;
   }
 
   let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
@@ -196,6 +249,11 @@
         borderColor: chartColor('--srb-surface', '#ffffff'),
         borderWidth: 3,
         hoverOffset: 4,
+        offset: [
+          selectedBreakdownFilter === 'ad' ? 8 : 0,
+          selectedBreakdownFilter === 'domain' ? 8 : 0,
+          selectedBreakdownFilter === 'other' ? 8 : 0,
+        ],
       }],
     },
     options: {
@@ -210,6 +268,10 @@
           },
         },
       },
+      onClick: (_event, elements) => {
+        const filter = (['ad', 'domain', 'other'] as const)[elements[0]?.index ?? -1];
+        if (filter) toggleBreakdownFilter(filter);
+      },
     },
   }));
 
@@ -218,13 +280,24 @@
     data: {
       labels: visibleTopDomains.map((item) => item.domain),
       datasets: [{
-        label: t('topDomains'),
+        label: domainRankingTitle,
         data: visibleTopDomains.map((item) => item.count),
-        backgroundColor: visibleTopDomains.map((_, index) => [
-          chartColor('--srb-chart-blue', '#3b82f6'),
-          chartColor('--srb-chart-purple', '#a855f7'),
-          chartColor('--srb-chart-pink', '#ec4899'),
-        ][index % 3]),
+        backgroundColor: visibleTopDomains.map((_, index) => {
+          if (selectedBreakdownFilter === 'ad') {
+            return chartColor('--srb-chart-blue', '#3b82f6');
+          }
+          if (selectedBreakdownFilter === 'domain') {
+            return chartColor('--srb-chart-purple', '#a855f7');
+          }
+          if (selectedBreakdownFilter === 'other') {
+            return chartColor('--srb-chart-pink', '#ec4899');
+          }
+          return [
+            chartColor('--srb-chart-blue', '#3b82f6'),
+            chartColor('--srb-chart-purple', '#a855f7'),
+            chartColor('--srb-chart-pink', '#ec4899'),
+          ][index % 3];
+        }),
         borderRadius: 7,
         borderSkipped: false,
         barThickness: 14,
@@ -286,18 +359,34 @@
   <section class="range-section" aria-labelledby="recent-stats-title">
     <div class="range-toolbar">
       <h2 id="recent-stats-title">{t('recentStats')}</h2>
-      <div class="range-select-shell">
-        <select
-          value={rangeDays}
-          aria-label={t('statisticsRange')}
-          onchange={(event) => rangeDays = Number(event.currentTarget.value) as StatisticsRange}
-        >
-          <option value={7}>{t('last7Days')}</option>
-          <option value={30}>{t('last30Days')}</option>
-          <option value={90}>{t('last90Days')}</option>
-          <option value={180}>{t('last180Days')}</option>
-          <option value={365}>{t('last365Days')}</option>
-        </select>
+      <div class="range-controls">
+        <div class="range-select-shell">
+          <select
+            value={rangeDays}
+            aria-label={t('statisticsRange')}
+            onchange={(event) => rangeDays = Number(event.currentTarget.value) as StatisticsRange}
+          >
+            <option value={7}>{t('last7Days')}</option>
+            <option value={30}>{t('last30Days')}</option>
+            <option value={90}>{t('last90Days')}</option>
+            <option value={180}>{t('last180Days')}</option>
+            <option value={365}>{t('last365Days')}</option>
+          </select>
+        </div>
+        <div class="range-select-shell engine-select-shell">
+          <select
+            value={engineFilter}
+            aria-label={t('searchEngineFilter')}
+            onchange={(event) => engineFilter = event.currentTarget.value}
+          >
+            <option value="all">{t('allSearchEngines')}</option>
+            {#each BUILT_IN_ENGINES as engine}
+              <option value={engine.hostname}>
+                {getSearchEngineDisplayName(engine.hostname, engine.name)}
+              </option>
+            {/each}
+          </select>
+        </div>
       </div>
     </div>
 
@@ -361,9 +450,30 @@
           />
         </div>
         <div class="breakdown-list">
-          <span><i class="dot blue"></i>{t('adLabel')} <strong>{breakdown.ads}</strong></span>
-          <span><i class="dot purple"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong></span>
-          <span><i class="dot pink"></i>{t('otherLabel')} <strong>{breakdown.other}</strong></span>
+          <button
+            type="button"
+            class:active={selectedBreakdownFilter === 'ad'}
+            aria-pressed={selectedBreakdownFilter === 'ad'}
+            onclick={() => toggleBreakdownFilter('ad')}
+          >
+            <i class="dot blue"></i>{t('adLabel')} <strong>{breakdown.ads}</strong>
+          </button>
+          <button
+            type="button"
+            class:active={selectedBreakdownFilter === 'domain'}
+            aria-pressed={selectedBreakdownFilter === 'domain'}
+            onclick={() => toggleBreakdownFilter('domain')}
+          >
+            <i class="dot purple"></i>{t('domainLabel')} <strong>{breakdown.domains}</strong>
+          </button>
+          <button
+            type="button"
+            class:active={selectedBreakdownFilter === 'other'}
+            aria-pressed={selectedBreakdownFilter === 'other'}
+            onclick={() => toggleBreakdownFilter('other')}
+          >
+            <i class="dot pink"></i>{t('otherLabel')} <strong>{breakdown.other}</strong>
+          </button>
         </div>
       {:else}
         <div class="dash-empty">{t('noData')}</div>
@@ -373,8 +483,18 @@
     <section class="dash-card domains-card">
       <div class="dash-card-heading">
         <div>
-          <h2>{t('topDomains')}</h2>
+          <h2 data-testid="domain-ranking-title">{domainRankingTitle}</h2>
         </div>
+        {#if selectedBreakdownFilter !== 'all'}
+          <button
+            type="button"
+            class="ranking-filter-pill"
+            aria-label={t('clearDomainRankingFilter')}
+            onclick={() => selectedBreakdownFilter = 'all'}
+          >
+            {selectedBreakdownLabel}<span aria-hidden="true">×</span>
+          </button>
+        {/if}
       </div>
       {#if visibleTopDomains.length === 0}
         <div class="dash-empty">{t('noData')}</div>
@@ -422,6 +542,11 @@
     font-weight: var(--srb-weight-bold);
     letter-spacing: -0.02em;
   }
+  .range-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--srb-space-sm);
+  }
   .range-select-shell {
     position: relative;
     flex: 0 0 auto;
@@ -460,6 +585,9 @@
   .range-select-shell select:focus-visible {
     outline: 2px solid var(--srb-primary);
     outline-offset: 2px;
+  }
+  .engine-select-shell select {
+    min-width: 152px;
   }
 
   .dash-hero {
@@ -617,12 +745,59 @@
     color: var(--srb-text-secondary);
     font-size: var(--srb-font-size-xs);
   }
-  .breakdown-list span {
+  .breakdown-list button {
     display: inline-flex;
     align-items: center;
     gap: var(--srb-space-xs);
+    padding: 7px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--srb-radius-full);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    transition:
+      background var(--srb-transition-fast),
+      border-color var(--srb-transition-fast);
+  }
+  .breakdown-list button:hover {
+    background: var(--srb-control-hover-bg);
+  }
+  .breakdown-list button:focus-visible {
+    outline: 2px solid var(--srb-accent-ring);
+    outline-offset: 2px;
+  }
+  .breakdown-list button.active {
+    border-color: var(--srb-accent-border-soft);
+    background: var(--srb-accent-soft);
+    color: var(--srb-primary-hover);
   }
   .breakdown-list strong { color: var(--srb-text-strong); }
+  .ranking-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--srb-space-xs);
+    padding: 6px 10px;
+    border: 1px solid var(--srb-accent-border-soft);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-accent-soft);
+    color: var(--srb-primary-hover);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--srb-font-size-xs);
+    font-weight: var(--srb-weight-bold);
+  }
+  .ranking-filter-pill:hover {
+    border-color: var(--srb-accent-border);
+  }
+  .ranking-filter-pill:focus-visible {
+    outline: 2px solid var(--srb-accent-ring);
+    outline-offset: 2px;
+  }
+  .ranking-filter-pill span {
+    font-size: 14px;
+    line-height: 1;
+  }
   .dot {
     width: 8px;
     height: 8px;
@@ -644,6 +819,7 @@
 
   @media (max-width: 700px) {
     .range-toolbar { align-items: center; flex-direction: row; gap: var(--srb-space-md); }
+    .range-controls { justify-content: flex-end; flex-wrap: wrap; }
     .dash-kpis,
     .detail-grid { grid-template-columns: 1fr; }
     .dash-hero {

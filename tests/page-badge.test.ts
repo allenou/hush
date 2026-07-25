@@ -229,6 +229,8 @@ describe('toolbar page badge', () => {
     fakeBrowser.runtime.onMessage.addListener(listener);
     document.body.innerHTML = `
       <div id="srb-collapse-bar"></div>
+      <div class="srb-blocked-badge" data-rule-type="domain"></div>
+      <div class="srb-blocked-badge" data-rule-type="url"></div>
       <div class="srb-blocked-badge"></div>
       <div class="srb-ad-badge"></div>
     `;
@@ -237,7 +239,14 @@ describe('toolbar page badge', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listener).toHaveBeenCalledWith(
-      { type: 'srb-page-marker-count', count: 2 },
+      {
+        type: 'srb-page-marker-count',
+        count: 4,
+        adCount: 1,
+        domainCount: 1,
+        urlCount: 1,
+        selectorCount: 1,
+      },
       expect.anything(),
     );
   });
@@ -250,7 +259,14 @@ describe('toolbar page badge', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listener).toHaveBeenCalledWith(
-      { type: 'srb-page-marker-count', count: 0 },
+      {
+        type: 'srb-page-marker-count',
+        count: 0,
+        adCount: 0,
+        domainCount: 0,
+        urlCount: 0,
+        selectorCount: 0,
+      },
       expect.anything(),
     );
   });

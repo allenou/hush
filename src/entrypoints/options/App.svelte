@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { BlockItem, BlockStats, SearchRecord } from '@/utils/storage';
+  import type {
+    BlockedDomainStat,
+    BlockItem,
+    BlockStats,
+    SearchRecord,
+  } from '@/utils/storage';
   import {
     addBlockedUrl,
     addDomain,
@@ -9,6 +14,7 @@
     removeBlockedItem,
     createStorageBackup,
     restoreStorageBackup,
+    clearAllData,
     setBlockAds,
     setBlockSubdomains,
     setRecordSearchHistory,
@@ -45,10 +51,11 @@
   let domainBlockCount = $state(0);
   let todayBlockCount = $state(0);
   let dailyStats = $state<BlockStats[]>([]);
-  let topBlockedDomains = $state<{ domain: string; count: number }[]>([]);
+  let topBlockedDomains = $state<BlockedDomainStat[]>([]);
   let searchHistory = $state<SearchRecord[]>([]);
   let recordSearchHistory = $state(true);
   let backupStatus = $state('');
+  let clearDataStatus = $state('');
   let currentLocale = $state('zh_CN');
 
   function openAddDialog() {
@@ -101,6 +108,13 @@
     } catch {
       backupStatus = t('backupImportFailed');
     }
+  }
+
+  async function handleClearAllData() {
+    await clearAllData();
+    backupStatus = '';
+    await loadData();
+    clearDataStatus = t('clearAllDataSuccess');
   }
 
   async function loadData() {
@@ -256,6 +270,8 @@
         {backupStatus}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
+        {clearDataStatus}
+        onClearAllData={handleClearAllData}
       />
     {/if}
   </main>

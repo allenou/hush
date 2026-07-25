@@ -24,6 +24,8 @@ const keptKeys = [
   'recordSearchDesc',
   'backupDesc',
   'backupImportConfirm',
+  'clearAllDataDesc',
+  'clearAllDataConfirm',
   'hintDomainUrl',
   'errorDuplicateUrl',
   'errorDuplicateDomain',

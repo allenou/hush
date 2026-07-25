@@ -210,7 +210,7 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
     try {
       const full = currentHost + '||' + selector;
       await addBlockedSelector(full);
-      await recordBlock('selector', currentHost);
+      await recordBlock('selector', currentHost, undefined, currentHost);
       (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
       const mask = document.createElement('div');
       mask.className = 'srb-mask';

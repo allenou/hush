@@ -1,22 +1,91 @@
 <script lang="ts">
-  import ChartCanvas from '@/components/ChartCanvas.svelte';
+  import { BUILT_IN_ENGINES, detectSearchEngine } from '@/helpers/search-engines';
   import { get, removeBlockedItem, setEnabled, subscribe } from '@/utils/storage';
   import { extractDomain, findMatchingBlockedDomainIndex } from '@/utils/domain';
-  import { t, initLocale } from '@/utils/locale-store.svelte';
-  import { formatDate, getLocale, setDocumentLocale } from '@/utils/locale';
-  import { buildDailySeries, formatLocalDateKey } from '@/utils/statistics';
+  import {
+    getSearchEngineDisplayName,
+    t,
+    initLocale,
+  } from '@/utils/locale-store.svelte';
+  import { getLocale, setDocumentLocale } from '@/utils/locale';
+  import { formatLocalDateKey } from '@/utils/statistics';
+  import {
+    PAGE_MARKER_SUMMARY_REQUEST,
+    isPageMarkerCountMessage,
+    isPageMarkerSummary,
+  } from '@/utils/page-badge';
+  import type { PageMarkerSummary } from '@/utils/page-badge';
   import { onMount } from 'svelte';
-  import type { ChartConfiguration } from 'chart.js';
   import packageJson from '../../../package.json';
 
-  let blockCount = 0;
+  const EMPTY_PAGE_MARKER_SUMMARY: PageMarkerSummary = {
+    count: 0,
+    adCount: 0,
+    domainCount: 0,
+    urlCount: 0,
+    selectorCount: 0,
+  };
+  type ChartScope = 'site' | 'today';
+  type ChartBarKey = 'domain' | 'url' | 'ad' | 'selector' | 'subdomain' | 'other';
+
   let todayCount = 0;
+  let todayBreakdown = {
+    adCount: 0,
+    targetDomainCount: 0,
+    subdomainCount: 0,
+    otherCount: 0,
+  };
   let enabled = true;
+  let selectedChartScope: ChartScope = 'site';
+  let chartScopeInitialized = false;
+  let currentTabId: number | null = null;
+  let currentSearchEngineName: string | null = null;
   let currentSiteBlocked = false;
   let currentSiteBlockIndex = -1;
   let currentSiteAvailable: boolean | null = null;
+  let pageMarkerSummary = { ...EMPTY_PAGE_MARKER_SUMMARY };
   let unblockingCurrentSite = false;
-  let stats = buildDailySeries([], 7);
+  let pageMarkerBars: {
+    key: ChartBarKey;
+    label: string;
+    count: number;
+    height: number;
+  }[] = [];
+  let supportedEngineNames = '';
+
+  $: {
+    supportedEngineNames = BUILT_IN_ENGINES
+      .map((engine) => getSearchEngineDisplayName(engine.hostname, engine.name))
+      .join(' · ');
+    const inferredOtherCount = Math.max(
+      0,
+      todayCount
+        - todayBreakdown.adCount
+        - todayBreakdown.targetDomainCount
+        - todayBreakdown.subdomainCount,
+    );
+    const todayOtherCount = Math.max(todayBreakdown.otherCount, inferredOtherCount);
+    const markerTypes = selectedChartScope === 'site'
+      ? [
+          { key: 'domain' as const, label: t('domainLabel'), count: pageMarkerSummary.domainCount },
+          { key: 'url' as const, label: t('filterUrl'), count: pageMarkerSummary.urlCount },
+          { key: 'ad' as const, label: t('adLabel'), count: pageMarkerSummary.adCount },
+          { key: 'selector' as const, label: t('pageElementLabel'), count: pageMarkerSummary.selectorCount },
+        ]
+      : [
+          { key: 'domain' as const, label: t('domainLabel'), count: todayBreakdown.targetDomainCount },
+          { key: 'subdomain' as const, label: t('subdomainStatsLabel'), count: todayBreakdown.subdomainCount },
+          { key: 'ad' as const, label: t('adLabel'), count: todayBreakdown.adCount },
+          { key: 'other' as const, label: t('otherLabel'), count: todayOtherCount },
+        ];
+    const maxCount = Math.max(1, ...markerTypes.map((item) => item.count));
+    pageMarkerBars = markerTypes.map((item) => ({
+      ...item,
+      height: item.count === 0
+        ? 4
+        : Math.max(18, Math.round((item.count / maxCount) * 100)),
+    }));
+  }
 
   async function loadData() {
     const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
@@ -27,12 +96,40 @@
       await initLocale();
     }
     setDocumentLocale(getLocale());
-    blockCount = storage.blockCount;
     enabled = storage.enabled;
-    stats = buildDailySeries(storage.stats ?? [], 7);
     const today = formatLocalDateKey(new Date());
     const todayStat = (storage.stats ?? []).find(s => s.date === today);
     todayCount = todayStat?.count ?? 0;
+    todayBreakdown = {
+      adCount: todayStat?.adCount ?? 0,
+      targetDomainCount: todayStat?.targetDomainCount ?? 0,
+      subdomainCount: todayStat?.subdomainCount ?? 0,
+      otherCount: todayStat?.otherCount ?? 0,
+    };
+    currentTabId = tab?.id ?? null;
+    const currentSearchEngine = tab?.url ? detectSearchEngine(tab.url) : null;
+    currentSearchEngineName = currentSearchEngine
+      ? getSearchEngineDisplayName(currentSearchEngine.hostname, currentSearchEngine.name)
+      : null;
+    if (!chartScopeInitialized) {
+      selectedChartScope = currentSearchEngineName ? 'site' : 'today';
+      chartScopeInitialized = true;
+    }
+    pageMarkerSummary = { ...EMPTY_PAGE_MARKER_SUMMARY };
+
+    if (currentSearchEngineName && currentTabId !== null) {
+      try {
+        const response: unknown = await chrome.tabs.sendMessage(currentTabId, {
+          type: PAGE_MARKER_SUMMARY_REQUEST,
+        });
+        if (isPageMarkerSummary(response)) {
+          pageMarkerSummary = response;
+        }
+      } catch {
+        // 页面尚未注入 content script 时保持零命中状态。
+      }
+    }
+
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       currentSiteAvailable = domain !== null;
@@ -68,80 +165,32 @@
     chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
   }
 
-  function dateLabel(dateStr: string): string {
-    return formatDate(new Date(`${dateStr}T00:00:00`), { weekday: 'short' });
+  function selectChartScope(scope: ChartScope): void {
+    selectedChartScope = scope;
   }
-
-  function chartColor(property: string, fallback: string): string {
-    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
-      return fallback;
-    }
-
-    try {
-      return getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback;
-    } catch {
-      return fallback;
-    }
-  }
-
-  let trendConfiguration: ChartConfiguration<'line'>;
-  $: trendConfiguration = {
-    type: 'line',
-    data: {
-      labels: stats.map((item) => dateLabel(item.date)),
-      datasets: [{
-        label: t('weeklyTrend'),
-        data: stats.map((item) => item.count),
-        borderColor: chartColor('--srb-chart-blue', '#3b82f6'),
-        backgroundColor: chartColor('--srb-chart-fill', 'rgba(59, 130, 246, 0.12)'),
-        borderWidth: 2,
-        fill: true,
-        pointBackgroundColor: chartColor('--srb-chart-blue', '#3b82f6'),
-        pointBorderColor: chartColor('--srb-surface', '#ffffff'),
-        pointBorderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 4,
-        tension: 0.34,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 180 },
-      interaction: { intersect: false, mode: 'index' },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          displayColors: false,
-          padding: 8,
-          callbacks: {
-            label: (context) => `${context.parsed.y ?? 0} ${t('times')}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          border: { display: false },
-          grid: { display: false },
-          ticks: {
-            autoSkip: false,
-            color: chartColor('--srb-text-muted', '#6b6f84'),
-            font: { size: 9, weight: 500 },
-            maxRotation: 0,
-          },
-        },
-        y: {
-          beginAtZero: true,
-          display: false,
-          suggestedMax: 1,
-        },
-      },
-    },
-  };
 
   onMount(() => {
-    loadData();
-    return subscribe(() => loadData());
+    const handlePageMarkerUpdate = (
+      message: unknown,
+      sender: chrome.runtime.MessageSender,
+    ): void => {
+      if (sender.tab?.id !== currentTabId || !isPageMarkerCountMessage(message)) return;
+      pageMarkerSummary = {
+        count: message.count,
+        adCount: message.adCount ?? 0,
+        domainCount: message.domainCount ?? 0,
+        urlCount: message.urlCount ?? 0,
+        selectorCount: message.selectorCount ?? 0,
+      };
+    };
+
+    chrome.runtime.onMessage.addListener(handlePageMarkerUpdate);
+    void loadData();
+    const unsubscribeStorage = subscribe(() => loadData());
+    return () => {
+      chrome.runtime.onMessage.removeListener(handlePageMarkerUpdate);
+      unsubscribeStorage();
+    };
   });
 </script>
 
@@ -176,45 +225,131 @@
 
   <!-- ===== Stats ===== -->
   <div class="stats-grid">
-    <div class="stat-card">
-      <span class="stat-value">{blockCount}</span>
-      <span class="stat-label">{t('totalBlockedLabel')}</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-value">{todayCount}</span>
-      <span class="stat-label">{t('todayLabel')}</span>
-    </div>
+    <button
+      type="button"
+      class="stat-card current-site-card"
+      class:has-blocks={pageMarkerSummary.count > 0}
+      class:unavailable={!currentSearchEngineName}
+      class:selected={selectedChartScope === 'site'}
+      aria-pressed={selectedChartScope === 'site'}
+      aria-controls="srb-popup-chart"
+      onclick={() => selectChartScope('site')}
+    >
+      <div class="site-card-heading">
+        <span class="site-card-label">{t('currentSiteStatsLabel')}</span>
+      </div>
+      <div class="site-card-metric">
+        <span class="site-stat-value">
+          {currentSearchEngineName ? pageMarkerSummary.count : '—'}
+        </span>
+        {#if currentSearchEngineName}
+          <span class="site-stat-unit">{t('currentPageItemsUnit')}</span>
+        {/if}
+      </div>
+      <span class="site-card-meta">
+        {currentSearchEngineName ?? t('searchPageOnlyShort')}
+      </span>
+    </button>
+    <button
+      type="button"
+      class="stat-card today-card"
+      class:selected={selectedChartScope === 'today'}
+      aria-pressed={selectedChartScope === 'today'}
+      aria-controls="srb-popup-chart"
+      onclick={() => selectChartScope('today')}
+    >
+      <div class="site-card-heading">
+        <span class="today-card-label">{t('todayLabel')}</span>
+      </div>
+      <div class="site-card-metric">
+        <span class="site-stat-value stat-value">{todayCount}</span>
+        <span class="site-stat-unit">{t('times')}</span>
+      </div>
+      <span class="site-card-meta">{t('searchPageOnlyShort')}</span>
+    </button>
   </div>
 
-  <!-- ===== Site Status ===== -->
-  {#if currentSiteAvailable === true}
-    <div class="site-status" class:blocked={currentSiteBlocked}>
-      {#if currentSiteBlocked}
-        <span class="status-icon">🔴</span>
-        <span>{t('siteBlocked')}</span>
-        <button
-          class="unblock-site-btn"
-          disabled={unblockingCurrentSite}
-          onclick={unblockCurrentSite}
-        >
-          {t('unblockDomain')}
-        </button>
-      {:else}
-        <span class="status-icon">🟢</span>
-        <span>{t('siteNormal')}</span>
-      {/if}
+  <!-- ===== Linked Bar Chart ===== -->
+  <div id="srb-popup-chart" class="chart-section">
+    <div class="chart-heading-row">
+      <span class="chart-label">
+        {selectedChartScope === 'site'
+          ? t('currentSiteChartTitle')
+          : t('todayChartTitle')}
+      </span>
+      <span class="chart-engine">
+        {selectedChartScope === 'site'
+          ? currentSearchEngineName ?? t('siteUnavailableShort')
+          : t('todayLabel')}
+      </span>
     </div>
-  {/if}
-
-  <!-- ===== Chart (7-day) ===== -->
-  <div class="chart-section">
-    <span class="chart-label">{t('weeklyTrend')}</span>
-    <div class="chart">
-      <ChartCanvas
-        ariaLabel={t('popupTrendAria')}
-        configuration={trendConfiguration}
-      />
-    </div>
+    {#if selectedChartScope === 'site' && !currentSearchEngineName}
+      <div
+        class="chart-empty-state"
+        class:blocked={currentSiteBlocked}
+        role="status"
+      >
+        <div class="empty-state-content">
+          <span class="empty-state-icon" aria-hidden="true">
+            {#if currentSiteBlocked}
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3 4.5 6v5.2c0 4.7 3.1 8.5 7.5 9.8 4.4-1.3 7.5-5.1 7.5-9.8V6L12 3Z"></path>
+                <path d="M12 8v5"></path>
+                <path d="M12 16.5h.01"></path>
+              </svg>
+            {:else}
+              <svg viewBox="0 0 24 24">
+                <path d="M6.5 3.5h7l4 4v13h-11v-17Z"></path>
+                <path d="M13.5 3.5v4h4"></path>
+                <path d="m9.5 12 5 5"></path>
+                <path d="m14.5 12-5 5"></path>
+              </svg>
+            {/if}
+          </span>
+          <div class="empty-state-title-row">
+            <strong>
+              {currentSiteBlocked ? t('siteBlocked') : t('searchEnginePageHint')}
+            </strong>
+            {#if currentSiteBlocked}
+              <button
+                class="unblock-site-btn"
+                disabled={unblockingCurrentSite}
+                onclick={unblockCurrentSite}
+              >
+                {t('unblockDomain')}
+              </button>
+            {/if}
+          </div>
+          <span class="supported-engines">
+            {t('supportedSearchEngines', supportedEngineNames)}
+          </span>
+        </div>
+      </div>
+    {:else}
+      <div
+        class="site-bar-chart"
+        role="img"
+        aria-label={selectedChartScope === 'site'
+          ? t('currentSiteBarChartAria')
+          : t('todayBarChartAria')}
+      >
+        {#each pageMarkerBars as item}
+          <div
+            class={`bar-column ${item.key}`}
+            title={`${item.label}: ${item.count}`}
+          >
+            <span class="bar-value">{item.count}</span>
+            <div class="bar-track">
+              <span
+                class={`bar-fill ${item.key}`}
+                style={`height: ${item.height}%`}
+              ></span>
+            </div>
+            <span class="bar-label">{item.label}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <!-- ===== Footer ===== -->
@@ -357,55 +492,207 @@
     padding: 12px 16px;
   }
   .stat-card {
-    background: var(--srb-surface);
-    border-radius: var(--srb-radius-lg);
     padding: 12px;
-    text-align: center;
-    box-shadow: var(--srb-shadow-xs);
     border: 1px solid var(--srb-border-light);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    box-shadow: var(--srb-shadow-xs);
+    transition:
+      background var(--srb-transition-fast),
+      border-color var(--srb-transition-fast),
+      box-shadow var(--srb-transition-fast),
+      transform var(--srb-transition-fast);
+  }
+  .stat-card:hover:not(:disabled) {
+    border-color: var(--srb-border-muted);
+    transform: translateY(-1px);
+  }
+  .stat-card:focus-visible {
+    outline: 2px solid var(--srb-accent-ring);
+    outline-offset: 2px;
+  }
+  .stat-card.selected {
+    border-color: var(--srb-accent-border);
+    background: var(--srb-accent-soft);
+    box-shadow: 0 0 0 2px var(--srb-accent-highlight), var(--srb-shadow-sm);
+  }
+  .stat-card:disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+  .current-site-card {
+    position: relative;
+    min-width: 0;
+    min-height: 90px;
+    overflow: hidden;
+    background: var(--srb-surface);
+    text-align: left;
+  }
+  .current-site-card.has-blocks {
+    background: var(--srb-surface);
+  }
+  .current-site-card.unavailable {
+    background: var(--srb-control-hover-bg);
+    border-color: var(--srb-border-light);
+  }
+  .current-site-card.selected,
+  .current-site-card.has-blocks.selected {
+    background: var(--srb-accent-soft);
+    border-color: var(--srb-accent-border);
+  }
+  .site-card-heading {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-xs);
+  }
+  .site-card-label,
+  .today-card-label {
+    color: var(--srb-text-secondary);
+    font-size: 10px;
+    font-weight: var(--srb-weight-semibold);
+    letter-spacing: var(--srb-tracking-caps);
+  }
+  .site-card-metric {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .site-stat-value {
+    color: var(--srb-accent-hover);
+    font-size: 29px;
+    font-weight: var(--srb-weight-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .current-site-card.unavailable .site-stat-value {
+    color: var(--srb-text-muted);
+  }
+  .site-stat-unit {
+    color: var(--srb-text-secondary);
+    font-size: 10px;
+    font-weight: var(--srb-weight-medium);
+    white-space: nowrap;
+  }
+  .site-card-meta {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    max-width: 100%;
+    margin-top: 5px;
+    overflow: hidden;
+    color: var(--srb-text-secondary);
+    font-size: 10px;
+    font-weight: var(--srb-weight-medium);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .today-card {
+    position: relative;
+    min-width: 0;
+    min-height: 90px;
+    overflow: hidden;
+    text-align: left;
   }
   .stat-value {
     display: block;
-    font-size: var(--srb-font-size-stat);
-    font-weight: var(--srb-weight-bold);
     color: var(--srb-text-strong);
-    line-height: var(--srb-line-height-tight);
-  }
-  .stat-label {
-    display: block;
-    font-size: 11px;
-    color: var(--srb-text-secondary);
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: var(--srb-tracking-caps);
+    font-size: 29px;
+    font-weight: var(--srb-weight-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
   }
 
-  /* ===== Site Status ===== */
-  .site-status {
+  /* ===== Unsupported Page Chart State ===== */
+  .chart-empty-state {
     display: flex;
+    box-sizing: border-box;
+    height: 112px;
     align-items: center;
-    gap: var(--srb-space-xs);
-    margin: 0 16px 10px;
-    padding: 8px 12px;
-    border-radius: var(--srb-radius-md);
-    background: var(--srb-success-light);
-    color: var(--srb-success-text);
+    justify-content: center;
+    padding: 0 12px;
+    color: var(--srb-text-secondary);
     font-size: var(--srb-font-size-xs);
     font-weight: var(--srb-weight-medium);
   }
-  .site-status.blocked {
+  .empty-state-content {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+  }
+  .empty-state-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--srb-border-light);
+    border-radius: 10px;
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text-muted);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+  .empty-state-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+  .empty-state-title-row {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .empty-state-title-row strong {
+    min-width: 0;
+    color: var(--srb-text-strong);
+    font-size: 11px;
+    font-weight: var(--srb-weight-semibold);
+    line-height: 1.35;
+  }
+  .supported-engines {
+    display: block;
+    max-width: 238px;
+    margin-top: 3px;
+    color: var(--srb-text-muted);
+    font-size: 9px;
+    font-weight: var(--srb-weight-medium);
+    line-height: 1.35;
+    text-align: center;
+  }
+  .chart-empty-state.blocked {
+    color: var(--srb-danger-strong);
+  }
+  .chart-empty-state.blocked .empty-state-icon {
+    border-color: var(--srb-danger-border);
     background: var(--srb-danger-light);
     color: var(--srb-danger-strong);
   }
-  .status-icon {
-    font-size: 8px;
-  }
   .unblock-site-btn {
-    margin-left: auto;
+    flex: 0 0 auto;
     padding: 3px 8px;
-    border: 1px solid currentColor;
+    border: 1px solid var(--srb-danger-border);
     border-radius: var(--srb-radius-full);
-    background: transparent;
+    background: var(--srb-surface);
     color: inherit;
     cursor: pointer;
     font: inherit;
@@ -413,34 +700,117 @@
     line-height: 1.2;
   }
   .unblock-site-btn:hover {
-    background: var(--srb-surface);
+    background: var(--srb-danger-light);
   }
   .unblock-site-btn:disabled {
     cursor: wait;
     opacity: 0.6;
   }
 
-  /* ===== Chart ===== */
+  /* ===== Current Site Bar Chart ===== */
   .chart-section {
     margin: 0 16px 10px;
     padding: 12px;
-    background: var(--srb-surface);
-    border-radius: var(--srb-radius-lg);
     border: 1px solid var(--srb-border-light);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
     box-shadow: var(--srb-shadow-xs);
   }
+  .chart-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--srb-space-sm);
+    margin-bottom: 14px;
+  }
   .chart-label {
-    display: block;
+    color: var(--srb-text-secondary);
     font-size: 11px;
     font-weight: var(--srb-weight-semibold);
-    color: var(--srb-text-secondary);
-    text-transform: uppercase;
     letter-spacing: var(--srb-tracking-caps);
-    margin-bottom: 10px;
   }
-  .chart {
-    position: relative;
-    height: 92px;
+  .chart-engine {
+    max-width: 96px;
+    overflow: hidden;
+    color: var(--srb-text-muted);
+    font-size: 9px;
+    font-weight: var(--srb-weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .site-bar-chart {
+    display: grid;
+    height: 112px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .bar-column {
+    display: grid;
+    min-width: 0;
+    grid-template-rows: 16px 1fr 18px;
+    gap: 4px;
+    text-align: center;
+  }
+  .bar-value {
+    color: var(--srb-text-secondary);
+    font-size: 10px;
+    font-weight: var(--srb-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 16px;
+  }
+  .bar-track {
+    display: flex;
+    min-height: 0;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--srb-radius-sm);
+    background:
+      linear-gradient(to top, rgba(116, 123, 139, 0.08) 1px, transparent 1px);
+    background-size: 100% 25%;
+    border-bottom: 1px solid var(--srb-border-muted);
+  }
+  .bar-fill {
+    display: block;
+    width: 22px;
+    min-height: 3px;
+    border-radius: 6px 6px 2px 2px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    transition: height var(--srb-transition-slow);
+  }
+  .bar-fill.domain {
+    background: linear-gradient(180deg, #60a5fa, var(--srb-chart-blue));
+  }
+  .bar-fill.url {
+    background: linear-gradient(180deg, #c084fc, var(--srb-chart-purple));
+  }
+  .bar-fill.ad {
+    background: linear-gradient(180deg, #fb923c, var(--srb-chart-orange));
+  }
+  .bar-fill.selector {
+    background: linear-gradient(180deg, #f472b6, var(--srb-chart-pink));
+  }
+  .bar-fill.subdomain {
+    background: linear-gradient(180deg, #818cf8, var(--srb-engine-baidu));
+  }
+  .bar-fill.other {
+    background: linear-gradient(180deg, #a1a1aa, #71717a);
+  }
+  .bar-label {
+    overflow: hidden;
+    color: var(--srb-text-secondary);
+    font-size: 10px;
+    font-weight: var(--srb-weight-medium);
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stat-card,
+    .bar-fill {
+      transition: none;
+    }
   }
 
   /* ===== Footer ===== */

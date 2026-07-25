@@ -45,7 +45,9 @@ describe('Dashboard layout', () => {
     expect(dashboardSource).not.toContain('dash-page-heading');
     expect(dashboardSource).not.toContain('range-switch');
     expect(dashboardSource).toContain('class="range-select-shell"');
-    expect(dashboardSource.match(/<option value=\{/g)).toHaveLength(5);
+    expect(dashboardSource).toContain('class="range-select-shell engine-select-shell"');
+    expect(dashboardSource).toContain('class="range-controls"');
+    expect(dashboardSource.match(/<option value=\{/g)).toHaveLength(6);
   });
 
   it('uses neutral statistic cards and a white total-blocked data hub', () => {

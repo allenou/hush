@@ -64,7 +64,7 @@ async function recordBlockOnce(
   if (item.hasAttribute('data-srb-counted')) return;
   item.setAttribute('data-srb-counted', 'true');
   try {
-    await recordBlock(type, domain, domainKind);
+    await recordBlock(type, domain, domainKind, _getHostname());
   } catch (error) {
     item.removeAttribute('data-srb-counted');
     throw error;

@@ -18,7 +18,7 @@ export interface ExtensionStorage {
   blockCount: number;
   adBlockCount: number;
   domainBlockCount: number;
-  blockedDomainStats: { domain: string; count: number }[];
+  blockedDomainStats: BlockedDomainStat[];
   searchHistory: SearchRecord[];
   recordSearchHistory: boolean;
   enabled: boolean;
@@ -54,6 +54,23 @@ export interface BlockStats {
   adCount?: number;
   targetDomainCount?: number;
   subdomainCount?: number;
+  otherCount?: number;
+  engineStats?: Record<string, EngineBlockStats>;
+}
+
+export interface EngineBlockStats {
+  count: number;
+  adCount?: number;
+  targetDomainCount?: number;
+  subdomainCount?: number;
+  otherCount?: number;
+}
+
+export interface BlockedDomainStat {
+  domain: string;
+  count: number;
+  adCount?: number;
+  domainCount?: number;
   otherCount?: number;
 }
 
@@ -134,6 +151,22 @@ function isSearchEngineStatDomain(domain: string): boolean {
   );
 }
 
+function cloneBlockStats(item: BlockStats): BlockStats {
+  return {
+    ...item,
+    ...(item.engineStats
+      ? {
+          engineStats: Object.fromEntries(
+            Object.entries(item.engineStats).map(([hostname, stats]) => [
+              hostname,
+              { ...stats },
+            ]),
+          ),
+        }
+      : {}),
+  };
+}
+
 function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): ExtensionStorage {
   const merged = value && typeof value === 'object'
     ? { ...freshDefaults(), ...value }
@@ -147,7 +180,7 @@ function normalizeStorage(value: Partial<ExtensionStorage> | null | undefined): 
     rules,
     blockedSelectors: compatibility.blockedSelectors,
     customEngines: [...(merged.customEngines ?? [])],
-    stats: [...(merged.stats ?? [])],
+    stats: (merged.stats ?? []).map(cloneBlockStats),
     blockedDomainStats: [...(merged.blockedDomainStats ?? [])]
       .filter((item) => !isSearchEngineStatDomain(item.domain)),
     searchHistory: [...(merged.searchHistory ?? [])],
@@ -166,6 +199,15 @@ export async function get(): Promise<ExtensionStorage> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isValidEngineStats(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return Object.values(value).every((item) => {
+    if (!isRecord(item) || typeof item.count !== 'number') return false;
+    return ['adCount', 'targetDomainCount', 'subdomainCount', 'otherCount']
+      .every((key) => item[key] === undefined || typeof item[key] === 'number');
+  });
 }
 
 export async function createStorageBackup(): Promise<StorageBackup> {
@@ -200,9 +242,16 @@ function isValidBackupData(data: Record<string, unknown>): boolean {
       && typeof item.engineHostname === 'string'
       && typeof item.timestamp === 'number')) return false;
   if (Array.isArray(data.stats) && !data.stats.every((item) =>
-    isRecord(item) && typeof item.date === 'string' && typeof item.count === 'number')) return false;
+    isRecord(item)
+      && typeof item.date === 'string'
+      && typeof item.count === 'number'
+      && (item.engineStats === undefined || isValidEngineStats(item.engineStats)))) return false;
   if (Array.isArray(data.blockedDomainStats) && !data.blockedDomainStats.every((item) =>
-    isRecord(item) && typeof item.domain === 'string' && typeof item.count === 'number')) return false;
+    isRecord(item)
+      && typeof item.domain === 'string'
+      && typeof item.count === 'number'
+      && ['adCount', 'domainCount', 'otherCount']
+        .every((key) => item[key] === undefined || typeof item[key] === 'number'))) return false;
   if (Array.isArray(data.rules) && !data.rules.every((item) => normalizeRule(item) !== null)) return false;
   if (Array.isArray(data.customEngines) && !data.customEngines.every((item) =>
     isRecord(item)
@@ -242,6 +291,14 @@ export async function restoreStorageBackup(value: unknown): Promise<ExtensionSto
 
   const normalized = normalizeStorage(value.data as Partial<ExtensionStorage>);
   return mutateStorage(() => ({ next: normalized, result: normalized }));
+}
+
+export function clearAllData(): Promise<void> {
+  const operation = mutationQueue.then(async () => {
+    await chrome.storage.local.clear();
+  });
+  mutationQueue = operation.then(() => undefined, () => undefined);
+  return operation;
 }
 
 async function set(partial: Partial<ExtensionStorage>): Promise<void> {
@@ -506,40 +563,60 @@ export async function removeCustomEngine(index: number): Promise<void> {
   }));
 }
 
+function incrementBlockStats(
+  entry: EngineBlockStats,
+  type?: BlockRecordType,
+  domainKind: DomainBlockKind = 'target',
+): void {
+  entry.count++;
+  if (type === 'ad') {
+    entry.adCount = (entry.adCount ?? 0) + 1;
+  } else if (type === 'domain' && domainKind === 'subdomain') {
+    entry.subdomainCount = (entry.subdomainCount ?? 0) + 1;
+  } else if (type === 'domain') {
+    entry.targetDomainCount = (entry.targetDomainCount ?? 0) + 1;
+  } else if (type) {
+    entry.otherCount = (entry.otherCount ?? 0) + 1;
+  }
+}
+
 async function recordBlockNow(
   type?: BlockRecordType,
   domain?: string,
   domainKind: DomainBlockKind = 'target',
+  engineHostname?: string,
 ): Promise<void> {
   await mutateStorage((current) => {
-    const stats = current.stats.map((item) => ({ ...item }));
+    const stats = current.stats.map(cloneBlockStats);
     const today = formatLocalDateKey(new Date());
-    const existing = stats.find((item) => item.date === today);
-    if (existing) {
-      existing.count++;
-      if (type === 'ad') existing.adCount = (existing.adCount ?? 0) + 1;
-      else if (type === 'domain' && domainKind === 'subdomain') {
-        existing.subdomainCount = (existing.subdomainCount ?? 0) + 1;
-      } else if (type === 'domain') {
-        existing.targetDomainCount = (existing.targetDomainCount ?? 0) + 1;
-      } else if (type) {
-        existing.otherCount = (existing.otherCount ?? 0) + 1;
-      }
-    } else {
-      const entry: BlockStats = { date: today, count: 1 };
-      if (type === 'ad') entry.adCount = 1;
-      else if (type === 'domain' && domainKind === 'subdomain') entry.subdomainCount = 1;
-      else if (type === 'domain') entry.targetDomainCount = 1;
-      else if (type) entry.otherCount = 1;
+    let entry = stats.find((item) => item.date === today);
+    if (!entry) {
+      entry = { date: today, count: 0 };
       stats.push(entry);
+    }
+
+    incrementBlockStats(entry, type, domainKind);
+
+    const normalizedEngine = engineHostname
+      ? normalizeHostname(engineHostname)
+      : '';
+    if (normalizedEngine && BUILT_IN_ENGINES.some((engine) => engine.hostname === normalizedEngine)) {
+      entry.engineStats ??= {};
+      const engineEntry = entry.engineStats[normalizedEngine] ?? { count: 0 };
+      incrementBlockStats(engineEntry, type, domainKind);
+      entry.engineStats[normalizedEngine] = engineEntry;
     }
     stats.sort((a, b) => a.date.localeCompare(b.date));
 
     const blockedDomainStats = current.blockedDomainStats.map((item) => ({ ...item }));
     if (domain) {
       const existingDomain = blockedDomainStats.find((item) => item.domain === domain);
-      if (existingDomain) existingDomain.count++;
-      else blockedDomainStats.push({ domain, count: 1 });
+      const domainStat: BlockedDomainStat = existingDomain ?? { domain, count: 0 };
+      domainStat.count++;
+      if (type === 'ad') domainStat.adCount = (domainStat.adCount ?? 0) + 1;
+      else if (type === 'domain') domainStat.domainCount = (domainStat.domainCount ?? 0) + 1;
+      else domainStat.otherCount = (domainStat.otherCount ?? 0) + 1;
+      if (!existingDomain) blockedDomainStats.push(domainStat);
       blockedDomainStats.sort((a, b) => b.count - a.count);
     }
 
@@ -563,8 +640,9 @@ export function recordBlock(
   type?: BlockRecordType,
   domain?: string,
   domainKind?: DomainBlockKind,
+  engineHostname?: string,
 ): Promise<void> {
-  return recordBlockNow(type, domain, domainKind);
+  return recordBlockNow(type, domain, domainKind, engineHostname);
 }
 
 export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {

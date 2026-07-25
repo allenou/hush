@@ -5,8 +5,46 @@ import { setLocale } from '@/utils/locale';
 import { t } from '@/utils/locale-store.svelte';
 import type { BlockStats } from '@/utils/storage';
 
+const chartMocks = vi.hoisted(() => ({
+  instances: [] as Array<{
+    type: string;
+    data: {
+      labels?: unknown[];
+      datasets: Array<{ data: unknown[] }>;
+    };
+    options?: {
+      onClick?: (event: unknown, elements: Array<{ index: number }>) => void;
+    };
+  }>,
+}));
+
 vi.mock('@/utils/chart', () => ({
   Chart: class {
+    type: string;
+    data: {
+      labels?: unknown[];
+      datasets: Array<{ data: unknown[] }>;
+    };
+    options?: {
+      onClick?: (event: unknown, elements: Array<{ index: number }>) => void;
+    };
+
+    constructor(_canvas: HTMLCanvasElement, configuration: {
+      type: string;
+      data: {
+        labels?: unknown[];
+        datasets: Array<{ data: unknown[] }>;
+      };
+      options?: {
+        onClick?: (event: unknown, elements: Array<{ index: number }>) => void;
+      };
+    }) {
+      this.type = configuration.type;
+      this.data = configuration.data;
+      this.options = configuration.options;
+      chartMocks.instances.push(this);
+    }
+
     update(): void {}
     destroy(): void {}
   },
@@ -32,6 +70,7 @@ describe('Dashboard', () => {
   afterEach(async () => {
     if (component) await unmount(component);
     component = undefined;
+    chartMocks.instances.length = 0;
     document.body.innerHTML = '';
   });
 
@@ -73,6 +112,34 @@ describe('Dashboard', () => {
 
     expect(rangeSelect?.value).toBe('90');
     expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('90');
+  });
+
+  it('filters recent statistics by search engine beside the time range', async () => {
+    const dailyStats = buildStats(30).map((item) => ({
+      ...item,
+      count: 3,
+      engineStats: {
+        'google.com': { count: 1 },
+        'baidu.com': { count: 2 },
+      },
+    }));
+    const target = render({ dailyStats });
+    const engineSelect = target.querySelector<HTMLSelectElement>('.engine-select-shell select');
+
+    expect(engineSelect).not.toBeNull();
+    expect(engineSelect?.value).toBe('all');
+    expect(engineSelect?.options).toHaveLength(6);
+    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('90');
+
+    engineSelect!.value = 'google.com';
+    engineSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('30');
+
+    engineSelect!.value = 'baidu.com';
+    engineSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('60');
   });
 
   it('renders a concise total-blocked data hub with inline units', async () => {
@@ -150,6 +217,65 @@ describe('Dashboard', () => {
 
     expect(target.querySelector('.domains-card canvas')).not.toBeNull();
     expect(target.querySelector('.domain-values')).toBeNull();
+  });
+
+  it('links breakdown selections to the domain ranking', async () => {
+    const target = render({
+      totalBlockCount: 20,
+      adBlockCount: 8,
+      domainBlockCount: 9,
+      topBlockedDomains: [
+        { domain: 'ads.example', count: 9, adCount: 8, domainCount: 1 },
+        { domain: 'content.example', count: 8, adCount: 1, domainCount: 7 },
+      ],
+    });
+    await tick();
+
+    const adButton = target.querySelector<HTMLButtonElement>('.breakdown-list button');
+    expect(adButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(target.querySelector('[data-testid="domain-ranking-title"]')?.textContent)
+      .toBe(t('topDomains'));
+
+    adButton?.click();
+    await tick();
+
+    expect(adButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(target.querySelector('[data-testid="domain-ranking-title"]')?.textContent)
+      .toBe(t('adDomainRanking'));
+    expect(target.querySelector('.ranking-filter-pill')?.textContent).toContain(t('adLabel'));
+    expect(target.querySelector('.domains-card canvas')).not.toBeNull();
+
+    target.querySelector<HTMLButtonElement>('.ranking-filter-pill')?.click();
+    await tick();
+
+    expect(adButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(target.querySelector('[data-testid="domain-ranking-title"]')?.textContent)
+      .toBe(t('topDomains'));
+  });
+
+  it('filters the domain ranking when a doughnut segment is clicked', async () => {
+    const target = render({
+      totalBlockCount: 20,
+      adBlockCount: 8,
+      domainBlockCount: 9,
+      topBlockedDomains: [
+        { domain: 'ads.example', count: 9, adCount: 8, domainCount: 1 },
+        { domain: 'content.example', count: 8, adCount: 1, domainCount: 7 },
+      ],
+    });
+    await tick();
+
+    const breakdownChart = chartMocks.instances.find((instance) => instance.type === 'doughnut');
+    const domainChart = chartMocks.instances.find((instance) => instance.type === 'bar');
+    expect(breakdownChart?.options?.onClick).toBeTypeOf('function');
+
+    breakdownChart?.options?.onClick?.({}, [{ index: 0 }]);
+    await tick();
+
+    expect(target.querySelector('[data-testid="domain-ranking-title"]')?.textContent)
+      .toBe(t('adDomainRanking'));
+    expect(domainChart?.data.labels).toEqual(['ads.example', 'content.example']);
+    expect(domainChart?.data.datasets[0]?.data).toEqual([8, 1]);
   });
 
   it('omits empty charts and their legends', async () => {

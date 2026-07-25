@@ -16,4 +16,21 @@ export function t(key: string, ...subs: string[]): string {
   return tBase(key, ...subs);
 }
 
+const SEARCH_ENGINE_NAME_KEYS: Record<string, string> = {
+  'google.com': 'searchEngineGoogle',
+  'baidu.com': 'searchEngineBaidu',
+  'bing.com': 'searchEngineBing',
+  'so.com': 'searchEngineSo',
+  'sogou.com': 'searchEngineSogou',
+};
+
+/** 根据 hostname 获取本地化搜索引擎名称，未知引擎保留原名称。 */
+export function getSearchEngineDisplayName(hostname: string, fallback: string): string {
+  const normalized = hostname.trim().toLowerCase().replace(/^www\./, '');
+  const key = SEARCH_ENGINE_NAME_KEYS[normalized];
+  if (!key) return fallback;
+  const translated = t(key);
+  return translated && translated !== key ? translated : fallback;
+}
+
 export { getLocale, setLocale, initLocale };

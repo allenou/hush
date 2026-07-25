@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '@/utils/locale-store.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let {
     blockAds = false,
@@ -11,6 +12,8 @@
     backupStatus = '',
     onExportBackup,
     onImportBackup,
+    clearDataStatus = '',
+    onClearAllData,
   }: {
     blockAds?: boolean;
     blockSubdomains?: boolean;
@@ -21,15 +24,23 @@
     backupStatus?: string;
     onExportBackup?: () => void | Promise<void>;
     onImportBackup?: (file: File) => void | Promise<void>;
+    clearDataStatus?: string;
+    onClearAllData?: () => void | Promise<void>;
   } = $props();
 
   let backupInput: HTMLInputElement | null = null;
+  let showClearDataConfirm = $state(false);
 
   function handleBackupFileChange(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     if (file) void onImportBackup?.(file);
     input.value = '';
+  }
+
+  async function confirmClearAllData() {
+    await onClearAllData?.();
+    showClearDataConfirm = false;
   }
 </script>
 
@@ -113,7 +124,36 @@
       />
     </div>
   </section>
+
+  <section class="settings-card wide danger-card" aria-labelledby="clear-data-heading">
+    <div class="danger-content">
+      <div class="card-heading danger-heading">
+        <div>
+          <h2 id="clear-data-heading">{t('clearAllDataLabel')}</h2>
+          <p>{t('clearAllDataDesc')}</p>
+        </div>
+      </div>
+
+      {#if clearDataStatus}
+        <p class="clear-data-status" role="status">{clearDataStatus}</p>
+      {/if}
+    </div>
+
+    <button class="clear-data-btn" onclick={() => showClearDataConfirm = true}>
+      {t('clearAllDataAction')}
+    </button>
+  </section>
 </div>
+
+<ConfirmDialog
+  show={showClearDataConfirm}
+  title={t('clearAllDataLabel')}
+  message={t('clearAllDataConfirm')}
+  confirmLabel={t('clearAllDataAction')}
+  cancelLabel={t('cancel')}
+  onConfirm={confirmClearAllData}
+  onClose={() => showClearDataConfirm = false}
+/>
 
 <style>
   .settings-page {
@@ -216,12 +256,14 @@
   .toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
   .toggle input:focus-visible + .toggle-track { box-shadow: var(--srb-focus-ring); }
 
-  .backup-btn:focus-visible {
+  .backup-btn:focus-visible,
+  .clear-data-btn:focus-visible {
     outline: none;
     box-shadow: var(--srb-focus-ring);
   }
 
-  .backup-card {
+  .backup-card,
+  .danger-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -277,10 +319,44 @@
   }
   .backup-input { display: none; }
 
+  .danger-card {
+    border-color: var(--srb-danger-border);
+  }
+  .danger-content { min-width: 0; }
+  .danger-heading { margin-bottom: 0; }
+  .danger-heading h2 { color: var(--srb-danger-strong); }
+  .clear-data-status {
+    margin: var(--srb-space-sm) 0 0;
+    color: var(--srb-success-text);
+    font-size: var(--srb-font-size-sm);
+    font-weight: var(--srb-weight-semibold);
+  }
+  .clear-data-btn {
+    flex: 0 0 auto;
+    min-height: var(--srb-button-height);
+    padding: 10px 16px;
+    border: 1px solid var(--srb-danger);
+    border-radius: var(--srb-radius-lg);
+    background: var(--srb-surface);
+    color: var(--srb-danger);
+    font: inherit;
+    font-size: var(--srb-font-size-body);
+    font-weight: var(--srb-weight-semibold);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color var(--srb-transition-base), background var(--srb-transition-base), color var(--srb-transition-base);
+  }
+  .clear-data-btn:hover {
+    border-color: var(--srb-danger-strong);
+    background: var(--srb-danger-light);
+    color: var(--srb-danger-strong);
+  }
+
   @media (max-width: 820px) {
     .settings-page { grid-template-columns: 1fr; }
     .settings-card.wide { grid-column: auto; }
-    .backup-card { align-items: flex-start; flex-direction: column; }
+    .backup-card,
+    .danger-card { align-items: flex-start; flex-direction: column; }
   }
 
   @media (max-width: 520px) {
@@ -291,6 +367,7 @@
   @media (prefers-reduced-motion: reduce) {
     .toggle-track,
     .toggle-thumb,
-    .backup-btn { transition: none; }
+    .backup-btn,
+    .clear-data-btn { transition: none; }
   }
 </style>

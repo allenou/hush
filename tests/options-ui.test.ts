@@ -6,6 +6,7 @@ import { fakeBrowser } from 'wxt/testing';
 import App from '@/entrypoints/options/App.svelte';
 import RulesTab from '@/entrypoints/options/components/RulesTab.svelte';
 import SearchHistoryTab from '@/entrypoints/options/components/SearchHistoryTab.svelte';
+import SettingsTab from '@/entrypoints/options/components/SettingsTab.svelte';
 
 vi.mock('@/utils/chart', () => ({
   Chart: class {
@@ -211,5 +212,36 @@ describe('Options UI', () => {
     target.querySelector<HTMLButtonElement>('.btn-danger')?.click();
 
     expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires confirmation before clearing all Hush data', async () => {
+    vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
+      clearAllDataLabel: '清空全部数据',
+      clearAllDataDesc: '删除 Hush 保存的全部数据',
+      clearAllDataAction: '清空 Hush 数据',
+      clearAllDataConfirm: '确定清空所有 Hush 数据吗？',
+      cancel: '取消',
+    })[key] ?? '');
+    const onClearAllData = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: { onClearAllData },
+    });
+
+    target.querySelector<HTMLButtonElement>('.clear-data-btn')?.click();
+    await tick();
+
+    expect(onClearAllData).not.toHaveBeenCalled();
+    expect(target.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(target.querySelector('#confirm-dialog-message')?.textContent)
+      .toBe('确定清空所有 Hush 数据吗？');
+
+    target.querySelector<HTMLButtonElement>('.btn-danger')?.click();
+    await vi.waitFor(() => {
+      expect(onClearAllData).toHaveBeenCalledTimes(1);
+      expect(target.querySelector('[role="dialog"]')).toBeNull();
+    });
   });
 });

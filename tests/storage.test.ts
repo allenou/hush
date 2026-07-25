@@ -11,7 +11,7 @@ import {
   addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
   recordBlock, recordSearch, removeSearchRecord, clearSearchHistory, incrementBlockCount,
   setEnabled, setBlockAds, subscribe,
-  createStorageBackup, restoreStorageBackup,
+  createStorageBackup, restoreStorageBackup, clearAllData,
 } from '@/utils/storage';
 import {
   applyBlockedSelectors,
@@ -479,8 +479,8 @@ describe('recordBlock', () => {
     expect(storage.blockCount).toBe(2);
     expect(storage.domainBlockCount).toBe(2);
     expect(storage.blockedDomainStats).toEqual(expect.arrayContaining([
-      { domain: 'one.example', count: 1 },
-      { domain: 'two.example', count: 1 },
+      expect.objectContaining({ domain: 'one.example', count: 1 }),
+      expect.objectContaining({ domain: 'two.example', count: 1 }),
     ]));
   });
 
@@ -498,6 +498,33 @@ describe('recordBlock', () => {
       targetDomainCount: 1,
       subdomainCount: 1,
       otherCount: 1,
+    });
+    expect((await get()).blockedDomainStats).toEqual(expect.arrayContaining([
+      expect.objectContaining({ domain: 'ads.example', adCount: 1 }),
+      expect.objectContaining({ domain: 'example.com', domainCount: 1, otherCount: 1 }),
+      expect.objectContaining({ domain: 'news.example.com', domainCount: 1 }),
+    ]));
+  });
+
+  it('records daily breakdowns for the active search engine', async () => {
+    await recordBlock('ad', 'ads.example', undefined, 'www.google.com');
+    await recordBlock('domain', 'example.com', 'target', 'google.com');
+    await recordBlock('domain', 'news.example.com', 'subdomain', 'www.baidu.com');
+    await recordBlock('url', 'example.com', undefined, 'baidu.com');
+
+    const today = formatLocalDateKey(new Date());
+    const entry = (await get()).stats.find((item) => item.date === today);
+    expect(entry?.engineStats).toMatchObject({
+      'google.com': {
+        count: 2,
+        adCount: 1,
+        targetDomainCount: 1,
+      },
+      'baidu.com': {
+        count: 2,
+        subdomainCount: 1,
+        otherCount: 1,
+      },
     });
   });
 
@@ -784,10 +811,10 @@ describe('result domain matching', () => {
     expect(storage.blockCount).toBe(2);
     expect(storage.domainBlockCount).toBe(2);
     expect(storage.stats.at(-1)?.count).toBe(2);
-    expect(storage.blockedDomainStats).toContainEqual({
+    expect(storage.blockedDomainStats).toContainEqual(expect.objectContaining({
       domain: 'sub.example.com',
       count: 2,
-    });
+    }));
   });
 
   it('records an automatically detected ad once while enabled', async () => {
@@ -818,10 +845,10 @@ describe('result domain matching', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     const storage = await get();
     expect(storage.adBlockCount).toBe(1);
-    expect(storage.blockedDomainStats).toContainEqual({
+    expect(storage.blockedDomainStats).toContainEqual(expect.objectContaining({
       domain: 'advertiser.example',
       count: 1,
-    });
+    }));
   });
 
   it('does not rank an opaque search-engine tracking domain as an advertiser', async () => {
@@ -1066,6 +1093,31 @@ describe('local backup and restore', () => {
       version: 1,
       data,
     })).rejects.toThrow('Invalid Hush backup');
+  });
+});
+
+describe('clear all data', () => {
+  it('removes all extension-local data and restores defaults', async () => {
+    await addDomain('example.com');
+    await recordBlock('domain', 'example.com');
+    await recordSearch('query', 'Google', 'google.com');
+    await setEnabled(false);
+    await fakeBrowser.storage.local.set({ futureHushKey: 'value' });
+
+    await clearAllData();
+
+    expect(await fakeBrowser.storage.local.get(['blocker', 'futureHushKey'])).toEqual({});
+    expect(await get()).toMatchObject({
+      urls: [],
+      blockedUrls: [],
+      rules: [],
+      blockCount: 0,
+      searchHistory: [],
+      enabled: true,
+      blockAds: true,
+      blockSubdomains: true,
+      recordSearchHistory: true,
+    });
   });
 });
 

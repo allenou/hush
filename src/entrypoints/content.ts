@@ -22,6 +22,10 @@ import { injectCollapseBar } from '@/helpers/ui';
 import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
+  countPageMarkerSummary,
+  isPageMarkerSummaryRequest,
+} from '@/utils/page-badge';
+import {
   initBlocker, syncBlockerState,
   scanBlockedDomains, scanForAds, scanResults,
   applyBlockedSelectors, checkSavedSelectors,
@@ -235,9 +239,12 @@ export default defineContentScript({
       ctx.addEventListener(document, 'srb-start-picker', () => {
         if (isEnabled) activatePicker(getHostname);
       });
-      chrome.runtime.onMessage.addListener((message) => {
+      chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message?.type === 'srb-start-picker' && isEnabled) {
           activatePicker(getHostname);
+        }
+        if (isPageMarkerSummaryRequest(message)) {
+          sendResponse(countPageMarkerSummary());
         }
       });
       const syncContextMenuTargetState = (event: Event): void => {
