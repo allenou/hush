@@ -2,7 +2,7 @@ import { getSearchEngineRule } from './search-engines';
 import type { SearchEngineConfig } from './search-engines';
 import { get, removeBlockedItem, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import type { DomainBlockKind } from '@/utils/storage';
-import { removeCollapseBar, updateCollapseBar } from './ui';
+import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
 import {
@@ -229,7 +229,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
         mask.remove();
         badge.remove();
       }
-      updateCollapseBar();
+      reportPageMarkerCount();
     } finally {
       removing = false;
       if (badge.isConnected) badge.removeAttribute('aria-disabled');
@@ -267,7 +267,7 @@ export function injectAdBadge(item: Element, href: string): void {
   badge.addEventListener('click', () => {
     mask.remove();
     badge.remove();
-    updateCollapseBar();
+    reportPageMarkerCount();
   });
   item.appendChild(mask);
   item.appendChild(badge);
@@ -308,7 +308,7 @@ export function scanBlockedDomains(): void {
       : null;
   const matchedContainers = new Map<HTMLElement, string>();
   document.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
-    if (link.closest('.srb-popup, .srb-collapse-bar, .srb-blocked-badge')) return;
+    if (link.closest('.srb-popup, .srb-blocked-badge')) return;
     if (link.closest('[data-srb-domain-blocked]')) return;
 
     const candidateUrls = isSogouPage
@@ -337,7 +337,7 @@ export function scanBlockedDomains(): void {
     }
   });
 
-  updateCollapseBar();
+  reportPageMarkerCount();
 }
 
 // ========== Item Processing ==========
@@ -369,7 +369,7 @@ export function scanResults(engine: SearchEngineConfig): void {
   if (!container) { setTimeout(() => _onContainerMissing(), 500); return; }
   container.querySelectorAll(engine.itemSelector).forEach((item) => processItem(item));
   scanForAds();
-  updateCollapseBar();
+  reportPageMarkerCount();
 }
 
 // ========== Ad Scanning ==========
@@ -377,13 +377,13 @@ export function scanResults(engine: SearchEngineConfig): void {
 /** 广告扫描 — 引擎提供命中特征，公共层负责标记和从标签向上定位容器。 */
 export function scanForAds(): void {
   if (!_state.blockAds || !_state.isEnabled) {
-    updateCollapseBar();
+    reportPageMarkerCount();
     return;
   }
 
   const engine = getSearchEngineRule(_getHostname());
   if (!engine) {
-    updateCollapseBar();
+    reportPageMarkerCount();
     return;
   }
 
@@ -397,7 +397,7 @@ export function scanForAds(): void {
 
   const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
   if (adLabels.size === 0) {
-    updateCollapseBar();
+    reportPageMarkerCount();
     return;
   }
 
@@ -421,7 +421,7 @@ export function scanForAds(): void {
       injectAdBadge(best, '');
     }
   });
-  updateCollapseBar();
+  reportPageMarkerCount();
 }
 
 // ========== Selector Rules ==========
@@ -439,7 +439,7 @@ export function restoreBlockedSelectors(): void {
       });
     } catch { /* skip */ }
   });
-  updateCollapseBar();
+  reportPageMarkerCount();
 }
 
 export function applyBlockedSelectors(): void {
@@ -468,13 +468,13 @@ export function applyBlockedSelectors(): void {
           await removeBlockedSelectorEntry(entry);
           mask.remove();
           badge.remove();
-          updateCollapseBar();
+          reportPageMarkerCount();
         });
         el.appendChild(badge);
       });
     } catch { /* skip */ }
   });
-  updateCollapseBar();
+  reportPageMarkerCount();
 }
 
 export function checkSavedSelectors(): void {
@@ -483,7 +483,7 @@ export function checkSavedSelectors(): void {
 
 // ========== Cleanup ==========
 
-export function clearAllMarkers(options: { preserveCounts?: boolean; removeCollapse?: boolean } = {}): void {
+export function clearAllMarkers(options: { preserveCounts?: boolean; clearPageCount?: boolean } = {}): void {
   document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
   document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
@@ -493,8 +493,8 @@ export function clearAllMarkers(options: { preserveCounts?: boolean; removeColla
     el.removeAttribute('data-srb-target-url');
     if (!options.preserveCounts) el.removeAttribute('data-srb-counted');
   });
-  if (options.removeCollapse !== false) removeCollapseBar();
-  else updateCollapseBar();
+  if (options.clearPageCount !== false) clearPageMarkerCount();
+  else reportPageMarkerCount();
 }
 
 // Set by content.ts for container-missing fallback

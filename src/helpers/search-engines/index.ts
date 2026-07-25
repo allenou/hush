@@ -1,9 +1,12 @@
 import { normalizeSearchHostname } from '@/constants/search-hosts';
 import { baiduSearchEngine } from './baidu';
 import { bingSearchEngine } from './bing';
+import { duckDuckGoSearchEngine } from './duckduckgo';
 import { googleSearchEngine } from './google';
 import { soSearchEngine } from './so';
 import { sogouSearchEngine } from './sogou';
+import { yahooSearchEngine } from './yahoo';
+import { yandexSearchEngine } from './yandex';
 import type { SearchEngineRule } from './types';
 
 /**
@@ -16,11 +19,16 @@ export const SEARCH_ENGINE_RULES: readonly SearchEngineRule[] = [
   bingSearchEngine,
   soSearchEngine,
   sogouSearchEngine,
+  yahooSearchEngine,
+  yandexSearchEngine,
+  duckDuckGoSearchEngine,
 ];
 
 export function getSearchEngineRule(hostname: string): SearchEngineRule | null {
   const normalized = normalizeSearchHostname(hostname);
-  return SEARCH_ENGINE_RULES.find((engine) => engine.hostname === normalized) ?? null;
+  return SEARCH_ENGINE_RULES.find((engine) =>
+    engine.hostname === normalized || engine.aliases?.includes(normalized),
+  ) ?? null;
 }
 
 export type { SearchEngineRule, SearchResultSelectorRule } from './types';

@@ -52,6 +52,9 @@ describe('Popup', () => {
         searchEngineBing: { message: 'Bing' },
         searchEngineSo: { message: '360 So' },
         searchEngineSogou: { message: 'Sogou' },
+        searchEngineYahoo: { message: 'Yahoo!' },
+        searchEngineYandex: { message: 'Yandex' },
+        searchEngineDuckDuckGo: { message: 'DuckDuckGo' },
       }),
     } as Response);
 
@@ -79,6 +82,9 @@ describe('Popup', () => {
       expect(emptyState).toContain('Bing');
       expect(emptyState).toContain('360 So');
       expect(emptyState).toContain('Sogou');
+      expect(emptyState).toContain('Yahoo!');
+      expect(emptyState).toContain('Yandex');
+      expect(emptyState).toContain('DuckDuckGo');
       expect(emptyState).not.toContain('搜狗');
     });
   });
@@ -111,6 +117,9 @@ describe('Popup', () => {
       searchEngineBing: 'Bing',
       searchEngineSo: '360 So',
       searchEngineSogou: 'Sogou',
+      searchEngineYahoo: 'Yahoo!',
+      searchEngineYandex: 'Yandex',
+      searchEngineDuckDuckGo: 'DuckDuckGo',
     })[key] ?? key);
 
     const target = document.createElement('div');
@@ -179,6 +188,9 @@ describe('Popup', () => {
       searchEngineBing: 'Bing',
       searchEngineSo: '360 So',
       searchEngineSogou: 'Sogou',
+      searchEngineYahoo: 'Yahoo!',
+      searchEngineYandex: 'Yandex',
+      searchEngineDuckDuckGo: 'DuckDuckGo',
     })[key] ?? key);
 
     const target = document.createElement('div');

@@ -1,7 +1,7 @@
 # Hush - Chrome Web Store Listing
 
 ## Short Description (132 chars max)
-Mark unwanted search results and ads, manage local rules, and optionally keep search history on five major search engines.
+Mark unwanted search results and ads, manage local rules, and optionally keep search history on eight major search engines.
 
 ## Full Description
 
@@ -24,8 +24,11 @@ Hush helps you visually mark and cover unwanted results while keeping the origin
 - Bing (`bing.com`, `www.bing.com`)
 - 360 Search (`so.com`, `www.so.com`)
 - Sogou (`sogou.com`, `www.sogou.com`)
+- Yahoo! (`search.yahoo.com`)
+- Yandex (`yandex.com`, `www.yandex.com`, `yandex.ru`, `www.yandex.ru`)
+- DuckDuckGo (`duckduckgo.com`, `www.duckduckgo.com`)
 
-Regional, mobile, and other subdomains are not included in the first release.
+Other regional, mobile, and unlisted subdomains are not included.
 
 **How to use:**
 

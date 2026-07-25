@@ -125,20 +125,6 @@ const CSS = `
   background: var(--srb-danger-hover);
 }
 
-/* ===== Collapse Bar ===== */
-.srb-collapse-bar {
-  padding: 8px 14px;
-  margin: 6px 0;
-  font-size: 15px;
-  font-family: var(--srb-font);
-  background: var(--srb-accent-light);
-  color: var(--srb-accent);
-  border-radius: var(--srb-radius-sm);
-  display: none;
-  font-weight: 500;
-  border: 1px solid var(--srb-accent-border-soft);
-}
-
 /* ===== Picker Tooltip ===== */
 .srb-picker-tooltip {
   position: fixed;

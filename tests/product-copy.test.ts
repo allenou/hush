@@ -57,6 +57,9 @@ describe('product copy', () => {
     expect(storeCopy).toContain('Bing');
     expect(storeCopy).toContain('360 Search');
     expect(storeCopy).toContain('Sogou');
+    expect(storeCopy).toContain('Yahoo!');
+    expect(storeCopy).toContain('Yandex');
+    expect(storeCopy).toContain('DuckDuckGo');
     expect(privacyCopy).toContain('search queries');
     expect(privacyCopy).toContain('processed locally');
     expect(privacyCopy).toContain('DOM');

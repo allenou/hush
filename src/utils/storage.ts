@@ -2,6 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import type { SearchEngineConfig, SearchRecord } from '@/helpers/search-engines';
 import {
   BUILT_IN_ENGINES,
+  getSearchEngineRule,
   matchEngineConfig,
   normalizeHostname,
   rankEngineConfigMatch,
@@ -145,7 +146,9 @@ function isSearchEngineStatDomain(domain: string): boolean {
   const normalized = normalizeHostname(domain);
   const trackingHosts = ['googleadservices.com', 'doubleclick.net'];
   return BUILT_IN_ENGINES.some((engine) =>
-    normalized === engine.hostname || normalized.endsWith(`.${engine.hostname}`),
+    [engine.hostname, ...(engine.aliases ?? [])].some((hostname) =>
+      normalized === hostname || normalized.endsWith(`.${hostname}`),
+    ),
   ) || trackingHosts.some((host) =>
     normalized === host || normalized.endsWith(`.${host}`),
   );
@@ -513,9 +516,7 @@ export async function removeBlockedSelectorEntry(entry: string): Promise<void> {
 
 export async function addCustomEngine(config: SearchEngineConfig): Promise<void> {
   // 禁止添加已在内置列表中的搜索引擎
-  if (BUILT_IN_ENGINES.some((e) => e.hostname === normalizeHostname(config.hostname))) {
-    return;
-  }
+  if (getSearchEngineRule(config.hostname)) return;
   await mutateStorage((current) => {
     const customEngines = [...current.customEngines];
     const existing = customEngines.findIndex((engine) =>
@@ -598,9 +599,9 @@ async function recordBlockNow(
     incrementBlockStats(entry, type, domainKind);
 
     const normalizedEngine = engineHostname
-      ? normalizeHostname(engineHostname)
+      ? getSearchEngineRule(engineHostname)?.hostname ?? ''
       : '';
-    if (normalizedEngine && BUILT_IN_ENGINES.some((engine) => engine.hostname === normalizedEngine)) {
+    if (normalizedEngine) {
       entry.engineStats ??= {};
       const engineEntry = entry.engineStats[normalizedEngine] ?? { count: 0 };
       incrementBlockStats(engineEntry, type, domainKind);

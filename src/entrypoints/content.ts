@@ -1,5 +1,9 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { SEARCH_ENGINE_MATCH_PATTERNS, isSupportedSearchHostname } from '@/constants/search-hosts';
+import {
+  SEARCH_ENGINE_HOSTS,
+  SEARCH_ENGINE_MATCH_PATTERNS,
+  isSupportedSearchHostname,
+} from '@/constants/search-hosts';
 import {
   BUILT_IN_ENGINES,
   detectBuiltInSearchResults,
@@ -18,7 +22,6 @@ import {
 } from '@/utils/url';
 import { matchesBlockedDomain } from '@/utils/domain';
 import { autoDetectSearchResults } from '@/helpers/detector';
-import { injectCollapseBar } from '@/helpers/ui';
 import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
@@ -92,11 +95,10 @@ export default defineContentScript({
       }
 
       injectStyles();
-      clearAllMarkers({ preserveCounts: true, removeCollapse: false });
+      clearAllMarkers({ preserveCounts: true, clearPageCount: false });
       pushState();
       scanBlockedDomains();
       if (currentEngine) {
-        injectCollapseBar(currentEngine.containerSelector);
         scanResults(currentEngine);
       } else {
         autoDetectRetries = 0;
@@ -147,7 +149,7 @@ export default defineContentScript({
         engine: currentEngine,
         blockedSelectors,
         hostname: getHostname(),
-        searchEngineHosts: BUILT_IN_ENGINES.map((engine) => engine.hostname),
+        searchEngineHosts: [...SEARCH_ENGINE_HOSTS],
       });
       if (target === scanObserverTarget && scanObserver) return;
 
@@ -192,7 +194,6 @@ export default defineContentScript({
       }
       currentEngine = detected;
       pushState();
-      injectCollapseBar(detected.containerSelector);
       scanResults(detected);
       setupScanObserver();
     }

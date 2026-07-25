@@ -22,6 +22,10 @@ const SEARCH_ENGINE_NAME_KEYS: Record<string, string> = {
   'bing.com': 'searchEngineBing',
   'so.com': 'searchEngineSo',
   'sogou.com': 'searchEngineSogou',
+  'search.yahoo.com': 'searchEngineYahoo',
+  'yandex.com': 'searchEngineYandex',
+  'yandex.ru': 'searchEngineYandex',
+  'duckduckgo.com': 'searchEngineDuckDuckGo',
 };
 
 /** 根据 hostname 获取本地化搜索引擎名称，未知引擎保留原名称。 */

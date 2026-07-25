@@ -1,7 +1,7 @@
 import { addBlockedSelector, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import { t } from '@/utils/i18n';
 import { lockBadgeTypography } from '@/utils/styles';
-import { updateCollapseBar } from './ui';
+import { reportPageMarkerCount } from '@/utils/page-badge';
 
 // ========== Module State ==========
 
@@ -226,10 +226,10 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
          await removeBlockedSelectorEntry(full);
          mask.remove();
          badge.remove();
-         updateCollapseBar();
+         reportPageMarkerCount();
        });
        el.appendChild(badge);
-       updateCollapseBar();
+       reportPageMarkerCount();
        overlay.remove();
     } catch (err) {
       console.error('[SRB] Failed to block by selector:', err);

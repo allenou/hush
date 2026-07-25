@@ -23,20 +23,35 @@ describe('supported search hostnames', () => {
     expect(isSupportedSearchHostname('www.google.com')).toBe(true);
     expect(isSupportedSearchHostname('sogou.com')).toBe(true);
     expect(isSupportedSearchHostname('www.sogou.com')).toBe(true);
+    expect(isSupportedSearchHostname('search.yahoo.com')).toBe(true);
+    expect(isSupportedSearchHostname('www.yandex.ru')).toBe(true);
+    expect(isSupportedSearchHostname('duckduckgo.com')).toBe(true);
   });
 
-  it.each(['m.baidu.com', 'cn.bing.com', 'wap.sogou.com', 'google.com.hk', 'example.com'])(
+  it.each([
+    'm.baidu.com',
+    'cn.bing.com',
+    'wap.sogou.com',
+    'www.search.yahoo.com',
+    'sub.duckduckgo.com',
+    'google.com.hk',
+    'example.com',
+  ])(
     'rejects non-enumerated hostname %s',
     (hostname) => expect(isSupportedSearchHostname(hostname)).toBe(false),
   );
 
-  it('exports ten exact Manifest match patterns', () => {
+  it('exports exact Manifest match patterns for all supported hosts', () => {
     expect(SEARCH_ENGINE_MATCH_PATTERNS).toEqual([
       '*://google.com/*', '*://www.google.com/*',
       '*://baidu.com/*', '*://www.baidu.com/*',
       '*://bing.com/*', '*://www.bing.com/*',
       '*://so.com/*', '*://www.so.com/*',
       '*://sogou.com/*', '*://www.sogou.com/*',
+      '*://search.yahoo.com/*',
+      '*://yandex.com/*', '*://www.yandex.com/*',
+      '*://yandex.ru/*', '*://www.yandex.ru/*',
+      '*://duckduckgo.com/*', '*://www.duckduckgo.com/*',
     ]);
   });
 });
@@ -81,6 +96,25 @@ describe('detectSearchEngine', () => {
     expect(result!.hostname).toBe('sogou.com');
   });
 
+  it('detects Yahoo!', () => {
+    const result = detectSearchEngine('https://search.yahoo.com/search?p=test');
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('Yahoo!');
+    expect(result!.hostname).toBe('search.yahoo.com');
+  });
+
+  it('detects Yandex on both global and Russian domains', () => {
+    expect(detectSearchEngine('https://yandex.com/search/?text=test')?.name).toBe('Yandex');
+    expect(detectSearchEngine('https://www.yandex.ru/search/?text=test')?.name).toBe('Yandex');
+  });
+
+  it('detects DuckDuckGo', () => {
+    const result = detectSearchEngine('https://duckduckgo.com/?q=test');
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('DuckDuckGo');
+    expect(result!.hostname).toBe('duckduckgo.com');
+  });
+
   it('returns null for unknown search engine', () => {
     const result = detectSearchEngine('https://www.example.com');
     expect(result).toBeNull();
@@ -98,8 +132,7 @@ describe('detectSearchEngine', () => {
   });
 
   it('handles subdomain of known engine', () => {
-    // sub.duckduckgo.com was removed from BUILT_IN_ENGINES
-    // so this should return null
+    // Manifest 仅支持 DuckDuckGo 根域名及 www，不接受任意子域名。
     const result = detectSearchEngine('https://sub.duckduckgo.com/');
     expect(result).toBeNull();
   });
@@ -150,11 +183,9 @@ describe('BUILT_IN_ENGINES', () => {
     expect(hostnames).toContain('bing.com');
     expect(hostnames).toContain('so.com');
     expect(hostnames).toContain('sogou.com');
-  });
-
-  it('no longer contains DuckDuckGo', () => {
-    const hostnames = BUILT_IN_ENGINES.map((e) => e.hostname);
-    expect(hostnames).not.toContain('duckduckgo.com');
+    expect(hostnames).toContain('search.yahoo.com');
+    expect(hostnames).toContain('yandex.com');
+    expect(hostnames).toContain('duckduckgo.com');
   });
 
   it('has no duplicate hostnames', () => {
@@ -171,7 +202,7 @@ describe('BUILT_IN_ENGINES', () => {
     for (const engine of BUILT_IN_ENGINES) {
       expect(engine.name).toBeTruthy();
       expect(engine.hostname).toBeTruthy();
-      expect(engine.linkSelector).toBe(engine.hostname === 'sogou.com' ? 'a' : 'a[href]');
+      expect(engine.linkSelector).toContain('a');
     }
   });
 });
@@ -197,6 +228,24 @@ describe('engine-specific rules', () => {
       expect.objectContaining({ containerSelector: '#main', itemSelector: '.rb', linkSelector: 'a' }),
     ]);
     expect(getSearchEngineRule('sogou.com')?.adItemSelectors).toContain('.ad-results');
+    expect(getSearchEngineRule('search.yahoo.com')?.resultSelectors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ containerSelector: '#web', itemSelector: '.algo-sr, .algo' }),
+      ]),
+    );
+    expect(getSearchEngineRule('yandex.ru')?.resultSelectors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ containerSelector: '#search-result', itemSelector: '.serp-item' }),
+      ]),
+    );
+    expect(getSearchEngineRule('duckduckgo.com')?.resultSelectors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          containerSelector: 'section[data-testid="mainline"]',
+          itemSelector: 'article[data-testid="result"]',
+        }),
+      ]),
+    );
   });
 
   it('does not use another engine result selector', () => {
@@ -221,6 +270,9 @@ describe('engine-specific rules', () => {
     expect(extractSearchQuery('https://www.baidu.com/s?q=wrong&wd=正确')).toBe('正确');
     expect(extractSearchQuery('https://www.google.com/search?wd=wrong')).toBeNull();
     expect(extractSearchQuery('https://www.sogou.com/web?query=搜狗')).toBe('搜狗');
+    expect(extractSearchQuery('https://search.yahoo.com/search?p=雅虎')).toBe('雅虎');
+    expect(extractSearchQuery('https://www.yandex.ru/search/?text=яндекс')).toBe('яндекс');
+    expect(extractSearchQuery('https://duckduckgo.com/?q=privacy')).toBe('privacy');
   });
 
   it('delegates search URL creation to the current engine', () => {
@@ -230,6 +282,52 @@ describe('engine-specific rules', () => {
     expect(getSearchUrl('bing.com', 'test')).toBe('https://www.bing.com/search?q=test');
     expect(getSearchUrl('sogou.com', '中文 搜索')).toBe(
       'https://www.sogou.com/web?query=%E4%B8%AD%E6%96%87%20%E6%90%9C%E7%B4%A2',
+    );
+    expect(getSearchUrl('search.yahoo.com', 'test')).toBe(
+      'https://search.yahoo.com/search?p=test',
+    );
+    expect(getSearchUrl('yandex.ru', 'test')).toBe(
+      'https://yandex.com/search/?text=test',
+    );
+    expect(getSearchUrl('duckduckgo.com', 'private search')).toBe(
+      'https://duckduckgo.com/?q=private%20search',
+    );
+  });
+
+  it('detects result containers for the three added engines', () => {
+    document.body.innerHTML = `
+      <div id="web">
+        <div class="algo-sr"><h3><a href="https://a.example">A</a></h3></div>
+        <div class="algo-sr"><h3><a href="https://b.example">B</a></h3></div>
+      </div>
+    `;
+    expect(detectBuiltInSearchResults('https://search.yahoo.com/search?p=test')).toEqual(
+      expect.objectContaining({ name: 'Yahoo!', containerSelector: '#web' }),
+    );
+
+    document.body.innerHTML = `
+      <ol id="search-result">
+        <li class="serp-item"><h2><a href="https://a.example">A</a></h2></li>
+        <li class="serp-item"><h2><a href="https://b.example">B</a></h2></li>
+      </ol>
+    `;
+    expect(detectBuiltInSearchResults('https://yandex.ru/search/?text=test')).toEqual(
+      expect.objectContaining({ name: 'Yandex', containerSelector: '#search-result' }),
+    );
+
+    document.body.innerHTML = `
+      <div data-testid="mainline"></div>
+      <section data-testid="mainline">
+        <article data-testid="result"><h2><a href="https://a.example">A</a></h2></article>
+        <article data-testid="result"><h2><a href="https://b.example">B</a></h2></article>
+      </section>
+    `;
+    expect(detectBuiltInSearchResults('https://duckduckgo.com/?q=test')).toEqual(
+      expect.objectContaining({
+        name: 'DuckDuckGo',
+        containerSelector: 'section[data-testid="mainline"]',
+        itemSelector: 'article[data-testid="result"]',
+      }),
     );
   });
 

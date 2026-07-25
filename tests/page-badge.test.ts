@@ -3,8 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fakeBrowser } from 'wxt/testing';
 import background from '@/entrypoints/background';
-import { updateCollapseBar } from '@/helpers/ui';
-import { clearPageMarkerCount } from '@/utils/page-badge';
+import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
 
 interface TriggerableEvent {
   trigger: (...args: unknown[]) => Promise<unknown[]>;
@@ -188,8 +187,8 @@ describe('toolbar page badge', () => {
 
   it('synchronizes the badge after picker add and undo actions', () => {
     const pickerSource = readFileSync(resolve(process.cwd(), 'src/helpers/picker.ts'), 'utf8');
-    expect(pickerSource).toContain("import { updateCollapseBar } from './ui'");
-    expect(pickerSource.match(/updateCollapseBar\(\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(pickerSource).toContain("import { reportPageMarkerCount } from '@/utils/page-badge'");
+    expect(pickerSource.match(/reportPageMarkerCount\(\)/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it('does not show the cumulative block count globally', async () => {
@@ -228,14 +227,13 @@ describe('toolbar page badge', () => {
     const listener = vi.fn();
     fakeBrowser.runtime.onMessage.addListener(listener);
     document.body.innerHTML = `
-      <div id="srb-collapse-bar"></div>
       <div class="srb-blocked-badge" data-rule-type="domain"></div>
       <div class="srb-blocked-badge" data-rule-type="url"></div>
       <div class="srb-blocked-badge"></div>
       <div class="srb-ad-badge"></div>
     `;
 
-    updateCollapseBar();
+    reportPageMarkerCount();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listener).toHaveBeenCalledWith(

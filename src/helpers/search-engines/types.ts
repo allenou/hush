@@ -8,6 +8,7 @@ export interface SearchResultSelectorRule {
 export interface SearchEngineRule {
   name: string;
   hostname: string;
+  aliases?: readonly string[];
   linkSelector: string;
   queryParameterNames: readonly string[];
   buildSearchUrl: (query: string) => string;

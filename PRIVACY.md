@@ -17,7 +17,7 @@ Search history can be disabled at any time and existing history can be deleted f
 
 ## Search page processing
 
-On the explicitly supported Google, Baidu, Bing, 360 Search, and Sogou domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.
+On the explicitly supported Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.
 
 Hush does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest.
 
@@ -25,7 +25,7 @@ Hush does not inject or scan pages outside the exact supported search-engine dom
 
 - `storage`: Saves rules, search history, statistics, backups, and preferences locally.
 - `contextMenus`: Adds actions to block domains, block links, and pick page elements to the browser context menu.
-- Supported search-engine host access: Runs the result-marking Content Script only on the declared Google, Baidu, Bing, 360 Search, and Sogou root and `www` domains.
+- Supported search-engine host access: Runs the result-marking Content Script only on the declared Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo domains.
 
 ## Changes
 

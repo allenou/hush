@@ -128,7 +128,7 @@ describe('Dashboard', () => {
 
     expect(engineSelect).not.toBeNull();
     expect(engineSelect?.value).toBe('all');
-    expect(engineSelect?.options).toHaveLength(6);
+    expect(engineSelect?.options).toHaveLength(9);
     expect(target.querySelector('[data-testid="range-total"]')?.textContent).toContain('90');
 
     engineSelect!.value = 'google.com';
