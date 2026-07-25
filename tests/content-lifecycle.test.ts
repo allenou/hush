@@ -9,6 +9,15 @@ describe('marking lifecycle', () => {
     expect(contentSource).toContain('handleUrlChange(window.location.href)');
   });
 
+  it('restores injected styles before dynamic result scans', () => {
+    const contentSource = readFileSync(resolve(process.cwd(), 'src/entrypoints/content.ts'), 'utf8');
+    const dynamicScan = contentSource.slice(
+      contentSource.indexOf('function runDynamicScan'),
+      contentSource.indexOf('function rescanWithCurrentState'),
+    );
+    expect(dynamicScan).toContain('injectStyles()');
+  });
+
   it('removes markers, scan attributes, and the collapse bar', () => {
     document.body.innerHTML = `
       <div id="srb-collapse-bar"></div>

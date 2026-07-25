@@ -69,6 +69,9 @@ export default defineContentScript({
 
     function runDynamicScan(engine: SearchEngineConfig | null = currentEngine): void {
       if (!isEnabled) return;
+      // 百度翻页时可能重建 <head>，导致插件样式节点被移除。
+      // 每次动态扫描都重新确认样式存在，避免新标记退化成普通文本。
+      injectStyles();
       pushState(engine);
       scanBlockedDomains();
       if (engine) scanResults(engine);
@@ -84,6 +87,7 @@ export default defineContentScript({
         return;
       }
 
+      injectStyles();
       clearAllMarkers({ preserveCounts: true, removeCollapse: false });
       pushState();
       scanBlockedDomains();
@@ -172,6 +176,7 @@ export default defineContentScript({
     async function tryAutoDetect(): Promise<void> {
       if (!isEnabled) return;
       if (autoDetectRetries >= MAX_AUTO_DETECT_RETRIES) return;
+      injectStyles();
       autoDetectRetries++;
       const detected = detectBuiltInSearchResults(window.location.href)
         ?? autoDetectSearchResults(getHostname);

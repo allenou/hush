@@ -38,7 +38,7 @@ describe('getScanObserverTarget', () => {
     })).toBeNull();
   });
 
-  it('uses document.body for active search engines so first-page rerenders are observed', () => {
+  it('uses the stable document root for active search engines', () => {
     const container = document.createElement('main');
     container.id = 'results';
     document.body.appendChild(container);
@@ -47,24 +47,39 @@ describe('getScanObserverTarget', () => {
       engine: makeEngine('#results'),
       blockedSelectors: ['example.com||.ad'],
       hostname: 'example.com',
-    })).toBe(document.body);
+    })).toBe(document.documentElement);
   });
 
-  it('uses document.body on built-in search hosts before engine detection succeeds', () => {
+  it('keeps observing after a search page replaces its body', () => {
+    const target = getScanObserverTarget({
+      engine: makeEngine('#results'),
+      blockedSelectors: [],
+      hostname: 'example.com',
+    });
+    const nextBody = document.createElement('body');
+    nextBody.innerHTML = '<main id="results"></main>';
+
+    document.body.replaceWith(nextBody);
+
+    expect(target).toBe(document.documentElement);
+    expect(target?.contains(nextBody)).toBe(true);
+  });
+
+  it('uses the document root on built-in search hosts before engine detection succeeds', () => {
     expect(getScanObserverTarget({
       engine: null,
       blockedSelectors: [],
       hostname: 'google.com',
       searchEngineHosts: ['google.com'],
-    })).toBe(document.body);
+    })).toBe(document.documentElement);
   });
 
-  it('falls back to document.body for current-host selector rules', () => {
+  it('falls back to the document root for current-host selector rules', () => {
     expect(getScanObserverTarget({
       engine: null,
       blockedSelectors: ['example.com||.ad'],
       hostname: 'example.com',
-    })).toBe(document.body);
+    })).toBe(document.documentElement);
   });
 
   it('returns null when only other-host selector rules exist', () => {

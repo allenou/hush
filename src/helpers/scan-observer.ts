@@ -18,16 +18,17 @@ export function hasSelectorRuleForHost(blockedSelectors: string[], hostname: str
 }
 
 export function getScanObserverTarget(options: ScanObserverTargetOptions): Element | null {
-  if (options.engine) return document.body;
+  // 使用稳定的根节点，避免百度翻页替换整个 body 后观察器仍挂在旧节点上。
+  if (options.engine) return document.documentElement;
 
   if (options.searchEngineHosts?.some((host) =>
     normalizeHostname(host) === normalizeHostname(options.hostname),
   )) {
-    return document.body;
+    return document.documentElement;
   }
 
   if (hasSelectorRuleForHost(options.blockedSelectors, options.hostname)) {
-    return document.body;
+    return document.documentElement;
   }
 
   return null;
