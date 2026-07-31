@@ -49,6 +49,8 @@
   let totalBlockCount = $state(0);
   let adBlockCount = $state(0);
   let domainBlockCount = $state(0);
+  let urlBlockCount = $state(0);
+  let selectorBlockCount = $state(0);
   let todayBlockCount = $state(0);
   let dailyStats = $state<BlockStats[]>([]);
   let topBlockedDomains = $state<BlockedDomainStat[]>([]);
@@ -133,6 +135,8 @@
     totalBlockCount = storage.blockCount ?? 0;
     adBlockCount = storage.adBlockCount ?? 0;
     domainBlockCount = storage.domainBlockCount ?? 0;
+    urlBlockCount = storage.urlBlockCount ?? 0;
+    selectorBlockCount = storage.selectorBlockCount ?? 0;
     topBlockedDomains = storage.blockedDomainStats ?? [];
     searchHistory = storage.searchHistory ?? [];
     recordSearchHistory = storage.recordSearchHistory ?? true;
@@ -239,7 +243,8 @@
     {#if activeTab === 'dashboard'}
       <Dashboard
         {totalBlockCount} {todayBlockCount} {totalCount}
-        {adBlockCount} {domainBlockCount} {dailyStats}
+        {adBlockCount} {domainBlockCount} {urlBlockCount} {selectorBlockCount}
+        {dailyStats}
         topBlockedDomains={topBlockedDomains}
       />
 

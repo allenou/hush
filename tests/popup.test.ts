@@ -234,7 +234,8 @@ describe('Popup', () => {
           adCount: 3,
           targetDomainCount: 2,
           subdomainCount: 1,
-          otherCount: 4,
+          urlCount: 2,
+          selectorCount: 2,
         }],
       },
     });
@@ -266,8 +267,6 @@ describe('Popup', () => {
         domainLabel: 'Domain',
         filterUrl: 'URL',
         adLabel: 'Ads',
-        otherLabel: 'Other',
-        subdomainStatsLabel: 'Subdomain',
         pageElementLabel: 'Element',
         todayLabel: 'Today',
       })[key] ?? key;
@@ -305,14 +304,14 @@ describe('Popup', () => {
       expect(target.querySelector('.today-card')?.getAttribute('aria-pressed')).toBe('true');
       expect(target.querySelector('.chart-label')?.textContent)
         .toContain("Today's block types");
-      expect(target.querySelector('.bar-column.domain .bar-value')?.textContent).toContain('2');
-      expect(target.querySelector('.bar-column.subdomain .bar-value')?.textContent).toContain('1');
+      expect(target.querySelector('.bar-column.domain .bar-value')?.textContent).toContain('3');
+      expect(target.querySelector('.bar-column.url .bar-value')?.textContent).toContain('2');
       expect(target.querySelector('.bar-column.ad .bar-value')?.textContent).toContain('3');
-      expect(target.querySelector('.bar-column.other .bar-value')?.textContent).toContain('4');
-      expect(target.querySelector<HTMLElement>('.bar-fill.domain')?.style.height).toBe('50%');
-      expect(target.querySelector<HTMLElement>('.bar-fill.subdomain')?.style.height).toBe('25%');
-      expect(target.querySelector<HTMLElement>('.bar-fill.ad')?.style.height).toBe('75%');
-      expect(target.querySelector<HTMLElement>('.bar-fill.other')?.style.height).toBe('100%');
+      expect(target.querySelector('.bar-column.selector .bar-value')?.textContent).toContain('2');
+      expect(target.querySelector<HTMLElement>('.bar-fill.domain')?.style.height).toBe('100%');
+      expect(target.querySelector<HTMLElement>('.bar-fill.url')?.style.height).toBe('67%');
+      expect(target.querySelector<HTMLElement>('.bar-fill.ad')?.style.height).toBe('100%');
+      expect(target.querySelector<HTMLElement>('.bar-fill.selector')?.style.height).toBe('67%');
     });
 
     target.querySelector<HTMLButtonElement>('.current-site-card')?.click();

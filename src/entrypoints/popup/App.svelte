@@ -26,13 +26,15 @@
     selectorCount: 0,
   };
   type ChartScope = 'site' | 'today';
-  type ChartBarKey = 'domain' | 'url' | 'ad' | 'selector' | 'subdomain' | 'other';
+  type ChartBarKey = 'domain' | 'url' | 'ad' | 'selector' | 'legacy';
 
   let todayCount = 0;
   let todayBreakdown = {
     adCount: 0,
     targetDomainCount: 0,
     subdomainCount: 0,
+    urlCount: 0,
+    selectorCount: 0,
     otherCount: 0,
   };
   let enabled = true;
@@ -57,14 +59,15 @@
     supportedEngineNames = BUILT_IN_ENGINES
       .map((engine) => getSearchEngineDisplayName(engine.hostname, engine.name))
       .join(' · ');
-    const inferredOtherCount = Math.max(
+    const legacyCount = Math.max(
       0,
       todayCount
         - todayBreakdown.adCount
         - todayBreakdown.targetDomainCount
-        - todayBreakdown.subdomainCount,
+        - todayBreakdown.subdomainCount
+        - todayBreakdown.urlCount
+        - todayBreakdown.selectorCount,
     );
-    const todayOtherCount = Math.max(todayBreakdown.otherCount, inferredOtherCount);
     const markerTypes = selectedChartScope === 'site'
       ? [
           { key: 'domain' as const, label: t('domainLabel'), count: pageMarkerSummary.domainCount },
@@ -73,10 +76,25 @@
           { key: 'selector' as const, label: t('pageElementLabel'), count: pageMarkerSummary.selectorCount },
         ]
       : [
-          { key: 'domain' as const, label: t('domainLabel'), count: todayBreakdown.targetDomainCount },
-          { key: 'subdomain' as const, label: t('subdomainStatsLabel'), count: todayBreakdown.subdomainCount },
+          {
+            key: 'domain' as const,
+            label: t('domainLabel'),
+            count: todayBreakdown.targetDomainCount + todayBreakdown.subdomainCount,
+          },
+          { key: 'url' as const, label: t('filterUrl'), count: todayBreakdown.urlCount },
           { key: 'ad' as const, label: t('adLabel'), count: todayBreakdown.adCount },
-          { key: 'other' as const, label: t('otherLabel'), count: todayOtherCount },
+          {
+            key: 'selector' as const,
+            label: t('pageElementLabel'),
+            count: todayBreakdown.selectorCount,
+          },
+          ...(legacyCount > 0
+            ? [{
+                key: 'legacy' as const,
+                label: t('legacyStatsLabel'),
+                count: Math.max(todayBreakdown.otherCount, legacyCount),
+              }]
+            : []),
         ];
     const maxCount = Math.max(1, ...markerTypes.map((item) => item.count));
     pageMarkerBars = markerTypes.map((item) => ({
@@ -104,6 +122,8 @@
       adCount: todayStat?.adCount ?? 0,
       targetDomainCount: todayStat?.targetDomainCount ?? 0,
       subdomainCount: todayStat?.subdomainCount ?? 0,
+      urlCount: todayStat?.urlCount ?? 0,
+      selectorCount: todayStat?.selectorCount ?? 0,
       otherCount: todayStat?.otherCount ?? 0,
     };
     currentTabId = tab?.id ?? null;
@@ -328,6 +348,7 @@
     {:else}
       <div
         class="site-bar-chart"
+        style={`grid-template-columns: repeat(${pageMarkerBars.length}, minmax(0, 1fr))`}
         role="img"
         aria-label={selectedChartScope === 'site'
           ? t('currentSiteBarChartAria')
@@ -791,10 +812,7 @@
   .bar-fill.selector {
     background: linear-gradient(180deg, #f472b6, var(--srb-chart-pink));
   }
-  .bar-fill.subdomain {
-    background: linear-gradient(180deg, #818cf8, var(--srb-engine-baidu));
-  }
-  .bar-fill.other {
+  .bar-fill.legacy {
     background: linear-gradient(180deg, #a1a1aa, #71717a);
   }
   .bar-label {

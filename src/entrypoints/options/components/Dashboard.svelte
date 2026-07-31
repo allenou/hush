@@ -17,7 +17,7 @@
   import type { StatisticsRange } from '@/utils/statistics';
   import type { ChartConfiguration } from 'chart.js';
 
-  type BreakdownFilter = 'all' | 'ad' | 'domain' | 'other';
+  type BreakdownFilter = 'all' | 'ad' | 'domain' | 'url' | 'selector' | 'legacy';
 
   interface Props {
     dailyStats?: BlockStats[];
@@ -27,6 +27,8 @@
     totalCount?: number;
     adBlockCount?: number;
     domainBlockCount?: number;
+    urlBlockCount?: number;
+    selectorBlockCount?: number;
     topBlockedDomains?: BlockedDomainStat[];
   }
 
@@ -38,6 +40,8 @@
     totalCount = 0,
     adBlockCount = 0,
     domainBlockCount = 0,
+    urlBlockCount = 0,
+    selectorBlockCount = 0,
     topBlockedDomains = [],
   }: Props = $props();
 
@@ -54,6 +58,8 @@
         adCount: engineStats?.adCount ?? 0,
         targetDomainCount: engineStats?.targetDomainCount ?? 0,
         subdomainCount: engineStats?.subdomainCount ?? 0,
+        urlCount: engineStats?.urlCount ?? 0,
+        selectorCount: engineStats?.selectorCount ?? 0,
         otherCount: engineStats?.otherCount ?? 0,
       };
     });
@@ -67,9 +73,13 @@
         ? item.adCount ?? 0
         : selectedBreakdownFilter === 'domain'
           ? item.domainCount ?? 0
-          : selectedBreakdownFilter === 'other'
-            ? item.otherCount ?? 0
-            : item.count,
+          : selectedBreakdownFilter === 'url'
+            ? item.urlCount ?? 0
+            : selectedBreakdownFilter === 'selector'
+              ? item.selectorCount ?? 0
+              : selectedBreakdownFilter === 'legacy'
+                ? item.otherCount ?? 0
+                : item.count,
     }))
     .filter((item) => item.count > 0)
     .sort((a, b) => b.count - a.count)
@@ -79,33 +89,49 @@
       ? t('adLabel')
       : selectedBreakdownFilter === 'domain'
         ? t('domainLabel')
-        : selectedBreakdownFilter === 'other'
-          ? t('otherLabel')
-          : t('filterAll'),
+        : selectedBreakdownFilter === 'url'
+          ? t('filterUrl')
+          : selectedBreakdownFilter === 'selector'
+            ? t('pageElementLabel')
+            : selectedBreakdownFilter === 'legacy'
+              ? t('legacyStatsLabel')
+              : t('filterAll'),
   );
   let domainRankingTitle = $derived(
     selectedBreakdownFilter === 'ad'
       ? t('adDomainRanking')
       : selectedBreakdownFilter === 'domain'
         ? t('domainRuleRanking')
-        : selectedBreakdownFilter === 'other'
-          ? t('otherDomainRanking')
-          : t('topDomains'),
+        : selectedBreakdownFilter === 'url'
+          ? t('urlDomainRanking')
+          : selectedBreakdownFilter === 'selector'
+            ? t('selectorDomainRanking')
+            : selectedBreakdownFilter === 'legacy'
+              ? t('legacyDomainRanking')
+              : t('topDomains'),
   );
   let breakdown = $derived(buildBlockBreakdown(
     totalBlockCount,
     adBlockCount,
     domainBlockCount,
+    urlBlockCount,
+    selectorBlockCount,
   ));
   let hasTrendData = $derived(summary.total > 0);
   let hasTypedTrendData = $derived(dailySeries.some((item) =>
     (item.adCount ?? 0) > 0
     || (item.targetDomainCount ?? 0) > 0
     || (item.subdomainCount ?? 0) > 0
+    || (item.urlCount ?? 0) > 0
+    || (item.selectorCount ?? 0) > 0
     || (item.otherCount ?? 0) > 0,
   ));
   let hasBreakdownData = $derived(
-    breakdown.ads > 0 || breakdown.domains > 0 || breakdown.other > 0,
+    breakdown.ads > 0
+    || breakdown.domains > 0
+    || breakdown.urls > 0
+    || breakdown.selectors > 0
+    || breakdown.legacy > 0,
   );
 
   function parseDate(dateStr: string): Date {
@@ -143,39 +169,51 @@
   let trendConfiguration = $derived.by((): ChartConfiguration<'line'> => {
     const primary = chartColor('--srb-chart-blue', '#3b82f6');
     const fill = chartColor('--srb-chart-fill', 'rgba(59, 130, 246, 0.12)');
-    const datasets = hasTypedTrendData ? [
+    const typedDatasets = [
       {
         label: t('adLabel'),
         data: dailySeries.map((item) => item.adCount ?? 0),
-        borderColor: primary,
-        backgroundColor: primary,
+        color: primary,
       },
       {
-        label: t('targetDomainLabel'),
-        data: dailySeries.map((item) => item.targetDomainCount ?? 0),
-        borderColor: chartColor('--srb-chart-purple', '#a855f7'),
-        backgroundColor: chartColor('--srb-chart-purple', '#a855f7'),
+        label: t('domainLabel'),
+        data: dailySeries.map((item) =>
+          (item.targetDomainCount ?? 0) + (item.subdomainCount ?? 0)),
+        color: chartColor('--srb-chart-purple', '#a855f7'),
       },
       {
-        label: t('subdomainTrendLabel'),
-        data: dailySeries.map((item) => item.subdomainCount ?? 0),
-        borderColor: chartColor('--srb-chart-pink', '#ec4899'),
-        backgroundColor: chartColor('--srb-chart-pink', '#ec4899'),
+        label: t('filterUrl'),
+        data: dailySeries.map((item) => item.urlCount ?? 0),
+        color: chartColor('--srb-chart-orange', '#f97316'),
       },
       {
-        label: t('otherLabel'),
-        data: dailySeries.map((item) => Math.max(
-          0,
-          item.count
-            - (item.adCount ?? 0)
-            - (item.targetDomainCount ?? 0)
-            - (item.subdomainCount ?? 0),
-        )),
-        borderColor: chartColor('--srb-chart-orange', '#f97316'),
-        backgroundColor: chartColor('--srb-chart-orange', '#f97316'),
+        label: t('pageElementLabel'),
+        data: dailySeries.map((item) => item.selectorCount ?? 0),
+        color: chartColor('--srb-chart-pink', '#ec4899'),
       },
-    ].map((dataset) => ({
-      ...dataset,
+    ];
+    const legacyData = dailySeries.map((item) => Math.max(
+      item.otherCount ?? 0,
+      item.count
+        - (item.adCount ?? 0)
+        - (item.targetDomainCount ?? 0)
+        - (item.subdomainCount ?? 0)
+        - (item.urlCount ?? 0)
+        - (item.selectorCount ?? 0),
+      0,
+    ));
+    if (legacyData.some((count) => count > 0)) {
+      typedDatasets.push({
+        label: t('legacyStatsLabel'),
+        data: legacyData,
+        color: chartColor('--srb-text-muted', '#71717a'),
+      });
+    }
+    const datasets = hasTypedTrendData ? typedDatasets.map((dataset) => ({
+      label: dataset.label,
+      data: dataset.data,
+      borderColor: dataset.color,
+      backgroundColor: dataset.color,
       borderWidth: 2,
       fill: false,
       pointRadius: rangeDays === 7 ? 3 : 0,
@@ -238,13 +276,29 @@
   let breakdownConfiguration = $derived.by((): ChartConfiguration<'doughnut'> => ({
     type: 'doughnut',
     data: {
-      labels: [t('adLabel'), t('domainLabel'), t('otherLabel')],
+      labels: [
+        t('adLabel'),
+        t('domainLabel'),
+        t('filterUrl'),
+        t('pageElementLabel'),
+        ...(breakdown.legacy > 0 ? [t('legacyStatsLabel')] : []),
+      ],
       datasets: [{
-        data: [breakdown.ads, breakdown.domains, breakdown.other],
+        data: [
+          breakdown.ads,
+          breakdown.domains,
+          breakdown.urls,
+          breakdown.selectors,
+          ...(breakdown.legacy > 0 ? [breakdown.legacy] : []),
+        ],
         backgroundColor: [
           chartColor('--srb-chart-blue', '#3b82f6'),
           chartColor('--srb-chart-purple', '#a855f7'),
+          chartColor('--srb-chart-orange', '#f97316'),
           chartColor('--srb-chart-pink', '#ec4899'),
+          ...(breakdown.legacy > 0
+            ? [chartColor('--srb-text-muted', '#71717a')]
+            : []),
         ],
         borderColor: chartColor('--srb-surface', '#ffffff'),
         borderWidth: 3,
@@ -252,7 +306,11 @@
         offset: [
           selectedBreakdownFilter === 'ad' ? 8 : 0,
           selectedBreakdownFilter === 'domain' ? 8 : 0,
-          selectedBreakdownFilter === 'other' ? 8 : 0,
+          selectedBreakdownFilter === 'url' ? 8 : 0,
+          selectedBreakdownFilter === 'selector' ? 8 : 0,
+          ...(breakdown.legacy > 0
+            ? [selectedBreakdownFilter === 'legacy' ? 8 : 0]
+            : []),
         ],
       }],
     },
@@ -269,7 +327,10 @@
         },
       },
       onClick: (_event, elements) => {
-        const filter = (['ad', 'domain', 'other'] as const)[elements[0]?.index ?? -1];
+        const filters = breakdown.legacy > 0
+          ? (['ad', 'domain', 'url', 'selector', 'legacy'] as const)
+          : (['ad', 'domain', 'url', 'selector'] as const);
+        const filter = filters[elements[0]?.index ?? -1];
         if (filter) toggleBreakdownFilter(filter);
       },
     },
@@ -289,14 +350,21 @@
           if (selectedBreakdownFilter === 'domain') {
             return chartColor('--srb-chart-purple', '#a855f7');
           }
-          if (selectedBreakdownFilter === 'other') {
+          if (selectedBreakdownFilter === 'url') {
+            return chartColor('--srb-chart-orange', '#f97316');
+          }
+          if (selectedBreakdownFilter === 'selector') {
             return chartColor('--srb-chart-pink', '#ec4899');
+          }
+          if (selectedBreakdownFilter === 'legacy') {
+            return chartColor('--srb-text-muted', '#71717a');
           }
           return [
             chartColor('--srb-chart-blue', '#3b82f6'),
             chartColor('--srb-chart-purple', '#a855f7'),
+            chartColor('--srb-chart-orange', '#f97316'),
             chartColor('--srb-chart-pink', '#ec4899'),
-          ][index % 3];
+          ][index % 4];
         }),
         borderRadius: 7,
         borderSkipped: false,
@@ -468,12 +536,32 @@
           </button>
           <button
             type="button"
-            class:active={selectedBreakdownFilter === 'other'}
-            aria-pressed={selectedBreakdownFilter === 'other'}
-            onclick={() => toggleBreakdownFilter('other')}
+            class:active={selectedBreakdownFilter === 'url'}
+            aria-pressed={selectedBreakdownFilter === 'url'}
+            onclick={() => toggleBreakdownFilter('url')}
           >
-            <i class="dot pink"></i>{t('otherLabel')} <strong>{breakdown.other}</strong>
+            <i class="dot orange"></i>{t('filterUrl')} <strong>{breakdown.urls}</strong>
           </button>
+          <button
+            type="button"
+            class:active={selectedBreakdownFilter === 'selector'}
+            aria-pressed={selectedBreakdownFilter === 'selector'}
+            onclick={() => toggleBreakdownFilter('selector')}
+          >
+            <i class="dot pink"></i>{t('pageElementLabel')}
+            <strong>{breakdown.selectors}</strong>
+          </button>
+          {#if breakdown.legacy > 0}
+            <button
+              type="button"
+              class:active={selectedBreakdownFilter === 'legacy'}
+              aria-pressed={selectedBreakdownFilter === 'legacy'}
+              onclick={() => toggleBreakdownFilter('legacy')}
+            >
+              <i class="dot muted"></i>{t('legacyStatsLabel')}
+              <strong>{breakdown.legacy}</strong>
+            </button>
+          {/if}
         </div>
       {:else}
         <div class="dash-empty">{t('noData')}</div>
@@ -739,6 +827,7 @@
   }
   .breakdown-list {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: var(--srb-space-lg);
     margin-top: var(--srb-space-sm);
@@ -806,7 +895,9 @@
   }
   .dot.blue { background: var(--srb-chart-blue); }
   .dot.purple { background: var(--srb-chart-purple); }
+  .dot.orange { background: var(--srb-chart-orange); }
   .dot.pink { background: var(--srb-chart-pink); }
+  .dot.muted { background: var(--srb-text-muted); }
 
   .dash-empty {
     display: grid;

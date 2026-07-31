@@ -19,6 +19,8 @@ export interface ExtensionStorage {
   blockCount: number;
   adBlockCount: number;
   domainBlockCount: number;
+  urlBlockCount: number;
+  selectorBlockCount: number;
   blockedDomainStats: BlockedDomainStat[];
   searchHistory: SearchRecord[];
   recordSearchHistory: boolean;
@@ -55,6 +57,9 @@ export interface BlockStats {
   adCount?: number;
   targetDomainCount?: number;
   subdomainCount?: number;
+  urlCount?: number;
+  selectorCount?: number;
+  /** 兼容旧版无法区分链接与元素的统计数据。 */
   otherCount?: number;
   engineStats?: Record<string, EngineBlockStats>;
 }
@@ -64,6 +69,9 @@ export interface EngineBlockStats {
   adCount?: number;
   targetDomainCount?: number;
   subdomainCount?: number;
+  urlCount?: number;
+  selectorCount?: number;
+  /** 兼容旧版无法区分链接与元素的统计数据。 */
   otherCount?: number;
 }
 
@@ -72,6 +80,9 @@ export interface BlockedDomainStat {
   count: number;
   adCount?: number;
   domainCount?: number;
+  urlCount?: number;
+  selectorCount?: number;
+  /** 兼容旧版无法区分链接与元素的统计数据。 */
   otherCount?: number;
 }
 
@@ -92,6 +103,8 @@ const DEFAULT: ExtensionStorage = {
   blockCount: 0,
   adBlockCount: 0,
   domainBlockCount: 0,
+  urlBlockCount: 0,
+  selectorBlockCount: 0,
   blockedDomainStats: [],
   searchHistory: [],
   recordSearchHistory: true,
@@ -208,7 +221,14 @@ function isValidEngineStats(value: unknown): boolean {
   if (!isRecord(value)) return false;
   return Object.values(value).every((item) => {
     if (!isRecord(item) || typeof item.count !== 'number') return false;
-    return ['adCount', 'targetDomainCount', 'subdomainCount', 'otherCount']
+    return [
+      'adCount',
+      'targetDomainCount',
+      'subdomainCount',
+      'urlCount',
+      'selectorCount',
+      'otherCount',
+    ]
       .every((key) => item[key] === undefined || typeof item[key] === 'number');
   });
 }
@@ -228,7 +248,13 @@ function isValidBackupData(data: Record<string, unknown>): boolean {
     'blockedSelectors', 'stats', 'blockedDomainStats',
   ];
   const booleanFields = ['recordSearchHistory', 'enabled', 'blockAds', 'blockSubdomains'];
-  const numberFields = ['blockCount', 'adBlockCount', 'domainBlockCount'];
+  const numberFields = [
+    'blockCount',
+    'adBlockCount',
+    'domainBlockCount',
+    'urlBlockCount',
+    'selectorBlockCount',
+  ];
 
   if (arrayFields.some((key) => key in data && !Array.isArray(data[key]))) return false;
   if (booleanFields.some((key) => key in data && typeof data[key] !== 'boolean')) return false;
@@ -253,7 +279,7 @@ function isValidBackupData(data: Record<string, unknown>): boolean {
     isRecord(item)
       && typeof item.domain === 'string'
       && typeof item.count === 'number'
-      && ['adCount', 'domainCount', 'otherCount']
+      && ['adCount', 'domainCount', 'urlCount', 'selectorCount', 'otherCount']
         .every((key) => item[key] === undefined || typeof item[key] === 'number'))) return false;
   if (Array.isArray(data.rules) && !data.rules.every((item) => normalizeRule(item) !== null)) return false;
   if (Array.isArray(data.customEngines) && !data.customEngines.every((item) =>
@@ -576,6 +602,10 @@ function incrementBlockStats(
     entry.subdomainCount = (entry.subdomainCount ?? 0) + 1;
   } else if (type === 'domain') {
     entry.targetDomainCount = (entry.targetDomainCount ?? 0) + 1;
+  } else if (type === 'url') {
+    entry.urlCount = (entry.urlCount ?? 0) + 1;
+  } else if (type === 'selector') {
+    entry.selectorCount = (entry.selectorCount ?? 0) + 1;
   } else if (type) {
     entry.otherCount = (entry.otherCount ?? 0) + 1;
   }
@@ -616,6 +646,10 @@ async function recordBlockNow(
       domainStat.count++;
       if (type === 'ad') domainStat.adCount = (domainStat.adCount ?? 0) + 1;
       else if (type === 'domain') domainStat.domainCount = (domainStat.domainCount ?? 0) + 1;
+      else if (type === 'url') domainStat.urlCount = (domainStat.urlCount ?? 0) + 1;
+      else if (type === 'selector') {
+        domainStat.selectorCount = (domainStat.selectorCount ?? 0) + 1;
+      }
       else domainStat.otherCount = (domainStat.otherCount ?? 0) + 1;
       if (!existingDomain) blockedDomainStats.push(domainStat);
       blockedDomainStats.sort((a, b) => b.count - a.count);
@@ -629,6 +663,12 @@ async function recordBlockNow(
         domainBlockCount: type === 'domain'
           ? current.domainBlockCount + 1
           : current.domainBlockCount,
+        urlBlockCount: type === 'url'
+          ? current.urlBlockCount + 1
+          : current.urlBlockCount,
+        selectorBlockCount: type === 'selector'
+          ? current.selectorBlockCount + 1
+          : current.selectorBlockCount,
         stats: stats.slice(-STATISTICS_RETENTION_DAYS),
         blockedDomainStats: domain ? blockedDomainStats.slice(0, 10) : blockedDomainStats,
       },

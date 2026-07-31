@@ -1,4 +1,4 @@
-import { t, getLocale } from '@/utils/i18n';
+import { formatDate, t } from '@/utils/i18n';
 
 export const MINUTE_MS = 60_000;
 export const HOUR_MS = 3_600_000;
@@ -10,5 +10,5 @@ export function formatRelativeTime(ts: number): string {
   if (diff < HOUR_MS) return t('minutesAgo', String(Math.floor(diff / MINUTE_MS)));
   if (diff < DAY_MS) return t('hoursAgo', String(Math.floor(diff / HOUR_MS)));
   const d = new Date(ts);
-  return d.toLocaleDateString(getLocale(), { month: 'numeric', day: 'numeric' });
+  return formatDate(d, { month: 'numeric', day: 'numeric' });
 }

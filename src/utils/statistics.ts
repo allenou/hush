@@ -67,10 +67,20 @@ export function buildBlockBreakdown(
   total: number,
   ads: number,
   domains: number,
-): { ads: number; domains: number; other: number } {
+  urls: number,
+  selectors: number,
+): {
+  ads: number;
+  domains: number;
+  urls: number;
+  selectors: number;
+  legacy: number;
+} {
   return {
     ads,
     domains,
-    other: Math.max(0, total - ads - domains),
+    urls,
+    selectors,
+    legacy: Math.max(0, total - ads - domains - urls - selectors),
   };
 }

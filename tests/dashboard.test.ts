@@ -180,6 +180,8 @@ describe('Dashboard', () => {
       totalBlockCount: 12,
       adBlockCount: 4,
       domainBlockCount: 5,
+      urlBlockCount: 2,
+      selectorBlockCount: 1,
       topBlockedDomains: [
         { domain: 'example.com', count: 8 },
         { domain: 'news.example', count: 3 },
@@ -190,10 +192,17 @@ describe('Dashboard', () => {
     const canvases = target.querySelectorAll('canvas');
     const detailGrid = target.querySelector('.detail-grid');
     const rangeSection = target.querySelector('.range-section');
+    const breakdownButtons = target.querySelectorAll('.breakdown-list button');
+    const breakdownChart = chartMocks.instances.find((instance) => instance.type === 'doughnut');
     expect(canvases).toHaveLength(3);
     expect(detailGrid).not.toBeNull();
     expect(rangeSection?.querySelectorAll('canvas')).toHaveLength(1);
     expect(detailGrid?.querySelectorAll('canvas')).toHaveLength(2);
+    expect(breakdownButtons).toHaveLength(4);
+    expect(target.querySelector('.breakdown-list')?.textContent).toContain(t('filterUrl'));
+    expect(target.querySelector('.breakdown-list')?.textContent).toContain(t('pageElementLabel'));
+    expect(target.querySelector('.breakdown-list')?.textContent).not.toContain(t('legacyStatsLabel'));
+    expect(breakdownChart?.data.datasets[0]?.data).toEqual([4, 5, 2, 1]);
     for (const canvas of canvases) {
       expect(canvas.getAttribute('aria-label')?.trim()).not.toBe('');
     }
@@ -224,9 +233,18 @@ describe('Dashboard', () => {
       totalBlockCount: 20,
       adBlockCount: 8,
       domainBlockCount: 9,
+      urlBlockCount: 2,
+      selectorBlockCount: 1,
       topBlockedDomains: [
         { domain: 'ads.example', count: 9, adCount: 8, domainCount: 1 },
-        { domain: 'content.example', count: 8, adCount: 1, domainCount: 7 },
+        {
+          domain: 'content.example',
+          count: 11,
+          adCount: 1,
+          domainCount: 7,
+          urlCount: 2,
+          selectorCount: 1,
+        },
       ],
     });
     await tick();
@@ -258,9 +276,18 @@ describe('Dashboard', () => {
       totalBlockCount: 20,
       adBlockCount: 8,
       domainBlockCount: 9,
+      urlBlockCount: 2,
+      selectorBlockCount: 1,
       topBlockedDomains: [
         { domain: 'ads.example', count: 9, adCount: 8, domainCount: 1 },
-        { domain: 'content.example', count: 8, adCount: 1, domainCount: 7 },
+        {
+          domain: 'content.example',
+          count: 11,
+          adCount: 1,
+          domainCount: 7,
+          urlCount: 2,
+          selectorCount: 1,
+        },
       ],
     });
     await tick();
@@ -284,6 +311,8 @@ describe('Dashboard', () => {
       totalBlockCount: 0,
       adBlockCount: 0,
       domainBlockCount: 0,
+      urlBlockCount: 0,
+      selectorBlockCount: 0,
       topBlockedDomains: [],
     });
     await tick();

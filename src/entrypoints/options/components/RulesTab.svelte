@@ -66,13 +66,18 @@
           oninput={handleSearchInput}
           placeholder={t('searchRules')}
         />
-        <div class="filter-tabs" role="tablist">
+        <div class="filter-tabs">
           {#each RULE_FILTERS as id}
-            <button class:active={activeFilter === id} onclick={() => handleFilterChange(id)}>{filterLabel[id]}</button>
+            <button
+              type="button"
+              class:active={activeFilter === id}
+              aria-pressed={activeFilter === id}
+              onclick={() => handleFilterChange(id)}
+            >{filterLabel[id]}</button>
           {/each}
         </div>
       {/if}
-      <button class="add-trigger" onclick={handleAddRule}>{t('addRule')}</button>
+      <button type="button" class="add-trigger" onclick={handleAddRule}>{t('addRule')}</button>
     </div>
   </div>
 
@@ -145,13 +150,14 @@
     line-height: var(--srb-line-height-tight);
   }
   .rules-actions {
+    --rules-control-height: var(--srb-input-height-compact);
     display: flex;
     gap: var(--srb-space-sm);
     align-items: center;
     flex-wrap: wrap;
   }
   .add-trigger {
-    height: var(--srb-button-height-compact);
+    height: var(--rules-control-height);
     padding: 0 14px;
     border: none;
     border-radius: var(--srb-radius-lg);
@@ -165,17 +171,26 @@
     transition: background var(--srb-transition-base);
   }
   .add-trigger:hover { background: var(--srb-primary-action-hover); }
+  .add-trigger:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
+  }
 
   .filter-tabs {
     display: inline-flex;
     gap: var(--srb-space-2xs);
+    height: var(--rules-control-height);
     padding: 3px;
+    box-sizing: border-box;
     border-radius: var(--srb-radius-lg);
     background: var(--srb-bg);
     border: 1px solid var(--srb-border);
   }
   .filter-tabs button {
-    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 12px;
     border: none;
     border-radius: var(--srb-radius-md);
     background: transparent;
@@ -186,15 +201,25 @@
     cursor: pointer;
     transition: background var(--srb-transition-fast), color var(--srb-transition-fast), box-shadow var(--srb-transition-fast);
   }
+  .filter-tabs button:hover {
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text);
+  }
   .filter-tabs button.active {
     background: var(--srb-surface);
     color: var(--srb-primary);
     box-shadow: var(--srb-shadow-xs);
   }
+  .filter-tabs button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
+  }
 
   .search-box {
     width: 180px;
-    height: var(--srb-input-height-compact);
+    height: var(--rules-control-height);
     padding: 0 12px;
     border: 1px solid var(--srb-border-strong);
     border-radius: var(--srb-radius-lg);

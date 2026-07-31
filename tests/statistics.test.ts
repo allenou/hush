@@ -125,11 +125,20 @@ describe('summarizeDailySeries', () => {
 });
 
 describe('buildBlockBreakdown', () => {
-  it('never returns a negative other count', () => {
-    expect(buildBlockBreakdown(5, 4, 3)).toEqual({
+  it('keeps typed counts and never returns a negative legacy count', () => {
+    expect(buildBlockBreakdown(5, 4, 3, 2, 1)).toEqual({
       ads: 4,
       domains: 3,
-      other: 0,
+      urls: 2,
+      selectors: 1,
+      legacy: 0,
+    });
+    expect(buildBlockBreakdown(12, 4, 3, 2, 1)).toEqual({
+      ads: 4,
+      domains: 3,
+      urls: 2,
+      selectors: 1,
+      legacy: 2,
     });
   });
 });

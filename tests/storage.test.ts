@@ -36,6 +36,8 @@ describe('get / set defaults', () => {
     expect(s.blockedUrls).toEqual([]);
     expect(s.rules).toEqual([]);
     expect(s.blockCount).toBe(0);
+    expect(s.urlBlockCount).toBe(0);
+    expect(s.selectorBlockCount).toBe(0);
     expect(s.enabled).toBe(true);
     expect(s.blockAds).toBe(true);
     expect(s.customEngines).toEqual([]);
@@ -484,25 +486,31 @@ describe('recordBlock', () => {
     ]));
   });
 
-  it('records daily ad, target-domain, subdomain, and other breakdowns', async () => {
+  it('records daily ad, domain, URL, and selector breakdowns', async () => {
     await recordBlock('ad', 'ads.example');
     await recordBlock('domain', 'example.com', 'target');
     await recordBlock('domain', 'news.example.com', 'subdomain');
     await recordBlock('url', 'example.com');
+    await recordBlock('selector', 'elements.example');
 
     const today = formatLocalDateKey(new Date());
     const entry = (await get()).stats.find((item) => item.date === today);
     expect(entry).toMatchObject({
-      count: 4,
+      count: 5,
       adCount: 1,
       targetDomainCount: 1,
       subdomainCount: 1,
-      otherCount: 1,
+      urlCount: 1,
+      selectorCount: 1,
     });
-    expect((await get()).blockedDomainStats).toEqual(expect.arrayContaining([
+    const storage = await get();
+    expect(storage.urlBlockCount).toBe(1);
+    expect(storage.selectorBlockCount).toBe(1);
+    expect(storage.blockedDomainStats).toEqual(expect.arrayContaining([
       expect.objectContaining({ domain: 'ads.example', adCount: 1 }),
-      expect.objectContaining({ domain: 'example.com', domainCount: 1, otherCount: 1 }),
+      expect.objectContaining({ domain: 'example.com', domainCount: 1, urlCount: 1 }),
       expect.objectContaining({ domain: 'news.example.com', domainCount: 1 }),
+      expect.objectContaining({ domain: 'elements.example', selectorCount: 1 }),
     ]));
   });
 
@@ -511,6 +519,7 @@ describe('recordBlock', () => {
     await recordBlock('domain', 'example.com', 'target', 'google.com');
     await recordBlock('domain', 'news.example.com', 'subdomain', 'www.baidu.com');
     await recordBlock('url', 'example.com', undefined, 'baidu.com');
+    await recordBlock('selector', 'elements.example', undefined, 'baidu.com');
 
     const today = formatLocalDateKey(new Date());
     const entry = (await get()).stats.find((item) => item.date === today);
@@ -521,9 +530,10 @@ describe('recordBlock', () => {
         targetDomainCount: 1,
       },
       'baidu.com': {
-        count: 2,
+        count: 3,
         subdomainCount: 1,
-        otherCount: 1,
+        urlCount: 1,
+        selectorCount: 1,
       },
     });
   });

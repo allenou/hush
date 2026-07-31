@@ -151,6 +151,33 @@ describe('Options UI', () => {
     expect(onSearchQueryChange).toHaveBeenCalledWith('example');
   });
 
+  it('exposes rule filters as a consistent pressed-button group', () => {
+    const onFilterChange = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(RulesTab, {
+      target,
+      props: {
+        totalCount: 1,
+        activeFilter: 'domain',
+        filteredItems: [{ type: 'domain', value: 'example.com', index: 0 }],
+        onFilterChange,
+      },
+    });
+
+    const filters = Array.from(
+      target.querySelectorAll<HTMLButtonElement>('.filter-tabs button'),
+    );
+    const activeFilter = filters.find((button) => button.classList.contains('active'));
+
+    expect(filters).toHaveLength(4);
+    expect(filters.every((button) => button.type === 'button')).toBe(true);
+    expect(activeFilter?.getAttribute('aria-pressed')).toBe('true');
+
+    filters.find((button) => button.getAttribute('aria-pressed') === 'false')?.click();
+    expect(onFilterChange).toHaveBeenCalledTimes(1);
+  });
+
   it('groups repeat search with engine selection and confirms before clearing history', async () => {
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       searchAction: '再次搜索',
