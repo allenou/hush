@@ -9,7 +9,7 @@ const { lang } = Astro.props;
 const messages = getTranslations(lang).searchDemo;
 ---
 
-<div class="search-demo" aria-label={messages.ariaLabel}>
+<div class="search-demo" aria-hidden="true">
   <div class="browser-bar">
     <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
     <div class="address-bar">search.example.com/results?q=quiet+search</div>
@@ -20,7 +20,7 @@ const messages = getTranslations(lang).searchDemo;
       <span class="result-source">helpful.example</span>
       <h3>{messages.primaryTitle}</h3>
       <p>{messages.primaryDescription}</p>
-      <button class="mark-control" type="button" aria-label={messages.markAriaLabel}>{messages.contextAction}</button>
+      <span class="mark-control">{messages.contextAction}</span>
     </article>
     <article class="demo-result covered">
       <div class="cover-content">
@@ -29,7 +29,7 @@ const messages = getTranslations(lang).searchDemo;
           <strong>{messages.marked}</strong>
           <span>{messages.rule}</span>
         </div>
-        <button type="button">{messages.show}</button>
+        <span class="demo-show-control">{messages.show}</span>
       </div>
     </article>
     <article class="demo-result compact">

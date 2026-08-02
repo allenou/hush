@@ -430,7 +430,7 @@ button {
   font-size: 11px;
 }
 
-.cover-content button {
+.demo-show-control {
   padding: 5px 10px;
   border: 1px solid rgba(79, 95, 159, 0.25);
   border-radius: 7px;
@@ -611,13 +611,15 @@ button {
   font-size: 12px;
 }
 
-.primary-result > button {
+.feature-context-control {
   position: absolute;
   top: 14px;
   right: 0;
+  display: grid;
   min-width: 62px;
   height: 30px;
   padding: 0 10px;
+  place-items: center;
   border: 0;
   border-radius: 999px;
   background: var(--color-primary);
@@ -805,13 +807,15 @@ button {
   line-height: 1.45;
 }
 
-.journey-result button {
+.journey-context-control {
   position: absolute;
   top: 54px;
   right: 18px;
+  display: grid;
   min-width: 64px;
   height: 30px;
   padding: 0 10px;
+  place-items: center;
   border: 0;
   border-radius: 999px;
   background: var(--color-primary);
@@ -871,7 +875,9 @@ button {
   font-size: 13px;
 }
 
-.journey-covered button {
+.journey-show-control {
+  display: inline-flex;
+  align-items: center;
   padding: 7px 11px;
   border: 1px solid rgba(79, 95, 159, 0.24);
   border-radius: 8px;
@@ -1473,7 +1479,7 @@ button {
     align-items: flex-start;
   }
 
-  .cover-content button {
+  .demo-show-control {
     display: none;
   }
 

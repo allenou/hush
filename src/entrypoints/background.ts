@@ -1,9 +1,9 @@
 import { defineBackground } from 'wxt/utils/define-background';
+import { WEB_PAGE_MATCH_PATTERNS } from '@/constants/context-menu';
 import {
-  isRestrictedContextMenuUrl,
-  WEB_PAGE_MATCH_PATTERNS,
-} from '@/constants/context-menu';
-import { SEARCH_ENGINE_MATCH_PATTERNS } from '@/constants/search-hosts';
+  SEARCH_ENGINE_MATCH_PATTERNS,
+  isSupportedSearchHostname,
+} from '@/constants/search-hosts';
 import { findMatchingBlockedDomainIndex } from '@/utils/domain';
 import { addBlockedUrl, addDomain, get, recordBlock, removeBlockedItem } from '@/utils/storage';
 import { isPageMarkerCountMessage } from '@/utils/page-badge';
@@ -16,59 +16,75 @@ const CONTEXT_MENU = {
   url: 'srb-block-url',
 } as const;
 
-interface ContextTargetStateMessage {
-  type: 'srb-context-domain-state';
-  domainBlocked: boolean;
-  urlBlocked: boolean;
-  domainOnly: boolean;
+interface ContextMenuShownData {
+  linkUrl?: string;
+  pageUrl?: string;
 }
 
-interface ContextMenuAvailabilityMessage {
-  type: 'srb-context-menu-availability';
-  available: boolean;
+interface DynamicContextMenus {
+  onShown: {
+    addListener: (
+      listener: (info: ContextMenuShownData, tab?: chrome.tabs.Tab) => void,
+    ) => void;
+  };
+  refresh: () => Promise<void>;
 }
 
 interface ToggleResult {
-  blocked: boolean;
   shouldRecord: boolean;
 }
 
-function isContextTargetStateMessage(message: unknown): message is ContextTargetStateMessage {
-  return Boolean(message)
-    && typeof message === 'object'
-    && (message as ContextTargetStateMessage).type === 'srb-context-domain-state'
-    && typeof (message as ContextTargetStateMessage).domainBlocked === 'boolean'
-    && typeof (message as ContextTargetStateMessage).urlBlocked === 'boolean'
-    && typeof (message as ContextTargetStateMessage).domainOnly === 'boolean';
+function getDynamicContextMenus(): typeof chrome.contextMenus & DynamicContextMenus {
+  return chrome.contextMenus as typeof chrome.contextMenus & DynamicContextMenus;
 }
 
-function isContextMenuAvailabilityMessage(message: unknown): message is ContextMenuAvailabilityMessage {
-  return Boolean(message)
-    && typeof message === 'object'
-    && (message as ContextMenuAvailabilityMessage).type === 'srb-context-menu-availability'
-    && typeof (message as ContextMenuAvailabilityMessage).available === 'boolean';
+function parseHttpUrl(value: string | undefined): URL | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
 }
 
-export async function updateContextMenuAvailability(available: boolean): Promise<void> {
-  await chrome.contextMenus.update(CONTEXT_MENU.root, { visible: available });
+function isSupportedSearchPage(value: string | undefined): boolean {
+  const url = parseHttpUrl(value);
+  return url ? isSupportedSearchHostname(url.hostname) : false;
 }
 
-export async function updateTargetContextMenus(
-  state: Omit<ContextTargetStateMessage, 'type'>,
-): Promise<void> {
+export async function updateShownContextMenus(info: ContextMenuShownData): Promise<void> {
+  const target = parseHttpUrl(info.linkUrl ?? info.pageUrl);
+  const searchPage = isSupportedSearchPage(info.pageUrl);
+  const showRuleActions = Boolean(target) && (!searchPage || Boolean(info.linkUrl));
+  const storage = target ? await get() : null;
+  const domain = target?.hostname.replace(/^www\./, '') ?? '';
+  const domainBlocked = Boolean(storage && findMatchingBlockedDomainIndex(
+    domain,
+    storage.urls,
+    storage.blockSubdomains ?? true,
+  ) >= 0);
+  const urlBlocked = Boolean(storage && target && storage.blockedUrls.includes(target.href));
+  const domainOnly = target ? isDomainHomepageUrl(target.href) : false;
+
   await Promise.all([
+    chrome.contextMenus.update(CONTEXT_MENU.picker, {
+      visible: searchPage,
+    }),
     chrome.contextMenus.update(CONTEXT_MENU.domain, {
-      title: state.domainBlocked
+      title: domainBlocked
         ? chrome.i18n.getMessage('unblockDomain') || 'Unblock this domain'
         : chrome.i18n.getMessage('blockDomain') || 'Block this domain',
+      visible: showRuleActions,
     }),
     chrome.contextMenus.update(CONTEXT_MENU.url, {
-      title: state.urlBlocked
+      title: urlBlocked
         ? chrome.i18n.getMessage('unblockUrl') || 'Unblock this URL'
         : chrome.i18n.getMessage('blockUrl') || 'Block this URL',
-      visible: !state.domainOnly,
+      visible: showRuleActions && !domainOnly,
     }),
   ]);
+  await getDynamicContextMenus().refresh();
 }
 
 async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
@@ -80,10 +96,10 @@ async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
   );
   if (blockedIndex >= 0) {
     await removeBlockedItem('domain', blockedIndex);
-    return { blocked: false, shouldRecord: false };
+    return { shouldRecord: false };
   }
   await addDomain(domain);
-  return { blocked: true, shouldRecord: true };
+  return { shouldRecord: true };
 }
 
 async function toggleUrlBlock(url: string): Promise<ToggleResult> {
@@ -91,33 +107,10 @@ async function toggleUrlBlock(url: string): Promise<ToggleResult> {
   const blockedIndex = storage.blockedUrls.indexOf(url);
   if (blockedIndex >= 0) {
     await removeBlockedItem('url', blockedIndex);
-    return { blocked: false, shouldRecord: false };
+    return { shouldRecord: false };
   }
   await addBlockedUrl(url);
-  return { blocked: true, shouldRecord: true };
-}
-
-function resetContextMenus(): void {
-  void Promise.all([
-    updateContextMenuAvailability(true),
-    updateTargetContextMenus({
-      domainBlocked: false,
-      urlBlocked: false,
-      domainOnly: false,
-    }),
-  ]).catch(() => {});
-}
-
-async function syncContextMenusForTab(tabId: number): Promise<void> {
-  const tab = await chrome.tabs.get(tabId);
-  await Promise.all([
-    updateContextMenuAvailability(!isRestrictedContextMenuUrl(tab.url)),
-    updateTargetContextMenus({
-      domainBlocked: false,
-      urlBlocked: false,
-      domainOnly: false,
-    }),
-  ]);
+  return { shouldRecord: true };
 }
 
 function createContextMenus(): void {
@@ -163,9 +156,10 @@ export default defineBackground(() => {
   void chrome.action.setBadgeBackgroundColor({ color: '#c00' });
   createContextMenus();
   chrome.runtime.onInstalled.addListener(createContextMenus);
-  void chrome.tabs.query({ active: true, lastFocusedWindow: true })
-    .then(([tab]) => tab?.id === undefined ? undefined : syncContextMenusForTab(tab.id))
-    .catch(() => {});
+
+  getDynamicContextMenus().onShown.addListener((info) => {
+    void updateShownContextMenus(info).catch(() => {});
+  });
 
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === CONTEXT_MENU.picker) {
@@ -175,42 +169,19 @@ export default defineBackground(() => {
       return;
     }
 
-    const targetUrl = info.linkUrl ?? info.pageUrl;
-    if (!targetUrl) return;
-    let target: URL;
-    try {
-      target = new URL(targetUrl);
-    } catch {
-      return;
-    }
-    if (target.protocol !== 'http:' && target.protocol !== 'https:') return;
+    const target = parseHttpUrl(info.linkUrl ?? info.pageUrl);
+    if (!target) return;
 
     const domain = target.hostname.replace(/^www\./, '');
     if (info.menuItemId === CONTEXT_MENU.domain) {
       void toggleDomainBlock(domain)
-        .then(async ({ blocked, shouldRecord }) => {
-          const storage = await get();
-          await updateTargetContextMenus({
-            domainBlocked: blocked,
-            urlBlocked: storage.blockedUrls.includes(target.href),
-            domainOnly: isDomainHomepageUrl(target.href),
-          });
+        .then(async ({ shouldRecord }) => {
           if (shouldRecord) await recordBlock('domain', domain);
         })
         .catch(() => {});
     } else if (info.menuItemId === CONTEXT_MENU.url) {
       void toggleUrlBlock(target.href)
-        .then(async ({ blocked, shouldRecord }) => {
-          const storage = await get();
-          await updateTargetContextMenus({
-            domainBlocked: findMatchingBlockedDomainIndex(
-              domain,
-              storage.urls,
-              storage.blockSubdomains ?? true,
-            ) >= 0,
-            urlBlocked: blocked,
-            domainOnly: isDomainHomepageUrl(target.href),
-          });
+        .then(async ({ shouldRecord }) => {
           if (shouldRecord) await recordBlock('url', domain);
         })
         .catch(() => {});
@@ -218,16 +189,6 @@ export default defineBackground(() => {
   });
 
   chrome.runtime.onMessage.addListener((message, sender) => {
-    if (isContextMenuAvailabilityMessage(message)) {
-      // 菜单可见性是全局状态，后台标签页不能覆盖当前活动标签页。
-      if (sender.tab?.active === false) return;
-      void updateContextMenuAvailability(message.available).catch(() => {});
-      return;
-    }
-    if (isContextTargetStateMessage(message)) {
-      void updateTargetContextMenus(message).catch(() => {});
-      return;
-    }
     const tabId = sender.tab?.id;
     if (tabId === undefined || !isPageMarkerCountMessage(message)) return;
     updateTabBadge(tabId, message.count);
@@ -236,10 +197,6 @@ export default defineBackground(() => {
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === 'loading') {
       updateTabBadge(tabId, 0);
-      void syncContextMenusForTab(tabId).catch(resetContextMenus);
     }
-  });
-  chrome.tabs.onActivated.addListener(({ tabId }) => {
-    void syncContextMenusForTab(tabId).catch(resetContextMenus);
   });
 });

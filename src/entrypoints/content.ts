@@ -14,13 +14,7 @@ import type { SearchEngineConfig } from '@/helpers/search-engines';
 import { get, subscribe, recordSearch } from '@/utils/storage';
 import { injectStyles } from '@/utils/styles';
 import { activatePicker, deactivatePicker } from '@/helpers/picker';
-import {
-  getHostname,
-  extractResultUrl,
-  isDomainHomepageUrl,
-  resolveContextTargetUrl,
-} from '@/utils/url';
-import { matchesBlockedDomain } from '@/utils/domain';
+import { getHostname, extractResultUrl } from '@/utils/url';
 import { autoDetectSearchResults } from '@/helpers/detector';
 import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
@@ -248,21 +242,6 @@ export default defineContentScript({
           sendResponse(countPageMarkerSummary());
         }
       });
-      const syncContextMenuTargetState = (event: Event): void => {
-        const target = event.target instanceof Element ? event.target : null;
-        const targetUrl = resolveContextTargetUrl(target, window.location.href);
-        const hostname = new URL(targetUrl).hostname.replace(/^www\./, '');
-        void chrome.runtime.sendMessage({
-          type: 'srb-context-domain-state',
-          domainBlocked: matchesBlockedDomain(hostname, blockedDomains, blockSubdomains),
-          urlBlocked: blockedUrls.includes(targetUrl),
-          domainOnly: isDomainHomepageUrl(targetUrl),
-        }).catch(() => {});
-      };
-      ctx.addEventListener(document, 'pointerdown', (event) => {
-        if ((event as PointerEvent).button === 2) syncContextMenuTargetState(event);
-      }, true);
-      ctx.addEventListener(document, 'contextmenu', syncContextMenuTargetState, true);
       if (isEnabled) startMarking();
     }
     ctx.onInvalidated(() => {

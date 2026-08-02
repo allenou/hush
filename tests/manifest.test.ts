@@ -1,12 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const configSource = readFileSync(resolve(process.cwd(), 'wxt.config.ts'), 'utf8');
 const contentSource = readFileSync(resolve(process.cwd(), 'src/entrypoints/content.ts'), 'utf8');
-const contextMenuGuardSource = readFileSync(
-  resolve(process.cwd(), 'src/entrypoints/context-menu-guard.content.ts'),
-  'utf8',
+const contextMenuGuardPath = resolve(
+  process.cwd(),
+  'src/entrypoints/context-menu-guard.content.ts',
 );
 
 describe('Manifest permissions', () => {
@@ -22,11 +22,9 @@ describe('Manifest permissions', () => {
     expect(configSource).not.toContain("'activeTab'");
   });
 
-  it('guards search engines and local web pages without requesting all URLs', () => {
-    expect(contextMenuGuardSource).toContain('SEARCH_ENGINE_MATCH_PATTERNS');
-    expect(contextMenuGuardSource).toContain('LOCAL_PAGE_MATCH_PATTERNS');
-    expect(contextMenuGuardSource).toContain('hideContextMenu();');
-    expect(contextMenuGuardSource).not.toContain("'<all_urls>'");
+  it('does not inject a context-menu guard into search or local pages', () => {
+    expect(existsSync(contextMenuGuardPath)).toBe(false);
+    expect(contentSource).not.toContain('LOCAL_PAGE_MATCH_PATTERNS');
   });
 
   it('provides the standard toolbar and extension-management icon sizes', () => {

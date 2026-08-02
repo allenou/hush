@@ -52,6 +52,8 @@ describe('product copy', () => {
     expect(storeCopy).not.toContain('any search engine');
     expect(storeCopy).not.toContain('Hide all results');
     expect(storeCopy).not.toContain('immediately hidden');
+    expect(storeCopy).not.toContain('floating button');
+    expect(storeCopy.toLowerCase()).not.toContain('backup');
     expect(storeCopy).toContain('Google');
     expect(storeCopy).toContain('Baidu');
     expect(storeCopy).toContain('Bing');
@@ -66,6 +68,7 @@ describe('product copy', () => {
     expect(privacyCopy).toContain('`contextMenus`');
     expect(privacyCopy).toContain('jskindler@outlook.com');
     expect(privacyCopy).not.toContain('supported-engine detection settings');
+    expect(privacyCopy.toLowerCase()).not.toContain('backup');
   });
 
   it('keeps the website release notes within the shipped feature set', () => {
@@ -76,6 +79,26 @@ describe('product copy', () => {
     expect(chineseSiteCopy).not.toContain('保存自定义搜索引擎配置');
     expect(englishSiteCopy).toContain('"getHush": "GitHub"');
     expect(chineseSiteCopy).toContain('"getHush": "GitHub"');
+    expect(englishSiteCopy.toLowerCase()).not.toContain('backup');
+    expect(chineseSiteCopy).not.toContain('备份');
+  });
+
+  it('keeps decorative website demos out of keyboard focus', () => {
+    const searchDemoSource = readFileSync(
+      resolve(process.cwd(), 'site/src/components/SearchDemo.astro'),
+      'utf8',
+    );
+    const homePageSource = readFileSync(
+      resolve(process.cwd(), 'site/src/components/HomePage.astro'),
+      'utf8',
+    );
+
+    expect(searchDemoSource).toContain('<div class="search-demo" aria-hidden="true">');
+    expect(searchDemoSource).not.toContain('<button');
+    expect(homePageSource).toContain('<span class="feature-context-control">');
+    expect(homePageSource).toContain('<span class="journey-context-control">');
+    expect(homePageSource).toContain('<span class="journey-show-control">');
+    expect(homePageSource).not.toMatch(/<button[^>]+class="(?:feature-context-control|journey-context-control|journey-show-control)"/);
   });
 
   it('removes copy already expressed by the interface', () => {

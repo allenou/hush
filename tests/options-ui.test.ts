@@ -88,6 +88,10 @@ describe('Options UI', () => {
     expect(settingsSource).not.toMatch(/\.backup-btn\s*\{[^}]*flex:\s*1;/s);
   });
 
+  it('keeps the backup card hidden for now', () => {
+    expect(settingsSource).toContain('class="settings-card wide backup-card" aria-labelledby="backup-heading" hidden');
+  });
+
   it('places the language switcher in the options header', () => {
     expect(navSource).toContain('class="locale-switcher"');
     expect(navSource).toContain("onLocaleChange?.(currentLocale === 'zh_CN' ? 'en' : 'zh_CN')");

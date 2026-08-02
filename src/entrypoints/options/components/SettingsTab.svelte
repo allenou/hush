@@ -92,7 +92,7 @@
     </label>
   </section>
 
-  <section class="settings-card wide backup-card" aria-labelledby="backup-heading">
+  <section class="settings-card wide backup-card" aria-labelledby="backup-heading" hidden>
     <div class="backup-content">
       <div class="card-heading backup-heading">
         <div>

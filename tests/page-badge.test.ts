@@ -11,11 +11,14 @@ interface TriggerableEvent {
 
 let contextMenuClickListener:
   ((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => void) | undefined;
+let contextMenuShownListener:
+  ((info: { linkUrl?: string; pageUrl?: string }, tab?: chrome.tabs.Tab) => void) | undefined;
 
 beforeEach(() => {
   vi.restoreAllMocks();
   fakeBrowser.reset();
   contextMenuClickListener = undefined;
+  contextMenuShownListener = undefined;
   vi.spyOn(fakeBrowser.contextMenus, 'removeAll').mockImplementation((callback) => {
     callback?.();
     return Promise.resolve();
@@ -24,28 +27,28 @@ beforeEach(() => {
   vi.spyOn(fakeBrowser.contextMenus.onClicked, 'addListener').mockImplementation((listener) => {
     contextMenuClickListener = listener;
   });
+  vi.spyOn(fakeBrowser.contextMenus.onShown, 'addListener').mockImplementation((listener) => {
+    contextMenuShownListener = listener;
+  });
+  vi.spyOn(fakeBrowser.contextMenus, 'refresh').mockResolvedValue();
   vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => key);
   document.body.innerHTML = '';
 });
 
 describe('toolbar page badge', () => {
-  it('shows only the domain action for a blocked homepage target', async () => {
+  it('shows only the picker when opening the menu on search-page background', async () => {
     const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
     background.main?.();
-    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
-
-    await onMessage.trigger(
-      {
-        type: 'srb-context-domain-state',
-        domainBlocked: true,
-        urlBlocked: false,
-        domainOnly: true,
-      },
-      { tab: { id: 7 } },
-    );
+    contextMenuShownListener?.({
+      pageUrl: 'https://www.google.com/search?q=hush',
+    }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-block-domain', { title: 'unblockDomain' });
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: true });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'blockDomain',
+        visible: false,
+      });
       expect(update).toHaveBeenCalledWith('srb-block-url', {
         title: 'blockUrl',
         visible: false,
@@ -53,70 +56,26 @@ describe('toolbar page badge', () => {
     });
   });
 
-  it('hides the entire context menu on guarded pages', async () => {
-    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
-    background.main?.();
-    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
-
-    await onMessage.trigger(
-      { type: 'srb-context-menu-availability', available: false },
-      { tab: { id: 7 } },
-    );
-
-    await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-root', { visible: false });
-    });
-  });
-
-  it('ignores availability messages from inactive guarded tabs', async () => {
-    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
-    background.main?.();
-    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
-
-    await onMessage.trigger(
-      { type: 'srb-context-menu-availability', available: false },
-      { tab: { id: 7, active: false } },
-    );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(update).not.toHaveBeenCalledWith('srb-root', { visible: false });
-  });
-
-  it('updates availability before opening a menu after switching tabs', async () => {
-    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
-    const localTab = await fakeBrowser.tabs.create({ url: 'http://localhost:3000/' });
-    const externalTab = await fakeBrowser.tabs.create({ url: 'https://example.com/article' });
-    background.main?.();
-    const onActivated = fakeBrowser.tabs.onActivated as unknown as TriggerableEvent;
-
-    await onActivated.trigger({ tabId: localTab.id, windowId: localTab.windowId });
-    await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-root', { visible: false });
-    });
-
-    await onActivated.trigger({ tabId: externalTab.id, windowId: externalTab.windowId });
-    await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-root', { visible: true });
-    });
-  });
-
-  it('shows independent domain and URL actions for a deep link', async () => {
-    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
-    background.main?.();
-    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
-
-    await onMessage.trigger(
-      {
-        type: 'srb-context-domain-state',
-        domainBlocked: false,
-        urlBlocked: true,
-        domainOnly: false,
+  it('shows rule actions for a search-result link and reflects stored state', async () => {
+    await fakeBrowser.storage.local.set({
+      blocker: {
+        urls: ['example.com'],
+        blockedUrls: ['https://example.com/article'],
       },
-      { tab: { id: 7 } },
-    );
+    });
+    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
+    background.main?.();
+    contextMenuShownListener?.({
+      pageUrl: 'https://www.google.com/search?q=hush',
+      linkUrl: 'https://example.com/article',
+    }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-block-domain', { title: 'blockDomain' });
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: true });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'unblockDomain',
+        visible: true,
+      });
       expect(update).toHaveBeenCalledWith('srb-block-url', {
         title: 'unblockUrl',
         visible: true,
@@ -124,7 +83,87 @@ describe('toolbar page badge', () => {
     });
   });
 
-  it('updates the same-page menu to unblock immediately after blocking a domain', async () => {
+  it('shows only the domain action for a homepage target', async () => {
+    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
+    background.main?.();
+    contextMenuShownListener?.({
+      pageUrl: 'https://example.com/',
+    }, { id: 7 });
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'blockDomain',
+        visible: true,
+      });
+      expect(update).toHaveBeenCalledWith('srb-block-url', {
+        title: 'blockUrl',
+        visible: false,
+      });
+    });
+  });
+
+  it('shows independent domain and URL actions on an ordinary article page', async () => {
+    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
+    background.main?.();
+    contextMenuShownListener?.({
+      pageUrl: 'https://example.com/article',
+    }, { id: 7 });
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'blockDomain',
+        visible: true,
+      });
+      expect(update).toHaveBeenCalledWith('srb-block-url', {
+        title: 'blockUrl',
+        visible: true,
+      });
+    });
+  });
+
+  it('treats localhost as an ordinary page without a guard content script', async () => {
+    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
+    background.main?.();
+    contextMenuShownListener?.({
+      pageUrl: 'http://localhost:3000/article',
+    }, { id: 7 });
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'blockDomain',
+        visible: true,
+      });
+      expect(update).toHaveBeenCalledWith('srb-block-url', {
+        title: 'blockUrl',
+        visible: true,
+      });
+    });
+  });
+
+  it('hides every dynamic action for a non-web target and refreshes the menu', async () => {
+    const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
+    const refresh = vi.mocked(fakeBrowser.contextMenus.refresh);
+    background.main?.();
+    contextMenuShownListener?.({ pageUrl: 'chrome://extensions/' }, { id: 7 });
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'blockDomain',
+        visible: false,
+      });
+      expect(update).toHaveBeenCalledWith('srb-block-url', {
+        title: 'blockUrl',
+        visible: false,
+      });
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows the unblock action the next time the menu opens after blocking a domain', async () => {
     const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
     background.main?.();
     contextMenuClickListener?.({
@@ -136,12 +175,35 @@ describe('toolbar page badge', () => {
     await vi.waitFor(async () => {
       const stored = await fakeBrowser.storage.local.get('blocker');
       expect(stored.blocker.urls).toEqual(['example.com']);
-      expect(update).toHaveBeenCalledWith('srb-block-domain', { title: 'unblockDomain' });
+    });
+
+    contextMenuShownListener?.({
+      pageUrl: 'https://example.com/article',
+    }, { id: 7 });
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+        title: 'unblockDomain',
+        visible: true,
+      });
       expect(update).toHaveBeenCalledWith('srb-block-url', {
         title: 'blockUrl',
         visible: true,
       });
     });
+  });
+
+  it('starts the element picker from the search-page menu', () => {
+    const sendMessage = vi.spyOn(fakeBrowser.tabs, 'sendMessage').mockResolvedValue(undefined);
+    background.main?.();
+
+    contextMenuClickListener?.({
+      menuItemId: 'srb-picker',
+      editable: false,
+      pageUrl: 'https://www.google.com/search?q=test',
+    }, { id: 7 });
+
+    expect(sendMessage).toHaveBeenCalledWith(7, { type: 'srb-start-picker' });
   });
 
   it('unblocks the matched parent-domain rule from the context menu', async () => {

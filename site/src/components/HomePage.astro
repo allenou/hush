@@ -93,7 +93,7 @@ const demoCopy = isZh
               <span>{demoCopy.source}</span>
               <strong>{demoCopy.title}</strong>
               <p>{demoCopy.description}</p>
-              <button type="button">{demoCopy.contextAction}</button>
+              <span class="feature-context-control">{demoCopy.contextAction}</span>
               <div class="rule-popover">
                 <strong>{demoCopy.menuTitle}</strong>
                 <b>{demoCopy.domain}</b><span>{demoCopy.url}</span><span>{demoCopy.element}</span>
@@ -119,11 +119,11 @@ const demoCopy = isZh
       <ol class="journey">
         <li class="journey-step choose-step">
           <div class="step-copy"><span>01</span><h3>{messages.workflow.steps[0]!.title}</h3><p>{messages.workflow.steps[0]!.description}</p></div>
-          <div class="journey-result"><small>{demoCopy.source}</small><strong>{demoCopy.title}</strong><button type="button">{demoCopy.contextAction}</button></div>
+          <div class="journey-result" aria-hidden="true"><small>{demoCopy.source}</small><strong>{demoCopy.title}</strong><span class="journey-context-control">{demoCopy.contextAction}</span></div>
         </li>
         <li class="journey-step rule-step">
           <div class="step-copy"><span>02</span><h3>{messages.workflow.steps[1]!.title}</h3><p>{messages.workflow.steps[1]!.description}</p></div>
-          <div class="journey-menu">
+          <div class="journey-menu" aria-hidden="true">
             <strong>{demoCopy.menuTitle}</strong>
             <span class="selected"><i></i>{demoCopy.domain}<b>✓</b></span>
             <span><i></i>{demoCopy.url}</span>
@@ -132,7 +132,7 @@ const demoCopy = isZh
         </li>
         <li class="journey-step recover-step">
           <div class="step-copy"><span>03</span><h3>{messages.workflow.steps[2]!.title}</h3><p>{messages.workflow.steps[2]!.description}</p></div>
-          <div class="journey-covered"><span class="shield-small">✓</span><strong>{demoCopy.marked}</strong><button type="button">{demoCopy.show}</button></div>
+          <div class="journey-covered" aria-hidden="true"><span class="shield-small">✓</span><strong>{demoCopy.marked}</strong><span class="journey-show-control">{demoCopy.show}</span></div>
         </li>
       </ol>
     </div>

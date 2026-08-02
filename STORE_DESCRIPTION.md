@@ -15,7 +15,6 @@ Hush helps you visually mark and cover unwanted results while keeping the origin
 • **Ad marking** – Identify and visually mark sponsored or advertising results
 • **Search history** – Revisit searches, switch engines, delete entries, or turn recording off
 • **Local statistics** – Review marking totals, breakdowns, trends, and frequently matched domains
-• **Local backup** – Export and restore rules, settings, statistics, and search history
 
 **Supported search engines:**
 
@@ -33,9 +32,9 @@ Other regional, mobile, and unlisted subdomains are not included.
 **How to use:**
 
 1. Open a supported search results page.
-2. Use the Hush floating button or a result-level action to create a domain, URL, or element rule.
+2. Open the Hush browser context menu on a page or result link to create a domain or URL rule, or start the element picker on a supported search page.
 3. Matching results are visually covered and labeled, with nearby controls for recovery.
-4. Manage rules, search history, settings, statistics, and backups from the options page.
+4. Manage rules, search history, settings, and statistics from the options page.
 
 All processing and storage stay on your device. Hush does not transmit page content, search queries, or extension data.
 
