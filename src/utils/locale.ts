@@ -1,9 +1,11 @@
 /**
  * 核心国际化模块
  *
- * 支持运行时切换语言，不依赖 chrome.i18n 的浏览器语言限定。
+ * 支持运行时切换语言，不依赖浏览器 i18n 的语言限定。
  * 加载 locales/{locale}/messages.json 实现自定义消息查找。
  */
+
+import { browser } from 'wxt/browser';
 
 type MessageMap = Record<string, string>;
 
@@ -32,7 +34,11 @@ export function t(key: string, ...subs: string[]): string {
 
 function getChromeMessage(key: string, subs: string[]): string {
   try {
-    return chrome.i18n.getMessage(
+    const getMessage = browser.i18n.getMessage as (
+      messageName: string,
+      substitutions?: string | string[],
+    ) => string;
+    return getMessage(
       key,
       subs.length > 0 ? (subs.length === 1 ? subs[0] : subs) : undefined,
     );
@@ -69,7 +75,7 @@ export function subscribe(fn: () => void): () => void {
 async function loadMessages(locale: string): Promise<MessageMap> {
   const dir = locale.startsWith('zh') ? 'zh_CN' : 'en';
   try {
-    const url = chrome.runtime.getURL(`_locales/${dir}/messages.json`);
+    const url = browser.runtime.getURL(`/_locales/${dir}/messages.json`);
     const res = await fetch(url);
     const data = (await res.json()) as Record<string, { message: string }>;
     const map: MessageMap = {};
@@ -84,7 +90,7 @@ async function loadMessages(locale: string): Promise<MessageMap> {
 
 /** 初始化语言（从存储中读取偏好，如无则用浏览器语言） */
 export async function initLocale(storedLocale?: string): Promise<void> {
-  const ui = chrome.i18n.getUILanguage();
+  const ui = browser.i18n.getUILanguage();
   const fallback = ui.startsWith('zh') ? 'zh_CN' : 'en';
   const nextLocale = storedLocale && (storedLocale === 'zh_CN' || storedLocale === 'en')
     ? storedLocale

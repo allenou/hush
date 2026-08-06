@@ -9,26 +9,36 @@ interface TriggerableEvent {
   trigger: (...args: unknown[]) => Promise<unknown[]>;
 }
 
-let contextMenuClickListener:
-  ((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => void) | undefined;
-let contextMenuShownListener:
-  ((info: { linkUrl?: string; pageUrl?: string }, tab?: chrome.tabs.Tab) => void) | undefined;
+type ContextMenuClickListener = (info: {
+  menuItemId: string;
+  editable: boolean;
+  linkUrl?: string;
+  pageUrl?: string;
+}, tab?: { id?: number }) => void;
+type ContextMenuShownListener = (info: { linkUrl?: string; pageUrl?: string }, tab?: { id?: number }) => void;
+
+let contextMenuClickListener: ContextMenuClickListener | undefined;
+let contextMenuShownListener: ContextMenuShownListener | undefined;
+
+async function getStoredBlocker(): Promise<{ urls: string[]; blockedUrls: string[] }> {
+  const stored = await fakeBrowser.storage.local.get('blocker') as {
+    blocker: { urls: string[]; blockedUrls: string[] };
+  };
+  return stored.blocker;
+}
 
 beforeEach(() => {
   vi.restoreAllMocks();
   fakeBrowser.reset();
   contextMenuClickListener = undefined;
   contextMenuShownListener = undefined;
-  vi.spyOn(fakeBrowser.contextMenus, 'removeAll').mockImplementation((callback) => {
-    callback?.();
-    return Promise.resolve();
-  });
+  vi.spyOn(fakeBrowser.contextMenus, 'removeAll').mockResolvedValue();
   vi.spyOn(fakeBrowser.contextMenus, 'create').mockImplementation(() => 'srb-test-menu');
   vi.spyOn(fakeBrowser.contextMenus.onClicked, 'addListener').mockImplementation((listener) => {
-    contextMenuClickListener = listener;
+    contextMenuClickListener = listener as unknown as ContextMenuClickListener;
   });
   vi.spyOn(fakeBrowser.contextMenus.onShown, 'addListener').mockImplementation((listener) => {
-    contextMenuShownListener = listener;
+    contextMenuShownListener = listener as unknown as ContextMenuShownListener;
   });
   vi.spyOn(fakeBrowser.contextMenus, 'refresh').mockResolvedValue();
   vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => key);
@@ -173,8 +183,7 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(async () => {
-      const stored = await fakeBrowser.storage.local.get('blocker');
-      expect(stored.blocker.urls).toEqual(['example.com']);
+      expect((await getStoredBlocker()).urls).toEqual(['example.com']);
     });
 
     contextMenuShownListener?.({
@@ -222,8 +231,7 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(async () => {
-      const stored = await fakeBrowser.storage.local.get('blocker');
-      expect(stored.blocker.urls).toEqual([]);
+      expect((await getStoredBlocker()).urls).toEqual([]);
     });
   });
 
@@ -242,8 +250,7 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(async () => {
-      const stored = await fakeBrowser.storage.local.get('blocker');
-      expect(stored.blocker.blockedUrls).toEqual([]);
+      expect((await getStoredBlocker()).blockedUrls).toEqual([]);
     });
   });
 

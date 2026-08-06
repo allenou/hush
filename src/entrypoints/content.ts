@@ -1,4 +1,5 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
+import { browser } from 'wxt/browser';
 import {
   SEARCH_ENGINE_HOSTS,
   SEARCH_ENGINE_MATCH_PATTERNS,
@@ -236,7 +237,7 @@ export default defineContentScript({
       ctx.addEventListener(document, 'srb-start-picker', () => {
         if (isEnabled) activatePicker(getHostname);
       });
-      chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message?.type === 'srb-start-picker' && isEnabled) {
           activatePicker(getHostname);
         }

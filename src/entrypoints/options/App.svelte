@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { browser } from 'wxt/browser';
   import type {
     BlockedDomainStat,
     BlockItem,
@@ -201,7 +202,7 @@
 
   function doSearch(record: SearchRecord, engineHostname?: string) {
     const url = getSearchUrl(engineHostname || record.engineHostname, record.query);
-    chrome.tabs.create({ url });
+    browser.tabs.create({ url });
   }
 
   async function handleRemoveSearchRecord(index: number) {

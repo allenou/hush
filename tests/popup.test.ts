@@ -215,7 +215,9 @@ describe('Popup', () => {
     unblockButton?.click();
 
     await vi.waitFor(async () => {
-      const stored = await fakeBrowser.storage.local.get('blocker');
+      const stored = await fakeBrowser.storage.local.get('blocker') as {
+        blocker: { urls: string[] };
+      };
       expect(stored.blocker.urls).toEqual([]);
       expect(target.querySelector('.chart-empty-state')?.textContent)
         .toContain('Currently supported on these search engines');

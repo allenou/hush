@@ -539,7 +539,7 @@ describe('recordBlock', () => {
   });
 
   it('keeps at most 365 days', async () => {
-    const past = [];
+    const past: { date: string; count: number }[] = [];
     for (let i = 0; i < 366; i++) {
       const d = new Date(); d.setDate(d.getDate() - i);
       past.push({ date: formatLocalDateKey(d), count: 1 });

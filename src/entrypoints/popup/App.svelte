@@ -16,6 +16,7 @@
   } from '@/utils/page-badge';
   import type { PageMarkerSummary } from '@/utils/page-badge';
   import { onMount } from 'svelte';
+  import { browser, type Browser } from 'wxt/browser';
   import packageJson from '../../../package.json';
 
   const EMPTY_PAGE_MARKER_SUMMARY: PageMarkerSummary = {
@@ -106,7 +107,7 @@
   }
 
   async function loadData() {
-    const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+    const tab = (await browser.tabs.query({ active: true, currentWindow: true }))[0];
     const storage = await get();
     if (storage.locale) {
       await initLocale(storage.locale);
@@ -139,7 +140,7 @@
 
     if (currentSearchEngineName && currentTabId !== null) {
       try {
-        const response: unknown = await chrome.tabs.sendMessage(currentTabId, {
+        const response: unknown = await browser.tabs.sendMessage(currentTabId, {
           type: PAGE_MARKER_SUMMARY_REQUEST,
         });
         if (isPageMarkerSummary(response)) {
@@ -182,7 +183,7 @@
   }
 
   function openOptions() {
-    chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+    browser.tabs.create({ url: browser.runtime.getURL('options.html') });
   }
 
   function selectChartScope(scope: ChartScope): void {
@@ -192,7 +193,7 @@
   onMount(() => {
     const handlePageMarkerUpdate = (
       message: unknown,
-      sender: chrome.runtime.MessageSender,
+      sender: Browser.runtime.MessageSender,
     ): void => {
       if (sender.tab?.id !== currentTabId || !isPageMarkerCountMessage(message)) return;
       pageMarkerSummary = {
@@ -204,11 +205,11 @@
       };
     };
 
-    chrome.runtime.onMessage.addListener(handlePageMarkerUpdate);
+    browser.runtime.onMessage.addListener(handlePageMarkerUpdate);
     void loadData();
     const unsubscribeStorage = subscribe(() => loadData());
     return () => {
-      chrome.runtime.onMessage.removeListener(handlePageMarkerUpdate);
+      browser.runtime.onMessage.removeListener(handlePageMarkerUpdate);
       unsubscribeStorage();
     };
   });

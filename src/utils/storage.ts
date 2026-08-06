@@ -1,4 +1,5 @@
 import { storage } from 'wxt/utils/storage';
+import { browser } from 'wxt/browser';
 import type { SearchEngineConfig, SearchRecord } from '@/helpers/search-engines';
 import {
   BUILT_IN_ENGINES,
@@ -324,7 +325,7 @@ export async function restoreStorageBackup(value: unknown): Promise<ExtensionSto
 
 export function clearAllData(): Promise<void> {
   const operation = mutationQueue.then(async () => {
-    await chrome.storage.local.clear();
+    await browser.storage.local.clear();
   });
   mutationQueue = operation.then(() => undefined, () => undefined);
   return operation;

@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/browser';
+import { browser } from 'wxt/browser';
 
 type RuntimeArea = 'background' | 'content' | 'options' | 'popup';
 
@@ -31,12 +32,13 @@ function sanitizeData(value: unknown, depth = 0): unknown {
 export function initSentry(area: RuntimeArea): void {
   const dsn = import.meta.env.WXT_PUBLIC_SENTRY_DSN;
   // 开发热更新期间不采集，避免测试操作污染生产项目。
-  if (!import.meta.env.PROD || !dsn) return;
+  // Firefox 发布清单声明不收集数据，因此该平台不初始化诊断上报。
+  if (!import.meta.env.PROD || !dsn || import.meta.env.BROWSER === 'firefox') return;
 
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    release: `extension@${chrome.runtime.getManifest().version}`,
+    release: `extension@${browser.runtime.getManifest().version}`,
     sendDefaultPii: false,
     tracesSampleRate: 0.05,
     initialScope: {

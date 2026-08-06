@@ -24,6 +24,7 @@ URL query parameters. Hush does not create user accounts or associate this data 
 
 Production releases use limited error diagnostics and basic website performance measurement.
 These events are privacy-filtered and do not include the data listed above.
+The Firefox build does not send diagnostics or website-measurement events.
 
 ## Search page processing
 

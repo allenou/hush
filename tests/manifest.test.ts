@@ -22,6 +22,12 @@ describe('Manifest permissions', () => {
     expect(configSource).not.toContain("'activeTab'");
   });
 
+  it('targets Chromium Edge and Firefox with Manifest V3', () => {
+    expect(configSource).toContain("targetBrowsers: ['chrome', 'edge', 'firefox']");
+    expect(configSource).toContain('manifestVersion: 3');
+    expect(configSource).toContain("required: ['none']");
+  });
+
   it('does not inject a context-menu guard into search or local pages', () => {
     expect(existsSync(contextMenuGuardPath)).toBe(false);
     expect(contentSource).not.toContain('LOCAL_PAGE_MATCH_PATTERNS');

@@ -1,4 +1,5 @@
 import { defineBackground } from 'wxt/utils/define-background';
+import { browser, type Browser } from 'wxt/browser';
 import { WEB_PAGE_MATCH_PATTERNS } from '@/constants/context-menu';
 import {
   SEARCH_ENGINE_MATCH_PATTERNS,
@@ -25,7 +26,7 @@ interface ContextMenuShownData {
 interface DynamicContextMenus {
   onShown: {
     addListener: (
-      listener: (info: ContextMenuShownData, tab?: chrome.tabs.Tab) => void,
+      listener: (info: ContextMenuShownData, tab?: Browser.tabs.Tab) => void,
     ) => void;
   };
   refresh: () => Promise<void>;
@@ -35,8 +36,8 @@ interface ToggleResult {
   shouldRecord: boolean;
 }
 
-function getDynamicContextMenus(): typeof chrome.contextMenus & DynamicContextMenus {
-  return chrome.contextMenus as typeof chrome.contextMenus & DynamicContextMenus;
+function getDynamicContextMenus(): typeof browser.contextMenus & DynamicContextMenus {
+  return browser.contextMenus as typeof browser.contextMenus & DynamicContextMenus;
 }
 
 function parseHttpUrl(value: string | undefined): URL | null {
@@ -69,19 +70,19 @@ export async function updateShownContextMenus(info: ContextMenuShownData): Promi
   const domainOnly = target ? isDomainHomepageUrl(target.href) : false;
 
   await Promise.all([
-    chrome.contextMenus.update(CONTEXT_MENU.picker, {
+    browser.contextMenus.update(CONTEXT_MENU.picker, {
       visible: searchPage,
     }),
-    chrome.contextMenus.update(CONTEXT_MENU.domain, {
+    browser.contextMenus.update(CONTEXT_MENU.domain, {
       title: domainBlocked
-        ? chrome.i18n.getMessage('unblockDomain') || 'Unblock this domain'
-        : chrome.i18n.getMessage('blockDomain') || 'Block this domain',
+        ? browser.i18n.getMessage('unblockDomain') || 'Unblock this domain'
+        : browser.i18n.getMessage('blockDomain') || 'Block this domain',
       visible: showRuleActions,
     }),
-    chrome.contextMenus.update(CONTEXT_MENU.url, {
+    browser.contextMenus.update(CONTEXT_MENU.url, {
       title: urlBlocked
-        ? chrome.i18n.getMessage('unblockUrl') || 'Unblock this URL'
-        : chrome.i18n.getMessage('blockUrl') || 'Block this URL',
+        ? browser.i18n.getMessage('unblockUrl') || 'Unblock this URL'
+        : browser.i18n.getMessage('blockUrl') || 'Block this URL',
       visible: showRuleActions && !domainOnly,
     }),
   ]);
@@ -114,59 +115,58 @@ async function toggleUrlBlock(url: string): Promise<ToggleResult> {
   return { shouldRecord: true };
 }
 
-function createContextMenus(): void {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: CONTEXT_MENU.root,
-      title: chrome.i18n.getMessage('contextMenuTitle') || 'Hush - Block unwanted pages',
-      contexts: ['page', 'link'],
-      documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
-    });
-    chrome.contextMenus.create({
-      id: CONTEXT_MENU.picker,
-      parentId: CONTEXT_MENU.root,
-      title: chrome.i18n.getMessage('pickAction') || 'Pick & Mark',
-      contexts: ['page', 'link'],
-      documentUrlPatterns: SEARCH_ENGINE_MATCH_PATTERNS,
-    });
-    chrome.contextMenus.create({
-      id: CONTEXT_MENU.domain,
-      parentId: CONTEXT_MENU.root,
-      title: chrome.i18n.getMessage('blockDomain') || 'Block this domain',
-      contexts: ['page', 'link'],
-      documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
-    });
-    chrome.contextMenus.create({
-      id: CONTEXT_MENU.url,
-      parentId: CONTEXT_MENU.root,
-      title: chrome.i18n.getMessage('blockUrl') || 'Block this URL',
-      contexts: ['page', 'link'],
-      documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
-    });
+async function createContextMenus(): Promise<void> {
+  await browser.contextMenus.removeAll();
+  browser.contextMenus.create({
+    id: CONTEXT_MENU.root,
+    title: browser.i18n.getMessage('contextMenuTitle') || 'Hush - Block unwanted pages',
+    contexts: ['page', 'link'],
+    documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
+  });
+  browser.contextMenus.create({
+    id: CONTEXT_MENU.picker,
+    parentId: CONTEXT_MENU.root,
+    title: browser.i18n.getMessage('pickAction') || 'Pick & Mark',
+    contexts: ['page', 'link'],
+    documentUrlPatterns: SEARCH_ENGINE_MATCH_PATTERNS,
+  });
+  browser.contextMenus.create({
+    id: CONTEXT_MENU.domain,
+    parentId: CONTEXT_MENU.root,
+    title: browser.i18n.getMessage('blockDomain') || 'Block this domain',
+    contexts: ['page', 'link'],
+    documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
+  });
+  browser.contextMenus.create({
+    id: CONTEXT_MENU.url,
+    parentId: CONTEXT_MENU.root,
+    title: browser.i18n.getMessage('blockUrl') || 'Block this URL',
+    contexts: ['page', 'link'],
+    documentUrlPatterns: [...WEB_PAGE_MATCH_PATTERNS],
   });
 }
 
 function updateTabBadge(tabId: number, count: number): void {
   const text = count > 0 ? String(count) : '';
-  void chrome.action.setBadgeText({ tabId, text });
+  void browser.action.setBadgeText({ tabId, text });
 }
 
 export default defineBackground(() => {
   initSentry('background');
   // 清除旧版本留下的全局累计 Badge，仅保留每个标签页自己的计数。
-  void chrome.action.setBadgeText({ text: '' });
-  void chrome.action.setBadgeBackgroundColor({ color: '#c00' });
-  createContextMenus();
-  chrome.runtime.onInstalled.addListener(createContextMenus);
+  void browser.action.setBadgeText({ text: '' });
+  void browser.action.setBadgeBackgroundColor({ color: '#c00' });
+  void createContextMenus();
+  browser.runtime.onInstalled.addListener(() => { void createContextMenus(); });
 
   getDynamicContextMenus().onShown.addListener((info) => {
     void updateShownContextMenus(info).catch(() => {});
   });
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  browser.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === CONTEXT_MENU.picker) {
       if (tab?.id !== undefined) {
-        void chrome.tabs.sendMessage(tab.id, { type: 'srb-start-picker' }).catch(() => {});
+        void browser.tabs.sendMessage(tab.id, { type: 'srb-start-picker' }).catch(() => {});
       }
       return;
     }
@@ -190,13 +190,13 @@ export default defineBackground(() => {
     }
   });
 
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  browser.runtime.onMessage.addListener((message, sender) => {
     const tabId = sender.tab?.id;
     if (tabId === undefined || !isPageMarkerCountMessage(message)) return;
     updateTabBadge(tabId, message.count);
   });
 
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === 'loading') {
       updateTabBadge(tabId, 0);
     }
