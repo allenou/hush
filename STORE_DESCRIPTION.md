@@ -36,7 +36,9 @@ Other regional, mobile, and unlisted subdomains are not included.
 3. Matching results are visually covered and labeled, with nearby controls for recovery.
 4. Manage rules, search history, settings, and statistics from the options page.
 
-All processing and storage stay on your device. Hush does not transmit page content, search queries, or extension data.
+Rules, search history, page content, search queries, URLs, cookies, and settings stay on your device.
+Production builds send only privacy-filtered error diagnostics; request bodies, cookies,
+authorization headers, URL query parameters, and user-saved Hush data are removed before sending.
 
 ## Categories
 

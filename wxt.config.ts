@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import packageJson from './package.json' with { type: 'json' };
 import { SEARCH_ENGINE_MATCH_PATTERNS } from './src/constants/search-hosts';
 
 export default defineConfig({
@@ -22,10 +23,15 @@ export default defineConfig({
   manifest: {
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
-    version: '1.0.0',
+    version: packageJson.version,
     default_locale: 'en',
     permissions: ['storage', 'contextMenus'],
-    host_permissions: SEARCH_ENGINE_MATCH_PATTERNS,
+    host_permissions: [
+      ...SEARCH_ENGINE_MATCH_PATTERNS,
+      'https://*.ingest.sentry.io/*',
+      'https://*.ingest.us.sentry.io/*',
+      'https://*.ingest.de.sentry.io/*',
+    ],
     action: {
       default_popup: '/popup.html',
       default_title: '__MSG_extName__',

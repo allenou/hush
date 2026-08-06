@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "site": "npm --prefix site run dev",
+    "web": "npm --prefix web run dev",
     "build": "wxt build",
     "zip": "wxt zip",
     "wxt-prepare": "wxt prepare",
@@ -24,6 +24,7 @@
     "wxt": "^0.20.0"
   },
   "dependencies": {
+    "@sentry/browser": "^10.69.0",
     "chart.js": "^4.5.1"
   }
 }

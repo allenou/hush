@@ -2,11 +2,11 @@
   "meta": {
     "home": {
       "title": "Hush — Search with less noise",
-      "description": "Mark unwanted search results and ads, manage local rules, and keep everything on your device."
+      "description": "Mark unwanted search results and ads, manage local rules, and keep your search data on your device."
     },
     "privacy": {
       "title": "Privacy Policy — Hush",
-      "description": "Learn how Hush processes extension data locally and protects your search privacy."
+      "description": "Learn how Hush keeps search data local and uses privacy-filtered diagnostics."
     },
     "changelog": {
       "title": "Changelog — Hush",
@@ -31,7 +31,7 @@
   "home": {
     "hero": {
       "title": "Search with less noise.",
-      "description": "Mark unwanted results and ads, manage local rules, and keep everything on your device.",
+      "description": "Mark unwanted results and ads, manage local rules, and keep your search data on your device.",
       "getHush": "GitHub",
       "note": "Hush supports Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo."
     },
@@ -56,7 +56,7 @@
     },
     "privacy": {
       "title": "Your searches stay yours.",
-      "description": "Hush processes supported search pages locally and stores extension data in chrome.storage.local. It does not transmit page content, search queries, or extension data to Hush or any third party.",
+      "description": "Hush processes supported search pages locally and stores rules and search history in chrome.storage.local. It never uploads page content, search queries, rules, or history.",
       "link": "Read our privacy policy"
     }
   },
@@ -74,8 +74,8 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "updated": "Last updated: July 2026",
-    "summary": "Hush processes extension data locally on your device. It does not upload, sell, share, or transmit this data to Hush or any third party.",
+    "updated": "Last updated: August 2026",
+    "summary": "Hush keeps its product data on your device. Production releases use privacy-filtered diagnostics and basic website measurement, but never upload your search content or saved Hush data.",
     "data": {
       "title": "Data processed locally",
       "intro": "Hush may store the following data in chrome.storage.local:",
@@ -91,12 +91,19 @@
       "description": "On the explicitly supported Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo domains, Hush reads DOM structure, visible advertising labels, and result links to identify and mark search results. This processing happens entirely inside your browser. Page content and search queries are not transmitted.",
       "scope": "Hush does not inject or scan pages outside the exact supported search-engine domains declared in the extension Manifest."
     },
+    "telemetry": {
+      "title": "Diagnostics and website measurement",
+      "description": "Production releases use limited error diagnostics. The website also uses basic page-load performance measurement.",
+      "exclusions": "These events are privacy-filtered. Hush does not upload search queries, page content, clicked or blocked URLs, saved domains, CSS selectors, search history, settings, statistics, cookies, request bodies, or URL query parameters."
+    },
     "permissions": {
       "title": "Permissions",
       "storage": "Saves rules, search history, statistics, and preferences locally.",
       "contextMenus": "Adds domain and URL actions for ordinary HTTP/HTTPS pages and links, plus an element picker on supported search pages. On ordinary pages, Hush uses only the page or link URL supplied by Chrome and does not inject or scan page content.",
       "hostTitle": "Supported search-engine host access",
-      "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo domains."
+      "hostDescription": "Runs the result-marking Content Script only on the declared Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo domains.",
+      "diagnosticsTitle": "Diagnostics endpoint access",
+      "diagnostics": "Sends the limited diagnostics and website performance measurements described above."
     },
     "changes": {
       "title": "Changes",
@@ -105,7 +112,7 @@
     "contact": {
       "title": "Contact",
       "description": "For privacy or support questions, contact",
-      "email": "jskindler@outlook.com",
+      "email": "tsdino@outlook.com",
       "punctuation": "."
     }
   },

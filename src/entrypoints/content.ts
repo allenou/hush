@@ -30,12 +30,14 @@ import {
   setOnContainerMissing,
 } from '@/helpers/ad-blocker';
 import { initLocale } from '@/utils/i18n';
+import { initSentry } from '@/utils/sentry';
 
 export default defineContentScript({
   matches: SEARCH_ENGINE_MATCH_PATTERNS,
   runAt: 'document_end',
   main(ctx) {
     if (!isSupportedSearchHostname(getHostname())) return;
+    initSentry('content');
     // ===== 状态 =====
     let blockedDomains: string[] = [];
     let blockedUrls: string[] = [];

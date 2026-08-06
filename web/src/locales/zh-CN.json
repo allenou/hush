@@ -2,11 +2,11 @@
   "meta": {
     "home": {
       "title": "Hush — 让搜索少一点噪音",
-      "description": "标记不需要的搜索结果和广告，在本地管理规则，并让所有数据留在你的设备上。"
+      "description": "标记不需要的搜索结果和广告，在本地管理规则，并让搜索数据留在你的设备上。"
     },
     "privacy": {
       "title": "隐私政策 — Hush",
-      "description": "了解 Hush 如何在本地处理扩展数据并保护你的搜索隐私。"
+      "description": "了解 Hush 如何让搜索数据留在本地，并使用经过隐私过滤的诊断信息。"
     },
     "changelog": {
       "title": "更新日志 — Hush",
@@ -31,7 +31,7 @@
   "home": {
     "hero": {
       "title": "让搜索少一点噪音。",
-      "description": "标记不需要的搜索结果和广告，在本地管理规则，并让所有数据留在你的设备上。",
+      "description": "标记不需要的搜索结果和广告，在本地管理规则，并让搜索数据留在你的设备上。",
       "getHush": "GitHub",
       "note": "Hush 支持 Google、百度、Bing、360 搜索、搜狗搜索、雅虎、Yandex 与 DuckDuckGo。"
     },
@@ -56,7 +56,7 @@
     },
     "privacy": {
       "title": "你的搜索，只属于你。",
-      "description": "Hush 仅在支持的搜索页面本地处理内容，并将扩展数据保存在 chrome.storage.local 中。不会向 Hush 或任何第三方传输页面内容、搜索词或扩展数据。",
+      "description": "Hush 仅在支持的搜索页面本地处理内容，并将规则和搜索历史保存在 chrome.storage.local 中。绝不会上传页面内容、搜索词、规则或历史记录。",
       "link": "阅读隐私政策"
     }
   },
@@ -74,8 +74,8 @@
   },
   "privacy": {
     "title": "隐私政策",
-    "updated": "最后更新：2026 年 7 月",
-    "summary": "Hush 在你的设备上本地处理扩展数据。我们不会上传、出售、分享或向 Hush 及任何第三方传输这些数据。",
+    "updated": "最后更新：2026 年 8 月",
+    "summary": "Hush 将产品数据保存在你的设备上。正式版本会使用经过隐私过滤的诊断信息和基础网站统计，但绝不会上传你的搜索内容或已保存的 Hush 数据。",
     "data": {
       "title": "本地处理的数据",
       "intro": "Hush 可能在 chrome.storage.local 中保存以下数据：",
@@ -91,12 +91,19 @@
       "description": "在明确支持的 Google、百度、Bing、360 搜索、搜狗搜索、雅虎、Yandex 和 DuckDuckGo 域名上，Hush 会读取 DOM 结构、可见的广告标签和结果链接，以识别并标记搜索结果。所有处理均在浏览器内完成，页面内容和搜索词不会被传输。",
       "scope": "Hush 不会在扩展清单所声明的精确搜索引擎域名之外注入或扫描页面。"
     },
+    "telemetry": {
+      "title": "诊断与网站统计",
+      "description": "正式版本会处理有限的错误诊断信息，网站也会进行基础页面加载性能统计。",
+      "exclusions": "这些事件经过隐私过滤。Hush 不会上传搜索词、页面内容、点击或屏蔽的 URL、已保存域名、CSS 选择器、搜索历史、设置、统计数据、Cookie、请求体或 URL 查询参数。"
+    },
     "permissions": {
       "title": "权限说明",
       "storage": "在本地保存规则、搜索历史、统计数据和偏好设置。",
       "contextMenus": "在普通 HTTP/HTTPS 页面和链接上提供域名、URL 操作，并在支持的搜索页面提供元素选择器。在普通页面上，Hush 只使用 Chrome 提供的页面或链接 URL，不会注入或扫描页面内容。",
       "hostTitle": "支持的搜索引擎主机访问权限",
-      "hostDescription": "仅在声明的 Google、百度、Bing、360 搜索、搜狗搜索、雅虎、Yandex 和 DuckDuckGo 域名上运行结果标记脚本。"
+      "hostDescription": "仅在声明的 Google、百度、Bing、360 搜索、搜狗搜索、雅虎、Yandex 和 DuckDuckGo 域名上运行结果标记脚本。",
+      "diagnosticsTitle": "诊断服务访问权限",
+      "diagnostics": "发送上述有限的诊断信息和网站性能数据。"
     },
     "changes": {
       "title": "政策变更",
@@ -105,7 +112,7 @@
     "contact": {
       "title": "联系我们",
       "description": "如有隐私或支持问题，请联系",
-      "email": "jskindler@outlook.com",
+      "email": "tsdino@outlook.com",
       "punctuation": "。"
     }
   },

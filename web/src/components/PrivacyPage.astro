@@ -43,12 +43,19 @@ const messages = getTranslations(lang).privacy;
         <p>{messages.processing.scope}</p>
       </section>
 
+      <section id="telemetry">
+        <h2>{messages.telemetry.title}</h2>
+        <p>{messages.telemetry.description}</p>
+        <p>{messages.telemetry.exclusions}</p>
+      </section>
+
       <section id="permissions">
         <h2>{messages.permissions.title}</h2>
         <dl class="permission-list">
           <div><dt>storage</dt><dd>{messages.permissions.storage}</dd></div>
           <div><dt>contextMenus</dt><dd>{messages.permissions.contextMenus}</dd></div>
           <div><dt>{messages.permissions.hostTitle}</dt><dd>{messages.permissions.hostDescription}</dd></div>
+          <div><dt>{messages.permissions.diagnosticsTitle}</dt><dd>{messages.permissions.diagnostics}</dd></div>
         </dl>
       </section>
 

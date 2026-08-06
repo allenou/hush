@@ -8,6 +8,7 @@ import { findMatchingBlockedDomainIndex } from '@/utils/domain';
 import { addBlockedUrl, addDomain, get, recordBlock, removeBlockedItem } from '@/utils/storage';
 import { isPageMarkerCountMessage } from '@/utils/page-badge';
 import { isDomainHomepageUrl } from '@/utils/url';
+import { initSentry } from '@/utils/sentry';
 
 const CONTEXT_MENU = {
   root: 'srb-root',
@@ -151,6 +152,7 @@ function updateTabBadge(tabId: number, count: number): void {
 }
 
 export default defineBackground(() => {
+  initSentry('background');
   // 清除旧版本留下的全局累计 Badge，仅保留每个标签页自己的计数。
   void chrome.action.setBadgeText({ text: '' });
   void chrome.action.setBadgeBackgroundColor({ color: '#c00' });

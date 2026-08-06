@@ -130,6 +130,6 @@ npm run wxt-prepare  # WXT 类型生成
 
 ## Git
 
-- 作者：allenou <jskindler@outlook.com>
+- 作者：allenou <tsdino@outlook.com>
 - 当前分支：dev（主分支为 master）
 - ❌ **严禁自动提交/推送代码** — 所有 `git commit`、`git push` 操作必须得到用户明确许可后才能执行

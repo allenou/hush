@@ -6,6 +6,9 @@ node_modules/
 .DS_Store
 .wxt/
 .superpowers/
-site/node_modules/
-site/dist/
+web/node_modules/
+web/dist/
 .astro/
+.env
+.env.*
+!.env.example

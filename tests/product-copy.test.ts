@@ -66,14 +66,14 @@ describe('product copy', () => {
     expect(privacyCopy).toContain('processed locally');
     expect(privacyCopy).toContain('DOM');
     expect(privacyCopy).toContain('`contextMenus`');
-    expect(privacyCopy).toContain('jskindler@outlook.com');
+    expect(privacyCopy).toContain('tsdino@outlook.com');
     expect(privacyCopy).not.toContain('supported-engine detection settings');
     expect(privacyCopy.toLowerCase()).not.toContain('backup');
   });
 
   it('keeps the website release notes within the shipped feature set', () => {
-    const englishSiteCopy = readFileSync(resolve(process.cwd(), 'site/src/locales/en.json'), 'utf8');
-    const chineseSiteCopy = readFileSync(resolve(process.cwd(), 'site/src/locales/zh-CN.json'), 'utf8');
+    const englishSiteCopy = readFileSync(resolve(process.cwd(), 'web/src/locales/en.json'), 'utf8');
+    const chineseSiteCopy = readFileSync(resolve(process.cwd(), 'web/src/locales/zh-CN.json'), 'utf8');
 
     expect(englishSiteCopy).not.toContain('save configurations for custom search engines');
     expect(chineseSiteCopy).not.toContain('保存自定义搜索引擎配置');
@@ -85,11 +85,11 @@ describe('product copy', () => {
 
   it('keeps decorative website demos out of keyboard focus', () => {
     const searchDemoSource = readFileSync(
-      resolve(process.cwd(), 'site/src/components/SearchDemo.astro'),
+      resolve(process.cwd(), 'web/src/components/SearchDemo.astro'),
       'utf8',
     );
     const homePageSource = readFileSync(
-      resolve(process.cwd(), 'site/src/components/HomePage.astro'),
+      resolve(process.cwd(), 'web/src/components/HomePage.astro'),
       'utf8',
     );
 
