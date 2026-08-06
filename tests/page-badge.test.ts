@@ -46,6 +46,24 @@ beforeEach(() => {
 });
 
 describe('toolbar page badge', () => {
+  it('starts when the browser does not provide dynamic context-menu APIs', () => {
+    const dynamicMenus = fakeBrowser.contextMenus as unknown as {
+      onShown?: unknown;
+      refresh?: unknown;
+    };
+    const onShown = dynamicMenus.onShown;
+    const refresh = dynamicMenus.refresh;
+    try {
+      dynamicMenus.onShown = undefined;
+      dynamicMenus.refresh = undefined;
+
+      expect(() => background.main?.()).not.toThrow();
+    } finally {
+      dynamicMenus.onShown = onShown;
+      dynamicMenus.refresh = refresh;
+    }
+  });
+
   it('shows only the picker when opening the menu on search-page background', async () => {
     const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
     background.main?.();

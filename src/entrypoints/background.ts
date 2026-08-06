@@ -24,12 +24,12 @@ interface ContextMenuShownData {
 }
 
 interface DynamicContextMenus {
-  onShown: {
+  onShown?: {
     addListener: (
       listener: (info: ContextMenuShownData, tab?: Browser.tabs.Tab) => void,
     ) => void;
   };
-  refresh: () => Promise<void>;
+  refresh?: () => Promise<void>;
 }
 
 interface ToggleResult {
@@ -86,7 +86,7 @@ export async function updateShownContextMenus(info: ContextMenuShownData): Promi
       visible: showRuleActions && !domainOnly,
     }),
   ]);
-  await getDynamicContextMenus().refresh();
+  await getDynamicContextMenus().refresh?.();
 }
 
 async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
@@ -159,7 +159,8 @@ export default defineBackground(() => {
   void createContextMenus();
   browser.runtime.onInstalled.addListener(() => { void createContextMenus(); });
 
-  getDynamicContextMenus().onShown.addListener((info) => {
+  // Edge 未实现 onShown / refresh；缺少它们时保持静态菜单，避免后台 Worker 启动失败。
+  getDynamicContextMenus().onShown?.addListener((info) => {
     void updateShownContextMenus(info).catch(() => {});
   });
 
