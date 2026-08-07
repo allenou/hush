@@ -5,8 +5,12 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
-const manifestPath = resolve(root, '.output/chrome-mv3/manifest.json');
-const zipPath = resolve(root, `.output/hush-search-${packageJson.version}-chrome.zip`);
+const browser = process.argv[2] ?? 'chrome';
+
+assert.ok(['chrome', 'edge', 'firefox'].includes(browser), `Unsupported browser: ${browser}`);
+
+const manifestPath = resolve(root, `.output/${browser}-mv3/manifest.json`);
+const zipPath = resolve(root, `.output/hush-search-${packageJson.version}-${browser}.zip`);
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
 assert.equal(manifest.manifest_version, 3);
@@ -37,4 +41,4 @@ for (const required of [
 assert.equal(zipEntries.some((entry) => entry.includes('context-menu-guard')), false);
 assert.equal(zipEntries.some((entry) => entry.endsWith('.map')), false);
 
-console.log(`Release artifact checks passed (${zipEntries.length} files, ${statSync(zipPath).size} bytes)`);
+console.log(`${browser} release artifact checks passed (${zipEntries.length} files, ${statSync(zipPath).size} bytes)`);

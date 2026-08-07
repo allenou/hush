@@ -1,0 +1,63 @@
+name: Release extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag version
+        run: |
+          package_version="$(node -p \"require('./package.json').version\")"
+          test "$GITHUB_REF_NAME" = "v$package_version"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Package Microsoft Edge
+        run: npm run zip:edge
+
+      - name: Verify Microsoft Edge package
+        run: node tests/release-artifacts.mjs edge
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          package_version="$(node -p \"require('./package.json').version\")"
+          release_notes="$(mktemp)"
+          {
+            echo '## Microsoft Edge'
+            echo
+            echo 'This release contains the Microsoft Edge extension package.'
+            echo
+            echo '## Changelog'
+            echo
+            echo "- [简体中文]($REPOSITORY_URL/blob/$GITHUB_REF_NAME/CHANGELOG.zh-CN.md)"
+            echo "- [English]($REPOSITORY_URL/blob/$GITHUB_REF_NAME/CHANGELOG.en.md)"
+          } > "$release_notes"
+
+          gh release create "$GITHUB_REF_NAME" ".output/hush-search-$package_version-edge.zip" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "$release_notes"
