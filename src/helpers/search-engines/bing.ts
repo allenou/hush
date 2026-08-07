@@ -11,7 +11,6 @@ export const bingSearchEngine: SearchEngineRule = {
     { containerSelector: '#b_results', itemSelector: '.b_algo', linkSelector: 'a[href]' },
   ],
   adItemSelectors: [
-    '[aria-label*="ad" i]',
     '[aria-label*="sponsor" i]',
     '[class*="ad-label" i]',
   ],

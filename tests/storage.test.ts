@@ -910,6 +910,19 @@ describe('result domain matching', () => {
 });
 
 describe('search engine ad detection', () => {
+  it('does not mistake Bing deeplink labels containing "ad" for advertisements', () => {
+    initBlocker({
+      getHostname: () => 'bing.com',
+      extractResultUrl: () => '',
+    });
+
+    const result = document.createElement('li');
+    result.className = 'b_algo b_vtl_deeplinks';
+    result.innerHTML = '<a aria-label="Download" href="https://example.com/download">Download</a>';
+
+    expect(isAdItem(result)).toBe(false);
+  });
+
   it('recognizes the Sogou ad-results class on an item or its descendants', () => {
     initBlocker({
       getHostname: () => 'sogou.com',
