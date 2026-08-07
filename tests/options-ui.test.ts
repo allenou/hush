@@ -7,6 +7,7 @@ import App from '@/entrypoints/options/App.svelte';
 import RulesTab from '@/entrypoints/options/components/RulesTab.svelte';
 import SearchHistoryTab from '@/entrypoints/options/components/SearchHistoryTab.svelte';
 import SettingsTab from '@/entrypoints/options/components/SettingsTab.svelte';
+import Toast from '@/entrypoints/options/components/Toast.svelte';
 
 vi.mock('@/utils/chart', () => ({
   Chart: class {
@@ -103,6 +104,24 @@ describe('Options UI', () => {
     expect(settingsSource).not.toContain('reset-settings-status');
     expect(toastSource).toContain('position: fixed;');
     expect(toastSource).toContain('}, 3000);');
+  });
+
+  it('automatically dismisses a toast after three seconds', async () => {
+    vi.useFakeTimers();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(Toast, {
+      target,
+      props: { toast: { id: 1, message: '已恢复默认页面处理' } },
+    });
+
+    await tick();
+    expect(target.querySelector('[role="status"]')?.textContent).toContain('已恢复默认页面处理');
+
+    await vi.advanceTimersByTimeAsync(3000);
+    await tick();
+    expect(target.querySelector('[role="status"]')).toBeNull();
+    vi.useRealTimers();
   });
 
   it('places the language switcher in the options header', () => {
