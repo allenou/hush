@@ -720,7 +720,7 @@ describe('result domain matching', () => {
     expect(document.querySelector('.srb-blocked-badge')).toBeNull();
   });
 
-  it('uses only link child span text for Sogou domain matching', () => {
+  it('uses Sogou linkurl and link child span text for domain matching', () => {
     initBlocker({
       getHostname: () => 'sogou.com',
       extractResultUrl: () => '',
@@ -746,10 +746,10 @@ describe('result domain matching', () => {
           <span>https://www.csdn.net/</span>
         </a>
       </div>
-      <div class="vrwrap" id="attribute-only">
+      <div class="vrwrap" id="linkurl-match">
         <h3>
           <a href="/link?url=opaque" linkurl="https://www.csdn.net/">
-            <span>属性中的目标地址不应生效</span>
+            <span>linkurl 中的目标地址应生效</span>
           </a>
         </h3>
         <p>另一个不应该被域名规则标记的搜索结果。</p>
@@ -764,7 +764,9 @@ describe('result domain matching', () => {
       child.classList.contains('srb-mask'))).toBe(true);
     expect(Array.from(matchedResult.children).some((child) =>
       child.classList.contains('srb-blocked-badge'))).toBe(true);
-    expect(document.querySelector('#attribute-only .srb-blocked-badge')).toBeNull();
+    const linkurlResult = document.querySelector<HTMLElement>('#linkurl-match')!;
+    expect(linkurlResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(linkurlResult.querySelector('.srb-blocked-badge')).toBeTruthy();
   });
 
   it('falls back to generic container lookup for Sogou results without vrwrap', () => {

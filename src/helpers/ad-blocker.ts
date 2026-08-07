@@ -8,6 +8,7 @@ import { matchesBlockedDomain } from '@/utils/domain';
 import {
   extractAnchorAttributeUrls,
   extractAnchorSpanUrls,
+  extractSogouLinkUrls,
 } from '@/utils/url';
 import { lockBadgeTypography } from '@/utils/styles';
 
@@ -293,7 +294,7 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
 
 /**
  * 从结果链接中查找命中的域名，再向上定位并标记所属内容块。
- * 搜狗仅使用链接子 span 的可见地址文本，其他引擎继续遍历链接属性。
+ * 搜狗使用明确的 linkurl 属性及链接子 span 的可见地址文本，其他引擎继续遍历链接属性。
  * 该扫描不依赖搜索引擎配置或自动检测结果。
  */
 export function scanBlockedDomains(): void {
@@ -312,7 +313,7 @@ export function scanBlockedDomains(): void {
     if (link.closest('[data-srb-domain-blocked]')) return;
 
     const candidateUrls = isSogouPage
-      ? extractAnchorSpanUrls(link)
+      ? [...extractSogouLinkUrls(link), ...extractAnchorSpanUrls(link)]
       : extractAnchorAttributeUrls(link);
     const matchedUrl = candidateUrls.find(
       (url) => matchBlockedDomain(url, _state.blockedDomains) >= 0,

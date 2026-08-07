@@ -362,6 +362,20 @@ describe('engine-specific rules', () => {
     ]);
   });
 
+  it('recognizes 360 image ads by their data-log marker', () => {
+    document.body.innerHTML = `
+      <div id="ordinary" class="inner_left single"><div class="item"><a href="https://example.com">普通结果</a></div></div>
+      <div id="image-ad" class="inner_left single">
+        <div class="item item_1"><a data-log="img-ad" href="https://www.so.com/s?src=lm">图片广告</a></div>
+      </div>
+    `;
+
+    const rule = getSearchEngineRule('so.com')!;
+    expect(rule.isAdItem?.(document.querySelector('#ordinary')!)).toBe(false);
+    expect(rule.isAdItem?.(document.querySelector('#image-ad')!)).toBe(true);
+    expect(rule.findAdContainers?.(document).map((element) => element.id)).toEqual(['image-ad']);
+  });
+
   it('finds standalone Sogou ad containers', () => {
     document.body.innerHTML = `
       <div id="ordinary" class="vrwrap">普通搜索结果</div>

@@ -204,14 +204,14 @@ describe('extractResultUrl', () => {
     expect(extractResultUrl(container, 'a[href]')).toBe('https://found-in-item.com');
   });
 
-  it('extracts Sogou target URL only from link child span text', () => {
+  it('prefers Sogou linkurl over the displayed URL text', () => {
     mockLocation('https://www.sogou.com/web?query=csdn');
     const container = document.createElement('div');
     container.innerHTML = `
       <h3>
         <a
           href="/link?url=opaque"
-          linkurl="https://wrong.example/from-link-attribute"
+          linkurl="https://target.example/from-linkurl"
         >
           CSDN
           <span>官网</span>
@@ -227,20 +227,20 @@ describe('extractResultUrl', () => {
       </a>
     `;
 
-    expect(extractResultUrl(container, 'a')).toBe('https://www.csdn.net/');
+    expect(extractResultUrl(container, 'a')).toBe('https://target.example/from-linkurl');
   });
 
-  it('does not use Sogou link or item attributes when span URL is absent', () => {
+  it('uses Sogou linkurl when the displayed URL text is absent', () => {
     mockLocation('https://www.sogou.com/web?query=csdn');
     const container = document.createElement('div');
     container.setAttribute('data-url', 'https://wrong.example/from-item-attribute');
     container.innerHTML = `
-      <a href="https://wrong.example/from-href" linkurl="https://wrong.example/from-linkurl">
+      <a href="https://wrong.example/from-href" linkurl="https://target.example/from-linkurl">
         <span>CSDN</span>
       </a>
     `;
 
-    expect(extractResultUrl(container, 'a')).toBe('');
+    expect(extractResultUrl(container, 'a')).toBe('https://target.example/from-linkurl');
   });
 
   it('returns empty string when no link found', () => {

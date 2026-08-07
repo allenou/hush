@@ -58,6 +58,13 @@ export function extractAnchorSpanUrls(link: HTMLAnchorElement): string[] {
   return Array.from(urls);
 }
 
+/** 提取搜狗结果链接由 linkurl 属性保存的真实目标地址。 */
+export function extractSogouLinkUrls(link: HTMLAnchorElement): string[] {
+  const value = link.getAttribute('linkurl');
+  const parsed = value ? parseHttpUrl(value.trim()) : null;
+  return parsed ? [parsed.href] : [];
+}
+
 function collectUrlsFromAttribute(rawValue: string, urls: Set<string>, depth = 0): void {
   if (!rawValue || depth > 3) return;
   let value = rawValue.trim().replace(/\\\//g, '/');
@@ -145,12 +152,15 @@ export function extractResultUrl(item: Element, linkSelector: string): string {
 }
 
 /**
- * 搜狗的跳转地址和属性不作为目标依据，只读取结果链接子 span 中展示的访问地址。
- * 例如：<a class="citeLinkClass"><span>CSDN</span><span>https://www.csdn.net/</span></a>
+ * 搜狗的跳转 href 不是真实目标；优先读取其明确的 linkurl 属性，
+ * 再回退至结果链接子 span 中展示的访问地址。
+ * 例如：<a linkurl="https://www.csdn.net/">或 <a class="citeLinkClass"><span>https://www.csdn.net/</span></a>
  */
 function extractSogouResultUrl(item: Element, linkSelector: string): string {
   const links = item.querySelectorAll<HTMLAnchorElement>(linkSelector);
   for (const link of links) {
+    const [linkUrl] = extractSogouLinkUrls(link);
+    if (linkUrl) return linkUrl;
     const [url] = extractAnchorSpanUrls(link);
     if (url) return url;
   }
