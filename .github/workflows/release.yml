@@ -28,7 +28,7 @@ jobs:
 
       - name: Verify tag version
         run: |
-          package_version="$(node -p \"require('./package.json').version\")"
+          package_version="$(node -p "require('./package.json').version")"
           test "$GITHUB_REF_NAME" = "v$package_version"
 
       - name: Run tests
@@ -45,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
-          package_version="$(node -p \"require('./package.json').version\")"
+          package_version="$(node -p "require('./package.json').version")"
           release_notes="$(mktemp)"
           {
             echo '## Microsoft Edge'
