@@ -1,6 +1,7 @@
 ---
 import SiteFooter from './SiteFooter.astro';
 import SiteHeader from './SiteHeader.astro';
+import { getChangelog } from '../utils/changelog';
 import { getTranslations, type Locale } from '../utils/i18n';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 
 const { lang } = Astro.props;
 const messages = getTranslations(lang).changelog;
+const entries = getChangelog(lang);
 ---
 
 <SiteHeader lang={lang} page="changelog" />
@@ -20,16 +22,21 @@ const messages = getTranslations(lang).changelog;
   </div>
 
   <div class="shell changelog-list">
-    {messages.entries.map((entry) => (
+    {entries.map((entry) => (
       <article class="changelog-entry">
         <div class="changelog-meta">
           <span>{entry.version}</span>
+          <span>{entry.date}</span>
         </div>
         <div class="changelog-content">
-          <h2>{entry.title}</h2>
-          <ul>
-            {entry.items.map((item) => <li>{item}</li>)}
-          </ul>
+          {entry.sections.map((section) => (
+            <>
+              <h2>{section.title}</h2>
+              <ul>
+                {section.items.map((item) => <li>{item}</li>)}
+              </ul>
+            </>
+          ))}
         </div>
       </article>
     ))}

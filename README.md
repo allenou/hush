@@ -27,3 +27,8 @@ npm run zip:firefox
 ```
 
 See [PRIVACY.md](./PRIVACY.md) for local data-processing details and [STORE_DESCRIPTION.md](./STORE_DESCRIPTION.md) for store listing copy.
+
+## Changelog
+
+- [简体中文](./CHANGELOG.zh-CN.md)
+- [English](./CHANGELOG.en.md)

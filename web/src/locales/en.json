@@ -118,27 +118,6 @@
   },
   "changelog": {
     "title": "Changelog",
-    "description": "Notable changes in each Hush release.",
-    "entries": [
-      {
-        "version": "v1.0.0",
-        "title": "Initial release",
-        "items": [
-          "Mark an entire domain or only one specific URL from a search result.",
-          "Select page elements visually and create site-scoped CSS selector rules.",
-          "Choose whether domain rules also apply to subdomains.",
-          "Display a clear badge over marked results and restore them directly from the page.",
-          "Detect and mark advertising and sponsored results with an independent settings toggle.",
-          "Support Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo out of the box.",
-          "Automatically detect result structures on supported search pages as their layouts change.",
-          "Keep marking active across dynamically loaded results and search-page navigation.",
-          "Quickly block domains, full links, or selected page elements from the browser's native context menu.",
-          "Optionally save search history and clear individual records or the full history at any time.",
-          "Show marking statistics in the dashboard and the current page count in the browser tab badge.",
-          "Store all rules, search history, statistics, and preferences locally on the user's device.",
-          "Provide English and Simplified Chinese interfaces with runtime language switching."
-        ]
-      }
-    ]
+    "description": "Notable changes in each Hush release."
   }
 }

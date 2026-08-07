@@ -12,3 +12,5 @@ web/dist/
 .env
 .env.*
 !.env.example
+docs
+.claude
