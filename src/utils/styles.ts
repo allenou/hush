@@ -94,6 +94,14 @@ const CSS = `
 }
 
 /* ===== Ad Badge — 样式与域名屏蔽一致，仅 badge 文字区分 ===== */
+[data-srb-ad-hidden="true"] {
+  display: none !important;
+}
+
+[data-srb-rule-hidden="true"] {
+  display: none !important;
+}
+
 .srb-ad-mask {
   position: absolute;
   inset: 0;

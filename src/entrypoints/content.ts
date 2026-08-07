@@ -13,6 +13,7 @@ import {
 } from '@/helpers/search-engines';
 import type { SearchEngineConfig } from '@/helpers/search-engines';
 import { get, subscribe, recordSearch } from '@/utils/storage';
+import type { AdDisplayMode } from '@/utils/storage';
 import { injectStyles } from '@/utils/styles';
 import { activatePicker, deactivatePicker } from '@/helpers/picker';
 import { getHostname, extractResultUrl } from '@/utils/url';
@@ -44,7 +45,14 @@ export default defineContentScript({
     let blockedUrls: string[] = [];
     let blockedSelectors: string[] = [];
     let isEnabled = true;
-    let blockAds = true;
+    let blockAds = false;
+    let blockDomains = true;
+    let blockUrls = true;
+    let blockSelectors = true;
+    let adDisplayMode: AdDisplayMode = 'mark';
+    let domainDisplayMode: AdDisplayMode = 'mark';
+    let urlDisplayMode: AdDisplayMode = 'mark';
+    let selectorDisplayMode: AdDisplayMode = 'mark';
     let blockSubdomains = true;
     let currentEngine: SearchEngineConfig | null = null;
     let scanObserver: MutationObserver | null = null;
@@ -57,7 +65,11 @@ export default defineContentScript({
 
     function pushState(engine?: SearchEngineConfig | null): void {
       syncBlockerState(
-        { blockedDomains, blockedUrls, blockedSelectors, isEnabled, blockAds, blockSubdomains },
+        {
+          blockedDomains, blockedUrls, blockedSelectors, isEnabled, blockAds, blockDomains,
+          blockUrls, blockSelectors, adDisplayMode, domainDisplayMode, urlDisplayMode,
+          selectorDisplayMode, blockSubdomains,
+        },
         engine ?? currentEngine,
       );
     }
@@ -67,7 +79,14 @@ export default defineContentScript({
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? true;
+      blockAds = storage.blockAds ?? false;
+      blockDomains = storage.blockDomains ?? true;
+      blockUrls = storage.blockUrls ?? true;
+      blockSelectors = storage.blockSelectors ?? true;
+      adDisplayMode = storage.adDisplayMode ?? 'mark';
+      domainDisplayMode = storage.domainDisplayMode ?? 'mark';
+      urlDisplayMode = storage.urlDisplayMode ?? 'mark';
+      selectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
       blockSubdomains = storage.blockSubdomains ?? true;
     }
 

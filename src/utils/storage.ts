@@ -27,12 +27,22 @@ export interface ExtensionStorage {
   recordSearchHistory: boolean;
   enabled: boolean;
   blockAds: boolean;
+  blockDomains: boolean;
+  blockUrls: boolean;
+  blockSelectors: boolean;
+  adDisplayMode: AdDisplayMode;
+  domainDisplayMode: AdDisplayMode;
+  urlDisplayMode: AdDisplayMode;
+  selectorDisplayMode: AdDisplayMode;
   blockSubdomains: boolean;
   customEngines: SearchEngineConfig[];
   blockedSelectors: string[];
   stats: BlockStats[];
   locale?: string;
 }
+
+/** 匹配结果在本地页面中的处理方式。 */
+export type AdDisplayMode = 'mark' | 'hide';
 
 export interface BlockItem {
   type: 'domain' | 'url' | 'selector';
@@ -110,7 +120,16 @@ const DEFAULT: ExtensionStorage = {
   searchHistory: [],
   recordSearchHistory: true,
   enabled: true,
-  blockAds: true,
+  // 广告隐藏需由用户主动启用，避免首次安装即改变页面展示。
+  blockAds: false,
+  // 已有规则在升级后继续生效；用户可在设置中按类别暂停应用。
+  blockDomains: true,
+  blockUrls: true,
+  blockSelectors: true,
+  adDisplayMode: 'mark',
+  domainDisplayMode: 'mark',
+  urlDisplayMode: 'mark',
+  selectorDisplayMode: 'mark',
   blockSubdomains: true,
   customEngines: [],
   blockedSelectors: [],
@@ -248,7 +267,10 @@ function isValidBackupData(data: Record<string, unknown>): boolean {
     'urls', 'blockedUrls', 'rules', 'searchHistory', 'customEngines',
     'blockedSelectors', 'stats', 'blockedDomainStats',
   ];
-  const booleanFields = ['recordSearchHistory', 'enabled', 'blockAds', 'blockSubdomains'];
+  const booleanFields = [
+    'recordSearchHistory', 'enabled', 'blockAds', 'blockDomains', 'blockUrls',
+    'blockSelectors', 'blockSubdomains',
+  ];
   const numberFields = [
     'blockCount',
     'adBlockCount',
@@ -259,6 +281,8 @@ function isValidBackupData(data: Record<string, unknown>): boolean {
 
   if (arrayFields.some((key) => key in data && !Array.isArray(data[key]))) return false;
   if (booleanFields.some((key) => key in data && typeof data[key] !== 'boolean')) return false;
+  const displayModeFields = ['adDisplayMode', 'domainDisplayMode', 'urlDisplayMode', 'selectorDisplayMode'];
+  if (displayModeFields.some((key) => key in data && data[key] !== 'mark' && data[key] !== 'hide')) return false;
   if (numberFields.some((key) => key in data && typeof data[key] !== 'number')) return false;
   if ('locale' in data && data.locale !== undefined && typeof data.locale !== 'string') return false;
 
@@ -329,6 +353,21 @@ export function clearAllData(): Promise<void> {
   });
   mutationQueue = operation.then(() => undefined, () => undefined);
   return operation;
+}
+
+/** 恢复页面处理设置，不影响其他偏好或用户数据。 */
+export async function resetPageHandling(): Promise<void> {
+  await set({
+    blockAds: DEFAULT.blockAds,
+    blockDomains: DEFAULT.blockDomains,
+    blockUrls: DEFAULT.blockUrls,
+    blockSelectors: DEFAULT.blockSelectors,
+    adDisplayMode: DEFAULT.adDisplayMode,
+    domainDisplayMode: DEFAULT.domainDisplayMode,
+    urlDisplayMode: DEFAULT.urlDisplayMode,
+    selectorDisplayMode: DEFAULT.selectorDisplayMode,
+    blockSubdomains: DEFAULT.blockSubdomains,
+  });
 }
 
 async function set(partial: Partial<ExtensionStorage>): Promise<void> {
@@ -739,6 +778,30 @@ export async function setEnabled(enabled: boolean): Promise<void> {
 
 export async function setBlockAds(blockAds: boolean): Promise<void> {
   await set({ blockAds });
+}
+
+export async function setAdDisplayMode(adDisplayMode: AdDisplayMode): Promise<void> {
+  await set({ adDisplayMode });
+}
+
+export type RuleDisplayModeTarget = 'domain' | 'url' | 'selector';
+
+export type RuleEnabledTarget = RuleDisplayModeTarget;
+
+export async function setRuleEnabled(
+  target: RuleEnabledTarget,
+  enabled: boolean,
+): Promise<void> {
+  const key = `block${target[0].toUpperCase()}${target.slice(1)}s` as const;
+  await set({ [key]: enabled } as Partial<ExtensionStorage>);
+}
+
+export async function setRuleDisplayMode(
+  target: RuleDisplayModeTarget,
+  mode: AdDisplayMode,
+): Promise<void> {
+  const key = `${target}DisplayMode` as const;
+  await set({ [key]: mode } as Partial<ExtensionStorage>);
 }
 
 export async function setBlockSubdomains(blockSubdomains: boolean): Promise<void> {

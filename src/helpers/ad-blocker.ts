@@ -2,6 +2,7 @@ import { getSearchEngineRule } from './search-engines';
 import type { SearchEngineConfig } from './search-engines';
 import { get, removeBlockedItem, removeBlockedSelectorEntry, recordBlock } from '@/utils/storage';
 import type { DomainBlockKind } from '@/utils/storage';
+import type { AdDisplayMode } from '@/utils/storage';
 import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
 import { t } from '@/utils/i18n';
 import { matchesBlockedDomain } from '@/utils/domain';
@@ -20,6 +21,14 @@ export interface BlockerState {
   blockedSelectors: string[];
   isEnabled: boolean;
   blockAds: boolean;
+  /** 未设置时保持旧版行为，确保已有调用兼容。 */
+  blockDomains?: boolean;
+  blockUrls?: boolean;
+  blockSelectors?: boolean;
+  adDisplayMode?: AdDisplayMode;
+  domainDisplayMode?: AdDisplayMode;
+  urlDisplayMode?: AdDisplayMode;
+  selectorDisplayMode?: AdDisplayMode;
   blockSubdomains: boolean;
 }
 
@@ -170,8 +179,19 @@ function rememberTargetUrl(item: Element, href: string): void {
 }
 
 export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boolean, href: string): void {
-  if (item.querySelector('.srb-blocked-badge')) return;
+  const ruleType = domainMatch ? 'domain' : 'url';
+  const displayMode = ruleType === 'domain'
+    ? (_state.domainDisplayMode ?? 'mark')
+    : (_state.urlDisplayMode ?? 'mark');
+  if (displayMode === 'hide' && item.hasAttribute('data-srb-rule-hidden')) return;
+  if (displayMode === 'mark' && item.querySelector('.srb-blocked-badge')) return;
   rememberTargetUrl(item, href);
+  if (displayMode === 'hide') {
+    // 仅修改当前页面的呈现，不拦截请求或改写页面网络通信。
+    item.setAttribute('data-srb-rule-hidden', 'true');
+    item.setAttribute('data-srb-rule-type', ruleType);
+    return;
+  }
   const mask = document.createElement('div');
   mask.className = 'srb-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
@@ -192,7 +212,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
     badge.setAttribute('aria-label', cancelText);
   }
 
-  renderRuleBadge(domainMatch ? 'domain' : 'url');
+  renderRuleBadge(ruleType);
 
   let removing = false;
   badge.addEventListener('click', async (event) => {
@@ -248,7 +268,9 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 }
 
 export function injectAdBadge(item: Element, href: string): void {
-  if (item.querySelector('.srb-ad-badge')) return;
+  const adDisplayMode = _state.adDisplayMode ?? 'mark';
+  if (adDisplayMode === 'hide' && item.hasAttribute('data-srb-ad-hidden')) return;
+  if (adDisplayMode === 'mark' && item.querySelector('.srb-ad-badge')) return;
   if (href) rememberTargetUrl(item, href);
   const adHref = href || item.querySelector<HTMLAnchorElement>('a[href]')?.href || '';
   const parsedDomain = tryParseHostname(adHref);
@@ -256,6 +278,12 @@ export function injectAdBadge(item: Element, href: string): void {
     ? parsedDomain
     : undefined;
   void recordBlockOnce(item, 'ad', domain).catch(() => {});
+  if (adDisplayMode === 'hide') {
+    // 仅修改当前页面的呈现，不拦截广告请求或改写页面网络通信。
+    item.setAttribute('data-srb-ad-hidden', 'true');
+    return;
+  }
+
   const mask = document.createElement('div');
   mask.className = 'srb-ad-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
@@ -279,8 +307,8 @@ function clearActionMarkers(item: Element): void {
 }
 
 function applyBlockedRuleMarker(item: Element, href: string): boolean {
-  const di = matchBlockedDomain(href, _state.blockedDomains);
-  const urlMatch = _state.blockedUrls.includes(href);
+  const di = _state.blockDomains === false ? -1 : matchBlockedDomain(href, _state.blockedDomains);
+  const urlMatch = _state.blockUrls === false ? false : _state.blockedUrls.includes(href);
   if (di < 0 && !urlMatch) return false;
 
   const domain = tryParseHostname(href) ?? undefined;
@@ -298,7 +326,7 @@ function applyBlockedRuleMarker(item: Element, href: string): boolean {
  * 该扫描不依赖搜索引擎配置或自动检测结果。
  */
 export function scanBlockedDomains(): void {
-  if (!_state.isEnabled || _state.blockedDomains.length === 0) return;
+  if (!_state.isEnabled || _state.blockDomains === false || _state.blockedDomains.length === 0) return;
 
   const currentHostname = _getHostname().replace(/^www\./, '');
   const isSogouPage = currentHostname === 'sogou.com';
@@ -391,7 +419,9 @@ export function scanForAds(): void {
   engine.findAdContainers?.(document).forEach((element) => {
     // 搜索引擎可能异步重写广告容器内容，导致已注入的遮罩被移除，
     // 但容器上的扫描标记仍保留；此时需要重新注入。
-    if (element.querySelector('.srb-ad-mask, .srb-ad-badge')) return;
+    if (_state.adDisplayMode === 'hide'
+      ? element.hasAttribute('data-srb-ad-hidden')
+      : Boolean(element.querySelector('.srb-ad-mask, .srb-ad-badge'))) return;
     element.setAttribute('data-srb-ad-scanned', 'true');
     injectAdBadge(element, '');
   });
@@ -428,7 +458,7 @@ export function scanForAds(): void {
 // ========== Selector Rules ==========
 
 export function restoreBlockedSelectors(): void {
-  if (!_state.isEnabled) return;
+  if (!_state.isEnabled || _state.blockSelectors === false) return;
   const curHost = _getHostname();
   _state.blockedSelectors.forEach((entry) => {
     const sep = entry.indexOf('||');
@@ -437,6 +467,8 @@ export function restoreBlockedSelectors(): void {
     try {
       document.querySelectorAll(entry.slice(sep + 2)).forEach((el) => {
         el.querySelectorAll('.srb-mask, .srb-blocked-badge').forEach((b) => b.remove());
+        el.removeAttribute('data-srb-rule-hidden');
+        el.removeAttribute('data-srb-rule-type');
       });
     } catch { /* skip */ }
   });
@@ -444,7 +476,7 @@ export function restoreBlockedSelectors(): void {
 }
 
 export function applyBlockedSelectors(): void {
-  if (!_state.isEnabled) return;
+  if (!_state.isEnabled || _state.blockSelectors === false) return;
   const curHost = _getHostname();
   _state.blockedSelectors.forEach((entry) => {
     const sep = entry.indexOf('||');
@@ -453,6 +485,13 @@ export function applyBlockedSelectors(): void {
     const selector = entry.slice(sep + 2);
     try {
       document.querySelectorAll(selector).forEach((el) => {
+        if ((_state.selectorDisplayMode ?? 'mark') === 'hide') {
+          if (!el.hasAttribute('data-srb-rule-hidden')) {
+            el.setAttribute('data-srb-rule-hidden', 'true');
+            el.setAttribute('data-srb-rule-type', 'selector');
+          }
+          return;
+        }
         if (el.querySelector('.srb-mask, .srb-blocked-badge')) return;
         (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
         const mask = document.createElement('div');
@@ -486,11 +525,14 @@ export function checkSavedSelectors(): void {
 
 export function clearAllMarkers(options: { preserveCounts?: boolean; clearPageCount?: boolean } = {}): void {
   document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
-  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
+  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-ad-hidden], [data-srb-rule-hidden], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
     el.removeAttribute('data-srb-processed');
     el.removeAttribute('data-srb-domain-blocked');
     el.removeAttribute('data-srb-ad-scanned');
     el.removeAttribute('data-srb-ad-badge');
+    el.removeAttribute('data-srb-ad-hidden');
+    el.removeAttribute('data-srb-rule-hidden');
+    el.removeAttribute('data-srb-rule-type');
     el.removeAttribute('data-srb-target-url');
     if (!options.preserveCounts) el.removeAttribute('data-srb-counted');
   });

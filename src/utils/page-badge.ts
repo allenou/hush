@@ -57,7 +57,7 @@ export function countPageMarkerSummary(root: ParentNode = document): PageMarkerS
   let urlCount = 0;
   let selectorCount = 0;
 
-  root.querySelectorAll<HTMLElement>('.srb-blocked-badge').forEach((badge) => {
+  root.querySelectorAll<HTMLElement>('.srb-blocked-badge, [data-srb-rule-hidden]').forEach((badge) => {
     if (badge.dataset.ruleType === 'domain') {
       domainCount++;
     } else if (badge.dataset.ruleType === 'url') {
@@ -67,7 +67,7 @@ export function countPageMarkerSummary(root: ParentNode = document): PageMarkerS
     }
   });
 
-  const adCount = root.querySelectorAll('.srb-ad-badge').length;
+  const adCount = root.querySelectorAll('[data-srb-ad-hidden], .srb-ad-badge').length;
   return {
     count: adCount + domainCount + urlCount + selectorCount,
     adCount,

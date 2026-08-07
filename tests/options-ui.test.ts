@@ -39,6 +39,10 @@ const searchHistorySource = readFileSync(
   resolve(process.cwd(), 'src/entrypoints/options/components/SearchHistoryTab.svelte'),
   'utf8',
 );
+const toastSource = readFileSync(
+  resolve(process.cwd(), 'src/entrypoints/options/components/Toast.svelte'),
+  'utf8',
+);
 
 describe('Options UI', () => {
   let component: ReturnType<typeof mount> | undefined;
@@ -80,16 +84,25 @@ describe('Options UI', () => {
   it('keeps settings sections aligned to the shared content width', () => {
     expect(settingsSource).not.toContain('max-width: var(--srb-settings-width);');
     expect(settingsSource).toMatch(/\.settings-page\s*\{[^}]*width:\s*100%;/s);
-    expect(settingsSource).toMatch(/\.settings-card\s*\{[^}]*background:\s*var\(--srb-surface\);/s);
-    expect(settingsSource).toContain('<section class="settings-card wide" aria-labelledby="history-heading">');
+    expect(settingsSource).toContain('class="settings-layout"');
+    expect(settingsSource).toContain('class="settings-main"');
+    expect(settingsSource).toContain('class="settings-aside"');
   });
 
   it('keeps backup buttons at content width', () => {
     expect(settingsSource).not.toMatch(/\.backup-btn\s*\{[^}]*flex:\s*1;/s);
   });
 
-  it('keeps the backup card hidden for now', () => {
-    expect(settingsSource).toContain('class="settings-card wide backup-card" aria-labelledby="backup-heading" hidden');
+  it('keeps data maintenance out of the primary settings column', () => {
+    expect(settingsSource).toContain('class="side-section data-section"');
+  });
+
+  it('shows settings operation feedback as a transient toast', () => {
+    expect(appSource).toContain("import Toast from './components/Toast.svelte';");
+    expect(appSource).toContain('<Toast {toast} />');
+    expect(settingsSource).not.toContain('reset-settings-status');
+    expect(toastSource).toContain('position: fixed;');
+    expect(toastSource).toContain('}, 3000);');
   });
 
   it('places the language switcher in the options header', () => {
@@ -273,6 +286,92 @@ describe('Options UI', () => {
     await vi.waitFor(() => {
       expect(onClearAllData).toHaveBeenCalledTimes(1);
       expect(target.querySelector('[role="dialog"]')).toBeNull();
+    });
+  });
+
+  it('requires confirmation before resetting page handling', async () => {
+    vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
+      resetPageHandlingLabel: '重置页面处理',
+      resetPageHandlingDesc: '恢复默认页面处理',
+      resetPageHandlingAction: '恢复默认页面处理',
+      resetPageHandlingConfirm: '确定恢复默认页面处理吗？',
+      cancel: '取消',
+    })[key] ?? '');
+    const onResetPageHandling = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: { onResetPageHandling },
+    });
+
+    target.querySelector<HTMLButtonElement>('.reset-settings-btn')?.click();
+    await tick();
+
+    expect(onResetPageHandling).not.toHaveBeenCalled();
+    expect(target.querySelector('#confirm-dialog-message')?.textContent)
+      .toBe('确定恢复默认页面处理吗？');
+
+    target.querySelector<HTMLButtonElement>('[role="dialog"] .btn-danger')?.click();
+    await vi.waitFor(() => {
+      expect(onResetPageHandling).toHaveBeenCalledTimes(1);
+      expect(target.querySelector('[role="dialog"]')).toBeNull();
+    });
+  });
+
+  it('uses handling modes instead of parent category switches', async () => {
+    const onToggleRuleEnabled = vi.fn();
+    const onRuleDisplayModeChange = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: {
+        blockDomains: true,
+        blockUrls: false,
+        blockSelectors: false,
+        onToggleRuleEnabled,
+        onRuleDisplayModeChange,
+      },
+    });
+
+    expect(target.querySelector('[data-testid="domain-display-mode-row"]')).not.toBeNull();
+    expect(target.querySelector('[data-testid="url-display-mode-row"]')).not.toBeNull();
+    expect(target.querySelector('[data-testid="selector-display-mode-row"]')).not.toBeNull();
+    expect(target.querySelector('[data-testid="domain-block-toggle"]')).toBeNull();
+
+    target.querySelector<HTMLButtonElement>('[data-testid="url-display-mode-row"]')?.click();
+    await tick();
+    target.querySelector<HTMLButtonElement>('.mode-menu [data-mode="mark"]')?.click();
+
+    await vi.waitFor(() => {
+      expect(onRuleDisplayModeChange).toHaveBeenCalledWith('url', 'mark');
+      expect(onToggleRuleEnabled).toHaveBeenCalledWith('url');
+    });
+  });
+
+  it('requires confirmation before changing a display mode to hide', async () => {
+    const onRuleDisplayModeChange = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: { onRuleDisplayModeChange },
+    });
+
+    target.querySelector<HTMLButtonElement>('[data-testid="domain-display-mode-row"]')?.click();
+    await tick();
+    expect(target.querySelector('.mode-menu')).not.toBeNull();
+
+    target.querySelector<HTMLButtonElement>('.mode-menu [data-mode="hide"]')?.click();
+    await tick();
+    expect(target.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(onRuleDisplayModeChange).not.toHaveBeenCalled();
+
+    target.querySelector<HTMLButtonElement>('[role="dialog"] .btn-danger')?.click();
+    await vi.waitFor(() => {
+      expect(onRuleDisplayModeChange).toHaveBeenCalledWith('domain', 'hide');
+      expect(target.querySelector('.mode-menu')).toBeNull();
     });
   });
 });

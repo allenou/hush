@@ -317,7 +317,7 @@ describe('toolbar page badge', () => {
       <div class="srb-blocked-badge" data-rule-type="domain"></div>
       <div class="srb-blocked-badge" data-rule-type="url"></div>
       <div class="srb-blocked-badge"></div>
-      <div class="srb-ad-badge"></div>
+      <div data-srb-ad-hidden></div>
     `;
 
     reportPageMarkerCount();

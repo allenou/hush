@@ -10,8 +10,8 @@ import {
   getAllBlocked, removeBlockedItem,
   addCustomEngine, findMatchingCustomEngine, removeCustomEngine,
   recordBlock, recordSearch, removeSearchRecord, clearSearchHistory, incrementBlockCount,
-  setEnabled, setBlockAds, subscribe,
-  createStorageBackup, restoreStorageBackup, clearAllData,
+  setEnabled, setBlockAds, setRuleEnabled, subscribe,
+  createStorageBackup, restoreStorageBackup, clearAllData, resetPageHandling,
 } from '@/utils/storage';
 import {
   applyBlockedSelectors,
@@ -39,7 +39,10 @@ describe('get / set defaults', () => {
     expect(s.urlBlockCount).toBe(0);
     expect(s.selectorBlockCount).toBe(0);
     expect(s.enabled).toBe(true);
-    expect(s.blockAds).toBe(true);
+    expect(s.blockAds).toBe(false);
+    expect(s.blockDomains).toBe(true);
+    expect(s.blockUrls).toBe(true);
+    expect(s.blockSelectors).toBe(true);
     expect(s.customEngines).toEqual([]);
     expect(s.blockedSelectors).toEqual([]);
     expect(s.stats).toEqual([]);
@@ -88,6 +91,17 @@ describe('get / set defaults', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener.mock.calls[0][0].enabled).toBe(false);
     unsubscribe();
+  });
+
+  it('persists category rule switches independently', async () => {
+    await setRuleEnabled('domain', false);
+    await setRuleEnabled('url', false);
+    await setRuleEnabled('selector', false);
+
+    const state = await get();
+    expect(state.blockDomains).toBe(false);
+    expect(state.blockUrls).toBe(false);
+    expect(state.blockSelectors).toBe(false);
   });
 });
 
@@ -274,6 +288,27 @@ describe('selector rule recovery', () => {
     await vi.waitFor(async () => {
       expect((await get()).blockedSelectors).toEqual([]);
     });
+    expect(document.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+  });
+
+  it('does not apply selector rules while the selector category is off', () => {
+    document.body.innerHTML = '<div class="target">Target</div>';
+    initBlocker({
+      getHostname: () => 'google.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: ['google.com||.target'],
+      isEnabled: true,
+      blockAds: false,
+      blockSelectors: false,
+      blockSubdomains: true,
+    }, null);
+
+    applyBlockedSelectors();
+
     expect(document.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
   });
 });
@@ -622,6 +657,39 @@ describe('result domain matching', () => {
     hostileStyle.remove();
   });
 
+  it('does not apply paused domain or URL rule categories', () => {
+    const domainItem = document.createElement('div');
+    domainItem.innerHTML = '<a href="https://sub.example.com/page">Domain</a>';
+    const urlItem = document.createElement('div');
+    urlItem.innerHTML = '<a href="https://sub.example.com/page">URL</a>';
+    document.body.append(domainItem, urlItem);
+
+    syncBlockerState({
+      blockedDomains: ['example.com'],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockDomains: false,
+      blockSubdomains: true,
+    }, makeEngine());
+    processItem(domainItem);
+
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: ['https://sub.example.com/page'],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: false,
+      blockUrls: false,
+      blockSubdomains: true,
+    }, makeEngine());
+    processItem(urlItem);
+
+    expect(domainItem.querySelector('.srb-blocked-badge')).toBeNull();
+    expect(urlItem.querySelector('.srb-blocked-badge')).toBeNull();
+  });
+
   it('finds a blocked domain in any attribute of any link before locating its content block', () => {
     initBlocker({
       getHostname: () => 'so.com',
@@ -845,6 +913,7 @@ describe('result domain matching', () => {
       blockedSelectors: [],
       isEnabled: true,
       blockAds: true,
+      adDisplayMode: 'hide',
       blockSubdomains: true,
     }, makeEngine());
     processItem(item);
@@ -879,6 +948,7 @@ describe('result domain matching', () => {
       blockedSelectors: [],
       isEnabled: true,
       blockAds: true,
+      adDisplayMode: 'hide',
       blockSubdomains: true,
     }, makeEngine());
     processItem(item);
@@ -943,7 +1013,7 @@ describe('search engine ad detection', () => {
     expect(isAdItem(ordinaryResult)).toBe(false);
   });
 
-  it('marks standalone Sogou ad-results containers during the global ad scan', () => {
+  it('hides standalone Sogou ad-results containers during the global ad scan', () => {
     initBlocker({
       getHostname: () => 'sogou.com',
       extractResultUrl: () => '',
@@ -954,6 +1024,7 @@ describe('search engine ad detection', () => {
       blockedSelectors: [],
       isEnabled: true,
       blockAds: true,
+      adDisplayMode: 'hide',
       blockSubdomains: true,
     }, null);
     document.body.innerHTML = `
@@ -963,11 +1034,11 @@ describe('search engine ad detection', () => {
 
     scanForAds();
 
-    expect(document.querySelector('.ad-results .srb-ad-badge')).toBeTruthy();
-    expect(document.querySelector('.vrwrap .srb-ad-badge')).toBeNull();
+    expect(document.querySelector('.ad-results')?.hasAttribute('data-srb-ad-hidden')).toBe(true);
+    expect(document.querySelector('.vrwrap')?.hasAttribute('data-srb-ad-hidden')).toBe(false);
   });
 
-  it('reinjects Sogou ad markers after the site rewrites an already scanned container', () => {
+  it('keeps Sogou ad containers hidden after the site rewrites their contents', () => {
     initBlocker({
       getHostname: () => 'sogou.com',
       extractResultUrl: () => '',
@@ -978,6 +1049,7 @@ describe('search engine ad detection', () => {
       blockedSelectors: [],
       isEnabled: true,
       blockAds: true,
+      adDisplayMode: 'hide',
       blockSubdomains: true,
     }, null);
     document.body.innerHTML = '<div class="ad-results"></div>';
@@ -985,17 +1057,16 @@ describe('search engine ad detection', () => {
     scanForAds();
     const adContainer = document.querySelector<HTMLElement>('.ad-results')!;
     expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
-    expect(adContainer.querySelector('.srb-ad-badge')).toBeTruthy();
+    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
 
-    // 模拟搜狗异步渲染通过 innerHTML 覆盖 Hush 注入的子节点。
+    // 模拟搜狗异步渲染覆盖容器内容；容器本身的本地隐藏状态应保留。
     adContainer.innerHTML = '<div class="ad_result">重新渲染的广告内容</div>';
     expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
-    expect(adContainer.querySelector('.srb-ad-badge')).toBeNull();
+    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
 
     scanForAds();
 
-    expect(adContainer.querySelector('.srb-ad-mask')).toBeTruthy();
-    expect(adContainer.querySelector('.srb-ad-badge')).toBeTruthy();
+    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
   });
 });
 
@@ -1139,9 +1210,52 @@ describe('clear all data', () => {
       blockCount: 0,
       searchHistory: [],
       enabled: true,
-      blockAds: true,
+      blockAds: false,
       blockSubdomains: true,
       recordSearchHistory: true,
+    });
+  });
+});
+
+describe('reset page handling', () => {
+  it('restores page handling defaults while preserving other preferences and user data', async () => {
+    await addDomain('example.com');
+    await recordBlock('domain', 'example.com');
+    await recordSearch('query', 'Google', 'google.com');
+    await fakeBrowser.storage.local.set({ blocker: {
+      ...(await get()),
+      enabled: false,
+      blockAds: true,
+      blockDomains: false,
+      blockUrls: false,
+      blockSelectors: false,
+      adDisplayMode: 'hide',
+      domainDisplayMode: 'hide',
+      urlDisplayMode: 'hide',
+      selectorDisplayMode: 'hide',
+      blockSubdomains: false,
+      recordSearchHistory: false,
+      locale: 'en',
+    } });
+
+    await resetPageHandling();
+
+    expect(await get()).toMatchObject({
+      urls: ['example.com'],
+      blockCount: 1,
+      searchHistory: [expect.objectContaining({ query: 'query' })],
+      locale: 'en',
+      enabled: false,
+      blockAds: false,
+      blockDomains: true,
+      blockUrls: true,
+      blockSelectors: true,
+      adDisplayMode: 'mark',
+      domainDisplayMode: 'mark',
+      urlDisplayMode: 'mark',
+      selectorDisplayMode: 'mark',
+      blockSubdomains: true,
+      recordSearchHistory: false,
     });
   });
 });

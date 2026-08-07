@@ -20,7 +20,7 @@ describe('marking lifecycle', () => {
 
   it('removes markers and scan attributes', () => {
     document.body.innerHTML = `
-      <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge data-srb-target-url="https://example.com/">
+      <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge data-srb-ad-hidden data-srb-rule-hidden data-srb-rule-type="domain" data-srb-target-url="https://example.com/">
         <div class="srb-blocked-badge"></div>
         <div class="srb-ad-badge"></div>
       </div>
@@ -29,6 +29,6 @@ describe('marking lifecycle', () => {
     clearAllMarkers();
 
     expect(document.querySelector('.srb-blocked-badge, .srb-ad-badge')).toBeNull();
-    expect(document.querySelector('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-target-url]')).toBeNull();
+    expect(document.querySelector('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-ad-hidden], [data-srb-rule-hidden], [data-srb-target-url]')).toBeNull();
   });
 });

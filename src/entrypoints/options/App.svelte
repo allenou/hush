@@ -6,6 +6,9 @@
     BlockItem,
     BlockStats,
     SearchRecord,
+    AdDisplayMode,
+    RuleEnabledTarget,
+    RuleDisplayModeTarget,
   } from '@/utils/storage';
   import {
     addBlockedUrl,
@@ -16,7 +19,11 @@
     createStorageBackup,
     restoreStorageBackup,
     clearAllData,
+    resetPageHandling,
     setBlockAds,
+    setRuleEnabled,
+    setAdDisplayMode,
+    setRuleDisplayMode,
     setBlockSubdomains,
     setRecordSearchHistory,
     removeSearchRecord,
@@ -37,10 +44,18 @@
   import SearchHistoryTab from './components/SearchHistoryTab.svelte';
   import SettingsTab from './components/SettingsTab.svelte';
   import AddRuleDialog from './components/AddRuleDialog.svelte';
+  import Toast from './components/Toast.svelte';
 
   let blockedItems = $state<BlockItem[]>([]);
   let errorMsg = $state('');
   let blockAds = $state(false);
+  let blockDomains = $state(true);
+  let blockUrls = $state(true);
+  let blockSelectors = $state(true);
+  let adDisplayMode = $state<AdDisplayMode>('mark');
+  let domainDisplayMode = $state<AdDisplayMode>('mark');
+  let urlDisplayMode = $state<AdDisplayMode>('mark');
+  let selectorDisplayMode = $state<AdDisplayMode>('mark');
   let blockSubdomains = $state(true);
   let enabled = $state(true);
   let activeFilter = $state<RuleFilter>('all');
@@ -57,8 +72,8 @@
   let topBlockedDomains = $state<BlockedDomainStat[]>([]);
   let searchHistory = $state<SearchRecord[]>([]);
   let recordSearchHistory = $state(true);
-  let backupStatus = $state('');
-  let clearDataStatus = $state('');
+  let toast = $state<{ id: number; message: string; tone?: 'success' | 'error' } | null>(null);
+  let nextToastId = 0;
   let currentLocale = $state('zh_CN');
 
   function openAddDialog() {
@@ -94,11 +109,15 @@
     URL.revokeObjectURL(url);
   }
 
+  function showToast(message: string, tone: 'success' | 'error' = 'success') {
+    toast = { id: ++nextToastId, message, tone };
+  }
+
   async function handleExportBackup() {
     const backup = await createStorageBackup();
     const date = backup.exportedAt.slice(0, 10);
     downloadTextFile(`hush-backup-${date}.json`, JSON.stringify(backup, null, 2));
-    backupStatus = t('backupExported');
+    showToast(t('backupExported'));
   }
 
   async function handleImportBackup(file: File) {
@@ -107,17 +126,22 @@
       const raw = await file.text();
       await restoreStorageBackup(JSON.parse(raw));
       await loadData();
-      backupStatus = t('backupImported');
+      showToast(t('backupImported'));
     } catch {
-      backupStatus = t('backupImportFailed');
+      showToast(t('backupImportFailed'), 'error');
     }
   }
 
   async function handleClearAllData() {
     await clearAllData();
-    backupStatus = '';
     await loadData();
-    clearDataStatus = t('clearAllDataSuccess');
+    showToast(t('clearAllDataSuccess'));
+  }
+
+  async function handleResetPageHandling() {
+    await resetPageHandling();
+    await loadData();
+    showToast(t('resetPageHandlingSuccess'));
   }
 
   async function loadData() {
@@ -132,6 +156,13 @@
     blockedItems = await getAllBlocked();
     enabled = storage.enabled;
     blockAds = storage.blockAds ?? false;
+    blockDomains = storage.blockDomains ?? true;
+    blockUrls = storage.blockUrls ?? true;
+    blockSelectors = storage.blockSelectors ?? true;
+    adDisplayMode = storage.adDisplayMode ?? 'mark';
+    domainDisplayMode = storage.domainDisplayMode ?? 'mark';
+    urlDisplayMode = storage.urlDisplayMode ?? 'mark';
+    selectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
     blockSubdomains = storage.blockSubdomains ?? true;
     totalBlockCount = storage.blockCount ?? 0;
     adBlockCount = storage.adBlockCount ?? 0;
@@ -180,6 +211,26 @@
   async function toggleAdBlock() {
     blockAds = !blockAds;
     await setBlockAds(blockAds);
+  }
+
+  async function changeAdDisplayMode(mode: AdDisplayMode) {
+    adDisplayMode = mode;
+    await setAdDisplayMode(mode);
+  }
+
+  async function changeRuleDisplayMode(target: RuleDisplayModeTarget, mode: AdDisplayMode) {
+    if (target === 'domain') domainDisplayMode = mode;
+    else if (target === 'url') urlDisplayMode = mode;
+    else selectorDisplayMode = mode;
+    await setRuleDisplayMode(target, mode);
+  }
+
+  async function toggleRuleEnabled(target: RuleEnabledTarget) {
+    if (target === 'domain') blockDomains = !blockDomains;
+    else if (target === 'url') blockUrls = !blockUrls;
+    else blockSelectors = !blockSelectors;
+    const value = target === 'domain' ? blockDomains : target === 'url' ? blockUrls : blockSelectors;
+    await setRuleEnabled(target, value);
   }
 
   async function toggleSubdomainBlock() {
@@ -269,15 +320,17 @@
 
     {:else}
       <SettingsTab
-        {blockAds} {blockSubdomains} {recordSearchHistory}
+        {blockAds} {blockDomains} {blockUrls} {blockSelectors} {adDisplayMode} {domainDisplayMode} {urlDisplayMode} {selectorDisplayMode} {blockSubdomains} {recordSearchHistory}
         onToggleAdBlock={toggleAdBlock}
+        onToggleRuleEnabled={toggleRuleEnabled}
+        onAdDisplayModeChange={changeAdDisplayMode}
+        onRuleDisplayModeChange={changeRuleDisplayMode}
         onToggleSubdomain={toggleSubdomainBlock}
         onToggleRecordSearch={toggleRecordSearch}
-        {backupStatus}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
-        {clearDataStatus}
         onClearAllData={handleClearAllData}
+        onResetPageHandling={handleResetPageHandling}
       />
     {/if}
   </main>
@@ -288,6 +341,8 @@
     onClose={closeAddDialog}
     onAdd={(val) => handleAdd(val)}
   />
+
+  <Toast {toast} />
 </div>
 
 <style>
