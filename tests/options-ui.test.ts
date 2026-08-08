@@ -75,6 +75,12 @@ describe('Options UI', () => {
     expect(appSource).toMatch(/:global\(html\)\s*\{[^}]*scrollbar-gutter:\s*stable;/s);
   });
 
+  it('keeps the selected tab in the URL and routes the settings shortcut to the settings tab', () => {
+    expect(appSource).toContain("params.set('tab', tab);");
+    expect(appSource).toContain("setActiveTab('method')");
+    expect(appSource).toContain('onhashchange={syncActiveTabFromLocation}');
+  });
+
   it('aligns the main content edges with the options header', () => {
     expect(appSource).toContain('--srb-options-page-gutter: var(--srb-space-2xl);');
     expect(appSource).toMatch(/\.main\s*\{[^}]*max-width:\s*calc\([\s\S]*var\(--srb-options-max-width\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*\);/);
@@ -94,8 +100,41 @@ describe('Options UI', () => {
     expect(settingsSource).not.toMatch(/\.backup-btn\s*\{[^}]*flex:\s*1;/s);
   });
 
+  it('uses a bordered danger button for clearing data without tinting the data row', () => {
+    expect(settingsSource).toMatch(/\.clear-data-btn\s*\{[^}]*border-color:\s*var\(--srb-danger-border\);/s);
+    expect(settingsSource).not.toMatch(/\.data-item-danger\s+strong\s*\{[^}]*color:/s);
+  });
+
+  it('starts backup export and import from the data section', () => {
+    const onExportBackup = vi.fn();
+    const onImportBackup = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: { onExportBackup, onImportBackup },
+    });
+
+    const backupButtons = target.querySelectorAll<HTMLButtonElement>('.backup-btn');
+    expect(backupButtons).toHaveLength(2);
+    backupButtons[0].click();
+    expect(onExportBackup).toHaveBeenCalledTimes(1);
+
+    const file = new File(['{}'], 'hush-backup.json', { type: 'application/json' });
+    const input = target.querySelector<HTMLInputElement>('.backup-input');
+    expect(input).not.toBeNull();
+    Object.defineProperty(input!, 'files', { value: [file], configurable: true });
+    input?.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(onImportBackup).toHaveBeenCalledWith(file);
+  });
+
   it('keeps data maintenance out of the primary settings column', () => {
     expect(settingsSource).toContain('class="side-section data-section"');
+  });
+
+  it('shows concise descriptions under the privacy and data section titles', () => {
+    expect(settingsSource).toContain("t('privacyNotice')");
+    expect(settingsSource).toContain("t('dataNotice')");
   });
 
   it('shows settings operation feedback as a transient toast', () => {
@@ -277,6 +316,34 @@ describe('Options UI', () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the local recording notice only while search history recording is enabled', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SearchHistoryTab, {
+      target,
+      props: { searchHistory: [], recordSearchHistory: true },
+    });
+
+    expect(target.querySelector('.search-recording-notice')?.textContent)
+      .toContain('searchHistoryRecordingNotice');
+    expect(target.querySelector('.history-clear')).toBeNull();
+  });
+
+  it('explains that recording is off when the history list is empty', () => {
+    const onOpenSettings = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SearchHistoryTab, {
+      target,
+      props: { searchHistory: [], recordSearchHistory: false, onOpenSettings },
+    });
+
+    expect(target.querySelector('.empty p')?.textContent).toContain('noHistoryDisabledDesc');
+    expect(target.querySelector('.history-clear')).toBeNull();
+    target.querySelector<HTMLButtonElement>('.empty-settings-link')?.click();
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
   it('requires confirmation before clearing all Hush data', async () => {
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       clearAllDataLabel: '清空全部数据',
@@ -306,6 +373,24 @@ describe('Options UI', () => {
       expect(onClearAllData).toHaveBeenCalledTimes(1);
       expect(target.querySelector('[role="dialog"]')).toBeNull();
     });
+  });
+
+  it('keeps subdomain matching off by default', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, { target });
+
+    expect(target.querySelector<HTMLInputElement>('[data-testid="subdomain-toggle"]')?.checked)
+      .toBe(false);
+  });
+
+  it('keeps search history recording off by default', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, { target });
+
+    expect(target.querySelector<HTMLInputElement>('[data-testid="search-history-toggle"]')?.checked)
+      .toBe(false);
   });
 
   it('requires confirmation before resetting page handling', async () => {
@@ -369,7 +454,7 @@ describe('Options UI', () => {
     });
   });
 
-  it('requires confirmation before changing a display mode to hide', async () => {
+  it('applies a hide display mode without a confirmation dialog', async () => {
     const onRuleDisplayModeChange = vi.fn();
     const target = document.createElement('div');
     document.body.appendChild(target);
@@ -383,14 +468,35 @@ describe('Options UI', () => {
     expect(target.querySelector('.mode-menu')).not.toBeNull();
 
     target.querySelector<HTMLButtonElement>('.mode-menu [data-mode="hide"]')?.click();
-    await tick();
-    expect(target.querySelector('[role="dialog"]')).not.toBeNull();
-    expect(onRuleDisplayModeChange).not.toHaveBeenCalled();
-
-    target.querySelector<HTMLButtonElement>('[role="dialog"] .btn-danger')?.click();
     await vi.waitFor(() => {
       expect(onRuleDisplayModeChange).toHaveBeenCalledWith('domain', 'hide');
       expect(target.querySelector('.mode-menu')).toBeNull();
+      expect(target.querySelector('[role="dialog"]')).toBeNull();
     });
+  });
+
+  it('requires confirmation every time ad hiding is selected', async () => {
+    const onAdDisplayModeChange = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = mount(SettingsTab, {
+      target,
+      props: { onAdDisplayModeChange },
+    });
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      target.querySelector<HTMLButtonElement>('[data-testid="ad-display-mode-row"]')?.click();
+      await tick();
+      target.querySelector<HTMLButtonElement>('.mode-menu [data-mode="hide"]')?.click();
+      await tick();
+
+      expect(target.querySelector('[role="dialog"]')).not.toBeNull();
+      expect(onAdDisplayModeChange).toHaveBeenCalledTimes(attempt);
+
+      target.querySelector<HTMLButtonElement>('[role="dialog"] .btn-danger')?.click();
+      await vi.waitFor(() => {
+        expect(onAdDisplayModeChange).toHaveBeenCalledTimes(attempt + 1);
+      });
+    }
   });
 });

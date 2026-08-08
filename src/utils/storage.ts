@@ -118,7 +118,8 @@ const DEFAULT: ExtensionStorage = {
   selectorBlockCount: 0,
   blockedDomainStats: [],
   searchHistory: [],
-  recordSearchHistory: true,
+  // 搜索记录需由用户主动启用，避免默认收集本地搜索关键词。
+  recordSearchHistory: false,
   enabled: true,
   // 广告隐藏需由用户主动启用，避免首次安装即改变页面展示。
   blockAds: false,
@@ -130,7 +131,8 @@ const DEFAULT: ExtensionStorage = {
   domainDisplayMode: 'mark',
   urlDisplayMode: 'mark',
   selectorDisplayMode: 'mark',
-  blockSubdomains: true,
+  // 子域名匹配需由用户主动启用，避免主域名规则意外扩大范围。
+  blockSubdomains: false,
   customEngines: [],
   blockedSelectors: [],
   stats: [],

@@ -11,7 +11,6 @@ const { lang, page } = Astro.props;
 const isZh = lang === 'zh-CN';
 const messages = getTranslations(lang).header;
 const homeHref = isZh ? sitePath('zh/') : sitePath();
-const changelogHref = isZh ? sitePath('zh/changelog/') : sitePath('changelog/');
 const privacyHref = isZh ? sitePath('zh/privacy/') : sitePath('privacy/');
 const pagePaths = {
   home: ['', 'zh/'],
@@ -29,7 +28,6 @@ const switchHref = sitePath(pagePaths[page][isZh ? 0 : 1]);
     </a>
     <nav aria-label={messages.navigationAriaLabel}>
       <a class:list={{ active: page === 'home' }} href={homeHref}>{messages.home}</a>
-      <a class:list={{ active: page === 'changelog' }} href={changelogHref}>{messages.changelog}</a>
       <a class:list={{ active: page === 'privacy' }} href={privacyHref}>{messages.privacy}</a>
       <a
         class="language-link"

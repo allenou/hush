@@ -41,8 +41,8 @@
       "items": [
         { "title": "Quick right-click blocking", "description": "Right-click on any webpage to block a whole domain or one specific link." },
         { "title": "Element picker", "description": "Select a page element and create a rule scoped to that site." },
-        { "title": "Ad marking", "description": "Identify and softly cover advertising and sponsored results." },
-        { "title": "Search history", "description": "Optionally keep recent searches, or disable and clear them anytime." }
+        { "title": "Ad handling", "description": "Mark or hide advertising and sponsored results." },
+        { "title": "Search history", "description": "Off by default. Choose to keep it locally, or disable and clear it anytime." }
       ]
     },
     "workflow": {
@@ -84,7 +84,7 @@
         "Search queries, search engine names, and timestamps when search history is enabled.",
         "Marking statistics, preferences, language selection, ad-marking settings, and subdomain-matching settings."
       ],
-      "outro": "Search history can be disabled at any time and existing history can be deleted from the extension settings."
+      "outro": "Search history is off by default. You can enable, disable, or delete existing history from the extension settings at any time."
     },
     "processing": {
       "title": "Search page processing",

@@ -155,7 +155,7 @@
       const domain = extractDomain(tab.url);
       currentSiteAvailable = domain !== null;
       currentSiteBlockIndex = domain
-        ? findMatchingBlockedDomainIndex(domain, storage.urls, storage.blockSubdomains ?? true)
+        ? findMatchingBlockedDomainIndex(domain, storage.urls, storage.blockSubdomains ?? false)
         : -1;
       currentSiteBlocked = currentSiteBlockIndex >= 0;
     } else {

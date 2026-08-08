@@ -53,7 +53,7 @@ export default defineContentScript({
     let domainDisplayMode: AdDisplayMode = 'mark';
     let urlDisplayMode: AdDisplayMode = 'mark';
     let selectorDisplayMode: AdDisplayMode = 'mark';
-    let blockSubdomains = true;
+    let blockSubdomains = false;
     let currentEngine: SearchEngineConfig | null = null;
     let scanObserver: MutationObserver | null = null;
     let scanObserverTarget: Element | null = null;
@@ -87,7 +87,7 @@ export default defineContentScript({
       domainDisplayMode = storage.domainDisplayMode ?? 'mark';
       urlDisplayMode = storage.urlDisplayMode ?? 'mark';
       selectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
-      blockSubdomains = storage.blockSubdomains ?? true;
+      blockSubdomains = storage.blockSubdomains ?? false;
     }
 
     function runDynamicScan(engine: SearchEngineConfig | null = currentEngine): void {
@@ -223,7 +223,7 @@ export default defineContentScript({
       if (!engine) return;
       // 检查用户是否开启了搜索记录
       get().then((storage) => {
-        if (storage.recordSearchHistory !== false) {
+        if (storage.recordSearchHistory) {
           recordSearch(query, engine.name, engine.hostname);
         }
       });

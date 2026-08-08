@@ -64,7 +64,7 @@ export async function updateShownContextMenus(info: ContextMenuShownData): Promi
   const domainBlocked = Boolean(storage && findMatchingBlockedDomainIndex(
     domain,
     storage.urls,
-    storage.blockSubdomains ?? true,
+    storage.blockSubdomains ?? false,
   ) >= 0);
   const urlBlocked = Boolean(storage && target && storage.blockedUrls.includes(target.href));
   const domainOnly = target ? isDomainHomepageUrl(target.href) : false;
@@ -94,7 +94,7 @@ async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
   const blockedIndex = findMatchingBlockedDomainIndex(
     domain,
     storage.urls,
-    storage.blockSubdomains ?? true,
+    storage.blockSubdomains ?? false,
   );
   if (blockedIndex >= 0) {
     await removeBlockedItem('domain', blockedIndex);

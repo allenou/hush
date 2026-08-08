@@ -43,6 +43,7 @@ describe('get / set defaults', () => {
     expect(s.blockDomains).toBe(true);
     expect(s.blockUrls).toBe(true);
     expect(s.blockSelectors).toBe(true);
+    expect(s.blockSubdomains).toBe(false);
     expect(s.customEngines).toEqual([]);
     expect(s.blockedSelectors).toEqual([]);
     expect(s.stats).toEqual([]);
@@ -1211,8 +1212,8 @@ describe('clear all data', () => {
       searchHistory: [],
       enabled: true,
       blockAds: false,
-      blockSubdomains: true,
-      recordSearchHistory: true,
+      blockSubdomains: false,
+      recordSearchHistory: false,
     });
   });
 });
@@ -1254,7 +1255,7 @@ describe('reset page handling', () => {
       domainDisplayMode: 'mark',
       urlDisplayMode: 'mark',
       selectorDisplayMode: 'mark',
-      blockSubdomains: true,
+      blockSubdomains: false,
       recordSearchHistory: false,
     });
   });

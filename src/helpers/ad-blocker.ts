@@ -222,7 +222,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
     badge.setAttribute('aria-disabled', 'true');
     try {
       const current = await get();
-      const includeSubdomains = current.blockSubdomains ?? true;
+      const includeSubdomains = current.blockSubdomains ?? false;
       const domainIndex = matchBlockedDomain(href, current.urls, includeSubdomains);
       const urlIndex = current.blockedUrls.indexOf(href);
       const ruleType = badge.dataset.ruleType === 'url' ? 'url' : 'domain';
@@ -237,7 +237,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
       const hasDomainRule = matchBlockedDomain(
         href,
         latest.urls,
-        latest.blockSubdomains ?? true,
+        latest.blockSubdomains ?? false,
       ) >= 0;
       const hasUrlRule = latest.blockedUrls.includes(href);
 

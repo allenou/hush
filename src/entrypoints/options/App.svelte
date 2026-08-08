@@ -33,7 +33,7 @@
   import { getSearchUrl } from '@/helpers/search-engines';
   import { formatLocalDateKey } from '@/utils/statistics';
   import { setDocumentLocale } from '@/utils/locale';
-  import type { TabId, RuleFilter } from '@/constants';
+  import { TABS, type TabId, type RuleFilter } from '@/constants';
   import { t, initLocale, setLocale as setAppLocale, getLocale } from '@/utils/locale-store.svelte';
   import { setStoredLocale } from '@/utils/storage';
   import { parseRuleInput } from '@/utils/rule-input';
@@ -56,11 +56,16 @@
   let domainDisplayMode = $state<AdDisplayMode>('mark');
   let urlDisplayMode = $state<AdDisplayMode>('mark');
   let selectorDisplayMode = $state<AdDisplayMode>('mark');
-  let blockSubdomains = $state(true);
+  let blockSubdomains = $state(false);
   let enabled = $state(true);
   let activeFilter = $state<RuleFilter>('all');
   let searchQuery = $state('');
-  let activeTab = $state<TabId>('dashboard');
+  function tabFromLocation(): TabId {
+    const tab = new URLSearchParams(window.location.hash.slice(1)).get('tab');
+    return TABS.includes(tab as TabId) ? tab as TabId : 'dashboard';
+  }
+
+  let activeTab = $state<TabId>(tabFromLocation());
   let showAddDialog = $state(false);
   let totalBlockCount = $state(0);
   let adBlockCount = $state(0);
@@ -71,7 +76,7 @@
   let dailyStats = $state<BlockStats[]>([]);
   let topBlockedDomains = $state<BlockedDomainStat[]>([]);
   let searchHistory = $state<SearchRecord[]>([]);
-  let recordSearchHistory = $state(true);
+  let recordSearchHistory = $state(false);
   let toast = $state<{ id: number; message: string; tone?: 'success' | 'error' } | null>(null);
   let nextToastId = 0;
   let currentLocale = $state('zh_CN');
@@ -88,6 +93,17 @@
 
   function onWindowKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && showAddDialog) closeAddDialog();
+  }
+
+  function setActiveTab(tab: TabId) {
+    activeTab = tab;
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    params.set('tab', tab);
+    window.history.replaceState(null, '', `#${params.toString()}`);
+  }
+
+  function syncActiveTabFromLocation() {
+    activeTab = tabFromLocation();
   }
 
   async function handleLocaleChange(newLocale: string) {
@@ -163,7 +179,7 @@
     domainDisplayMode = storage.domainDisplayMode ?? 'mark';
     urlDisplayMode = storage.urlDisplayMode ?? 'mark';
     selectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
-    blockSubdomains = storage.blockSubdomains ?? true;
+    blockSubdomains = storage.blockSubdomains ?? false;
     totalBlockCount = storage.blockCount ?? 0;
     adBlockCount = storage.adBlockCount ?? 0;
     domainBlockCount = storage.domainBlockCount ?? 0;
@@ -171,7 +187,7 @@
     selectorBlockCount = storage.selectorBlockCount ?? 0;
     topBlockedDomains = storage.blockedDomainStats ?? [];
     searchHistory = storage.searchHistory ?? [];
-    recordSearchHistory = storage.recordSearchHistory ?? true;
+    recordSearchHistory = storage.recordSearchHistory ?? false;
     dailyStats = storage.stats ?? [];
     const today = formatLocalDateKey(new Date());
     const todayStat = (storage.stats ?? []).find(s => s.date === today);
@@ -280,14 +296,14 @@
   });
 </script>
 
-<svelte:window onkeydown={onWindowKeydown} />
+<svelte:window onkeydown={onWindowKeydown} onhashchange={syncActiveTabFromLocation} />
 
 <div class="app">
   <AppNav
     {activeTab}
     {enabled}
     {currentLocale}
-    onTabChange={(tab) => activeTab = tab}
+    onTabChange={setActiveTab}
     onLocaleChange={handleLocaleChange}
   />
 
@@ -313,9 +329,11 @@
     {:else if activeTab === 'search'}
       <SearchHistoryTab
         {searchHistory}
+        {recordSearchHistory}
         onSearch={(detail) => doSearch(detail.record, detail.engineHostname)}
         onRemove={handleRemoveSearchRecord}
         onClear={handleClearSearchHistory}
+        onOpenSettings={() => setActiveTab('method')}
       />
 
     {:else}

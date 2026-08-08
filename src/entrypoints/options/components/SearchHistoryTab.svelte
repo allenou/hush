@@ -5,11 +5,13 @@
   import { getSearchEngineDisplayName, t } from '@/utils/locale-store.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
-  let { searchHistory = [], onSearch, onRemove, onClear } = $props<{
+  let { searchHistory = [], recordSearchHistory = false, onSearch, onRemove, onClear, onOpenSettings } = $props<{
     searchHistory: SearchRecord[];
+    recordSearchHistory?: boolean;
     onSearch?: (detail: { record: SearchRecord; engineHostname?: string }) => void;
     onRemove?: (index: number) => void;
     onClear?: () => void;
+    onOpenSettings?: () => void;
   }>();
 
   let searchEngineMenus = $state<Record<number, boolean>>({});
@@ -35,7 +37,12 @@
 
 <section class="search-section">
   <div class="search-section-heading">
-    <h2 class="card-title">{t('searchHistory')}</h2>
+    <div class="search-heading-copy">
+      <h2 class="card-title">{t('searchHistory')}</h2>
+      {#if recordSearchHistory}
+        <p class="search-recording-notice">{t('searchHistoryRecordingNotice')}</p>
+      {/if}
+    </div>
     {#if searchHistory.length > 0}
       <button class="history-clear" onclick={() => showClearConfirm = true}>{t('clearHistory')}</button>
     {/if}
@@ -50,7 +57,14 @@
         </svg>
       </div>
       <h3>{t('noHistory')}</h3>
-      <p>{t('noHistoryDesc')}</p>
+      {#if recordSearchHistory}
+        <p>{t('noHistoryDesc')}</p>
+      {:else}
+        <p>
+          {t('noHistoryDisabledDesc')}
+          <button type="button" class="empty-settings-link" onclick={() => onOpenSettings?.()}>{t('enableHistoryInSettings')}</button>
+        </p>
+      {/if}
     </div>
   {:else}
     <div class="search-table" role="table">
@@ -146,6 +160,13 @@
     gap: var(--srb-space-md);
     margin-bottom: 16px;
   }
+  .search-heading-copy { min-width: 0; }
+  .search-recording-notice {
+    margin: var(--srb-space-2xs) 0 0;
+    color: var(--srb-text-secondary);
+    font-size: var(--srb-font-size-xs);
+    line-height: var(--srb-line-height-body);
+  }
   .history-clear {
     border: none;
     background: transparent;
@@ -180,6 +201,19 @@
     color: var(--srb-text-subtle);
     font-size: var(--srb-font-size-body);
   }
+  .empty-settings-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--srb-primary);
+    font: inherit;
+    font-weight: var(--srb-weight-semibold);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .empty-settings-link:hover { color: var(--srb-primary-hover); }
+  .empty-settings-link:focus-visible { outline: none; box-shadow: var(--srb-focus-ring); }
 
   .search-table {
     border: 1px solid var(--srb-border-light);
