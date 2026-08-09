@@ -33,6 +33,12 @@ import {
 } from '@/helpers/ad-blocker';
 import { initLocale } from '@/utils/i18n';
 import { initSentry } from '@/utils/sentry';
+import {
+  getTemporaryBlocking,
+  isBlockTargetEnabled,
+  subscribeTemporaryBlocking,
+} from '@/utils/temporary-blocking';
+import type { TemporaryBlockingOverrides } from '@/utils/temporary-blocking';
 
 export default defineContentScript({
   matches: SEARCH_ENGINE_MATCH_PATTERNS,
@@ -49,6 +55,11 @@ export default defineContentScript({
     let blockDomains = true;
     let blockUrls = true;
     let blockSelectors = true;
+    let persistentBlockAds = false;
+    let persistentBlockDomains = true;
+    let persistentBlockUrls = true;
+    let persistentBlockSelectors = true;
+    let temporaryBlocking: TemporaryBlockingOverrides = {};
     let adDisplayMode: AdDisplayMode = 'mark';
     let domainDisplayMode: AdDisplayMode = 'mark';
     let urlDisplayMode: AdDisplayMode = 'mark';
@@ -74,15 +85,29 @@ export default defineContentScript({
       );
     }
 
+    function applyEffectiveBlockTargets(): void {
+      const persistent = {
+        blockAds: persistentBlockAds,
+        blockDomains: persistentBlockDomains,
+        blockUrls: persistentBlockUrls,
+        blockSelectors: persistentBlockSelectors,
+      };
+      blockAds = isBlockTargetEnabled('ad', persistent, temporaryBlocking);
+      blockDomains = isBlockTargetEnabled('domain', persistent, temporaryBlocking);
+      blockUrls = isBlockTargetEnabled('url', persistent, temporaryBlocking);
+      blockSelectors = isBlockTargetEnabled('selector', persistent, temporaryBlocking);
+    }
+
     function applyStorageState(storage: Awaited<ReturnType<typeof get>>): void {
       blockedDomains = storage.urls;
       blockedUrls = storage.blockedUrls;
       blockedSelectors = storage.blockedSelectors;
       isEnabled = storage.enabled;
-      blockAds = storage.blockAds ?? false;
-      blockDomains = storage.blockDomains ?? true;
-      blockUrls = storage.blockUrls ?? true;
-      blockSelectors = storage.blockSelectors ?? true;
+      persistentBlockAds = storage.blockAds ?? false;
+      persistentBlockDomains = storage.blockDomains ?? true;
+      persistentBlockUrls = storage.blockUrls ?? true;
+      persistentBlockSelectors = storage.blockSelectors ?? true;
+      applyEffectiveBlockTargets();
       adDisplayMode = storage.adDisplayMode ?? 'mark';
       domainDisplayMode = storage.domainDisplayMode ?? 'mark';
       urlDisplayMode = storage.urlDisplayMode ?? 'mark';
@@ -280,12 +305,20 @@ export default defineContentScript({
     });
     ctx.onInvalidated(unsubscribeStorage);
 
+    const unsubscribeTemporaryBlocking = subscribeTemporaryBlocking((value) => {
+      temporaryBlocking = value;
+      applyEffectiveBlockTargets();
+      rescanWithCurrentState();
+    });
+    ctx.onInvalidated(unsubscribeTemporaryBlocking);
+
     const unsubscribeUrlChanges = subscribeToUrlChanges(handleUrlChange);
     ctx.onInvalidated(unsubscribeUrlChanges);
 
     ctx.addEventListener(document, 'visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
-      void get().then((storage) => {
+      void Promise.all([get(), getTemporaryBlocking()]).then(([storage, temporary]) => {
+        temporaryBlocking = temporary;
         applyStorageState(storage);
         recordCurrentSearch();
         rescanWithCurrentState();
@@ -293,7 +326,8 @@ export default defineContentScript({
     });
 
     ctx.addEventListener(window, 'pageshow', () => {
-      void get().then((storage) => {
+      void Promise.all([get(), getTemporaryBlocking()]).then(([storage, temporary]) => {
+        temporaryBlocking = temporary;
         applyStorageState(storage);
         rescanWithCurrentState();
       });
@@ -301,7 +335,8 @@ export default defineContentScript({
 
     // ===== 启动 =====
 
-    get().then((storage) => {
+    Promise.all([get(), getTemporaryBlocking()]).then(([storage, temporary]) => {
+      temporaryBlocking = temporary;
       applyStorageState(storage);
       init(storage);
     });

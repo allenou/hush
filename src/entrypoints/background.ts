@@ -10,6 +10,7 @@ import { addBlockedUrl, addDomain, get, recordBlock, removeBlockedItem } from '@
 import { isPageMarkerCountMessage } from '@/utils/page-badge';
 import { isDomainHomepageUrl } from '@/utils/url';
 import { initSentry } from '@/utils/sentry';
+import { clearTemporaryBlocking } from '@/utils/temporary-blocking';
 
 const CONTEXT_MENU = {
   root: 'srb-root',
@@ -157,7 +158,13 @@ export default defineBackground(() => {
   void browser.action.setBadgeText({ text: '' });
   void browser.action.setBadgeBackgroundColor({ color: '#c00' });
   void createContextMenus();
-  browser.runtime.onInstalled.addListener(() => { void createContextMenus(); });
+  browser.runtime.onInstalled.addListener(() => {
+    void clearTemporaryBlocking();
+    void createContextMenus();
+  });
+  browser.runtime.onStartup.addListener(() => {
+    void clearTemporaryBlocking();
+  });
 
   // Edge 未实现 onShown / refresh；缺少它们时保持静态菜单，避免后台 Worker 启动失败。
   getDynamicContextMenus().onShown?.addListener((info) => {

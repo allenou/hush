@@ -225,6 +225,10 @@ describe('Popup', () => {
       blocker: {
         blockCount: 18,
         enabled: true,
+        blockAds: true,
+        blockDomains: true,
+        blockUrls: true,
+        blockSelectors: true,
         stats: [{
           date: today,
           count: 10,
@@ -293,6 +297,22 @@ describe('Popup', () => {
       expect(target.querySelector<HTMLElement>('.bar-fill.url')?.style.height).toBe('33%');
       expect(target.querySelector<HTMLElement>('.bar-fill.ad')?.style.height).toBe('67%');
       expect(target.querySelector<HTMLElement>('.bar-fill.selector')?.style.height).toBe('4%');
+      expect(target.querySelectorAll('.metric-toggle')).toHaveLength(4);
+      expect(target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.getAttribute('aria-pressed'))
+        .toBe('true');
+    });
+
+    target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.click();
+
+    await vi.waitFor(async () => {
+      const stored = await fakeBrowser.storage.local.get('temporaryBlocker') as {
+        temporaryBlocker?: { url?: boolean };
+      };
+      expect(stored.temporaryBlocker?.url).toBe(false);
+      expect(target.querySelector('.bar-column.url')?.classList.contains('paused')).toBe(true);
+      expect(target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.getAttribute('aria-pressed'))
+        .toBe('false');
+      expect(target.querySelector('.bar-column.url .bar-value')?.textContent).toContain('1');
     });
 
     target.querySelector<HTMLButtonElement>('.today-card')?.click();

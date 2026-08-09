@@ -15,6 +15,16 @@
     isPageMarkerSummary,
   } from '@/utils/page-badge';
   import type { PageMarkerSummary } from '@/utils/page-badge';
+  import {
+    getTemporaryBlocking,
+    isBlockTargetEnabled,
+    setTemporaryBlockEnabled,
+    subscribeTemporaryBlocking,
+  } from '@/utils/temporary-blocking';
+  import type {
+    TemporaryBlockingOverrides,
+    TemporaryBlockTarget,
+  } from '@/utils/temporary-blocking';
   import { onMount } from 'svelte';
   import { browser, type Browser } from 'wxt/browser';
   import packageJson from '../../../package.json';
@@ -28,6 +38,7 @@
   };
   type ChartScope = 'site' | 'today';
   type ChartBarKey = 'domain' | 'url' | 'ad' | 'selector' | 'legacy';
+  type ControllableChartBarKey = Exclude<ChartBarKey, 'legacy'>;
 
   let todayCount = 0;
   let todayBreakdown = {
@@ -47,11 +58,20 @@
   let currentSiteBlockIndex = -1;
   let pageMarkerSummary = { ...EMPTY_PAGE_MARKER_SUMMARY };
   let unblockingCurrentSite = false;
+  let togglingBlockTarget: TemporaryBlockTarget | null = null;
+  let temporaryBlocking: TemporaryBlockingOverrides = {};
+  let persistentBlockTargets = {
+    blockAds: false,
+    blockDomains: true,
+    blockUrls: true,
+    blockSelectors: true,
+  };
   let pageMarkerBars: {
     key: ChartBarKey;
     label: string;
     count: number;
     height: number;
+    enabled: boolean;
   }[] = [];
   let supportedEngineNames = '';
 
@@ -97,17 +117,28 @@
             : []),
         ];
     const maxCount = Math.max(1, ...markerTypes.map((item) => item.count));
+    const activeBlockTargets = {
+      domain: isBlockTargetEnabled('domain', persistentBlockTargets, temporaryBlocking),
+      url: isBlockTargetEnabled('url', persistentBlockTargets, temporaryBlocking),
+      ad: isBlockTargetEnabled('ad', persistentBlockTargets, temporaryBlocking),
+      selector: isBlockTargetEnabled('selector', persistentBlockTargets, temporaryBlocking),
+    };
     pageMarkerBars = markerTypes.map((item) => ({
       ...item,
       height: item.count === 0
         ? 4
         : Math.max(18, Math.round((item.count / maxCount) * 100)),
+      enabled: item.key === 'legacy' ? true : activeBlockTargets[item.key],
     }));
+  }
+
+  function isChartBarEnabled(target: ControllableChartBarKey): boolean {
+    return isBlockTargetEnabled(target, persistentBlockTargets, temporaryBlocking);
   }
 
   async function loadData() {
     const tab = (await browser.tabs.query({ active: true, currentWindow: true }))[0];
-    const storage = await get();
+    const [storage, temporary] = await Promise.all([get(), getTemporaryBlocking()]);
     if (storage.locale) {
       await initLocale(storage.locale);
     } else {
@@ -115,6 +146,13 @@
     }
     setDocumentLocale(getLocale());
     enabled = storage.enabled;
+    persistentBlockTargets = {
+      blockAds: storage.blockAds ?? false,
+      blockDomains: storage.blockDomains ?? true,
+      blockUrls: storage.blockUrls ?? true,
+      blockSelectors: storage.blockSelectors ?? true,
+    };
+    temporaryBlocking = temporary;
     const today = formatLocalDateKey(new Date());
     const todayStat = (storage.stats ?? []).find(s => s.date === today);
     todayCount = todayStat?.count ?? 0;
@@ -167,6 +205,19 @@
     await setEnabled(enabled);
   }
 
+  async function toggleBlockTarget(target: ControllableChartBarKey): Promise<void> {
+    if (!enabled || togglingBlockTarget) return;
+    togglingBlockTarget = target;
+    try {
+      temporaryBlocking = await setTemporaryBlockEnabled(
+        target,
+        !isChartBarEnabled(target),
+      );
+    } finally {
+      togglingBlockTarget = null;
+    }
+  }
+
   async function unblockCurrentSite() {
     if (currentSiteBlockIndex < 0 || unblockingCurrentSite) return;
     unblockingCurrentSite = true;
@@ -205,9 +256,13 @@
     browser.runtime.onMessage.addListener(handlePageMarkerUpdate);
     void loadData();
     const unsubscribeStorage = subscribe(() => loadData());
+    const unsubscribeTemporaryBlocking = subscribeTemporaryBlocking((value) => {
+      temporaryBlocking = value;
+    });
     return () => {
       browser.runtime.onMessage.removeListener(handlePageMarkerUpdate);
       unsubscribeStorage();
+      unsubscribeTemporaryBlocking();
     };
   });
 </script>
@@ -280,11 +335,16 @@
   <!-- ===== Linked Bar Chart ===== -->
   <div id="srb-popup-chart" class="chart-section">
     <div class="chart-heading-row">
-      <span class="chart-label">
-        {selectedChartScope === 'site'
-          ? t('currentSiteChartTitle')
-          : t('todayChartTitle')}
-      </span>
+      <div class="chart-title-group">
+        <span class="chart-label">
+          {selectedChartScope === 'site'
+            ? t('currentSiteChartTitle')
+            : t('todayChartTitle')}
+        </span>
+        {#if selectedChartScope === 'today' || currentSearchEngineName}
+          <span class="session-control-label">{t('temporarySessionLabel')}</span>
+        {/if}
+      </div>
       <span class="chart-engine">
         {selectedChartScope === 'site'
           ? currentSearchEngineName ?? t('searchPageOnlyShort')
@@ -337,7 +397,7 @@
       <div
         class="site-bar-chart"
         style={`grid-template-columns: repeat(${pageMarkerBars.length}, minmax(0, 1fr))`}
-        role="img"
+        role="group"
         aria-label={selectedChartScope === 'site'
           ? t('currentSiteBarChartAria')
           : t('todayBarChartAria')}
@@ -345,6 +405,7 @@
         {#each pageMarkerBars as item}
           <div
             class={`bar-column ${item.key}`}
+            class:paused={!item.enabled}
             title={`${item.label}: ${item.count}`}
           >
             <span class="bar-value">{item.count}</span>
@@ -354,7 +415,23 @@
                 style={`height: ${item.height}%`}
               ></span>
             </div>
-            <span class="bar-label">{item.label}</span>
+            {#if item.key === 'legacy'}
+              <span class="bar-label">{item.label}</span>
+            {:else}
+              <button
+                type="button"
+                class={`bar-label metric-toggle ${item.key}`}
+                class:toggling={togglingBlockTarget === item.key}
+                aria-pressed={item.enabled}
+                aria-label={`${item.label} · ${item.enabled ? t('temporaryDisable') : t('temporaryEnable')}`}
+                title={item.enabled ? t('temporaryDisable') : t('temporaryEnable')}
+                disabled={!enabled || togglingBlockTarget === item.key}
+                onclick={() => void toggleBlockTarget(item.key)}
+              >
+                <span class="metric-status" aria-hidden="true"></span>
+                <span class="metric-label-text">{item.label}</span>
+              </button>
+            {/if}
           </div>
         {/each}
       </div>
@@ -710,6 +787,12 @@
     gap: var(--srb-space-sm);
     margin-bottom: 14px;
   }
+  .chart-title-group {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+  }
   .chart-label {
     color: var(--srb-text-secondary);
     font-size: 11px;
@@ -725,6 +808,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .session-control-label {
+    flex: 0 0 auto;
+    padding: 2px 5px;
+    border: 1px solid var(--srb-border-light);
+    border-radius: 999px;
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text-muted);
+    font-size: 8px;
+    font-weight: var(--srb-weight-medium);
+    letter-spacing: 0;
+  }
   .site-bar-chart {
     display: grid;
     height: 112px;
@@ -735,9 +829,25 @@
   .bar-column {
     display: grid;
     min-width: 0;
-    grid-template-rows: 16px 1fr 18px;
+    grid-template-rows: 16px 1fr 22px;
     gap: 4px;
     text-align: center;
+  }
+  .bar-column.domain {
+    --metric-color: var(--srb-chart-blue);
+    --metric-soft: rgba(59, 130, 246, 0.1);
+  }
+  .bar-column.url {
+    --metric-color: var(--srb-chart-purple);
+    --metric-soft: rgba(168, 85, 247, 0.1);
+  }
+  .bar-column.ad {
+    --metric-color: var(--srb-chart-orange);
+    --metric-soft: rgba(249, 115, 22, 0.1);
+  }
+  .bar-column.selector {
+    --metric-color: var(--srb-chart-pink);
+    --metric-soft: rgba(236, 72, 153, 0.1);
   }
   .bar-value {
     color: var(--srb-text-secondary);
@@ -756,15 +866,20 @@
     background:
       linear-gradient(to top, rgba(116, 123, 139, 0.08) 1px, transparent 1px);
     background-size: 100% 25%;
-    border-bottom: 1px solid var(--srb-border-muted);
   }
   .bar-fill {
     display: block;
     width: 22px;
     min-height: 3px;
     border-radius: 6px 6px 2px 2px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
-    transition: height var(--srb-transition-slow);
+    transition:
+      height var(--srb-transition-slow),
+      filter var(--srb-transition-fast),
+      opacity var(--srb-transition-fast);
+  }
+  .bar-column.paused .bar-fill {
+    filter: grayscale(0.7);
+    opacity: 0.22;
   }
   .bar-fill.domain {
     background: linear-gradient(180deg, #60a5fa, var(--srb-chart-blue));
@@ -790,9 +905,61 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .metric-toggle {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 5px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--metric-soft);
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+      background var(--srb-transition-fast),
+      border-color var(--srb-transition-fast),
+      color var(--srb-transition-fast);
+  }
+  .metric-toggle[aria-pressed='false'] {
+    border-color: var(--srb-border-light);
+    background: transparent;
+    color: var(--srb-text-muted);
+  }
+  .metric-toggle:disabled {
+    cursor: not-allowed;
+  }
+  .metric-toggle.toggling {
+    cursor: wait;
+  }
+  .metric-status {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    border: 1px solid var(--metric-color);
+    border-radius: 50%;
+    background: var(--metric-color);
+  }
+  .metric-toggle[aria-pressed='false'] .metric-status {
+    background: transparent;
+  }
+  .metric-label-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .metric-toggle:hover:not(:disabled) {
+      border-color: var(--metric-color);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .stat-card,
-    .bar-fill {
+    .bar-fill,
+    .metric-toggle {
       transition: none;
     }
   }
