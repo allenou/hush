@@ -57,7 +57,6 @@
   let urlDisplayMode = $state<AdDisplayMode>('mark');
   let selectorDisplayMode = $state<AdDisplayMode>('mark');
   let blockSubdomains = $state(false);
-  let enabled = $state(true);
   let activeFilter = $state<RuleFilter>('all');
   let searchQuery = $state('');
   function tabFromLocation(): TabId {
@@ -170,7 +169,6 @@
     setDocumentLocale(getLocale());
     currentLocale = getLocale();
     blockedItems = await getAllBlocked();
-    enabled = storage.enabled;
     blockAds = storage.blockAds ?? false;
     blockDomains = storage.blockDomains ?? true;
     blockUrls = storage.blockUrls ?? true;
@@ -301,7 +299,6 @@
 <div class="app">
   <AppNav
     {activeTab}
-    {enabled}
     {currentLocale}
     onTabChange={setActiveTab}
     onLocaleChange={handleLocaleChange}

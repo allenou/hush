@@ -6,6 +6,7 @@
  */
 
 import { subscribe, t as tBase, getLocale, setLocale, initLocale } from './locale';
+import { getSearchEngineRule } from '@/helpers/search-engines';
 
 let _v = $state(0);
 subscribe(() => _v++);
@@ -30,7 +31,8 @@ const SEARCH_ENGINE_NAME_KEYS: Record<string, string> = {
 
 /** 根据 hostname 获取本地化搜索引擎名称，未知引擎保留原名称。 */
 export function getSearchEngineDisplayName(hostname: string, fallback: string): string {
-  const normalized = hostname.trim().toLowerCase().replace(/^www\./, '');
+  const normalized = getSearchEngineRule(hostname)?.hostname
+    ?? hostname.trim().toLowerCase().replace(/^www\./, '');
   const key = SEARCH_ENGINE_NAME_KEYS[normalized];
   if (!key) return fallback;
   const translated = t(key);

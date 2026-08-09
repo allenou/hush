@@ -43,8 +43,6 @@ describe('Popup', () => {
         searchPageOnlyShort: { message: 'Search pages only' },
         todayLabel: { message: 'Today' },
         times: { message: 'times' },
-        siteUnavailable: { message: 'Unavailable on this page' },
-        siteUnavailableShort: { message: 'Unavailable' },
         searchEnginePageHint: { message: 'Currently supported on these search engines' },
         supportedSearchEngines: { message: '$1' },
         searchEngineGoogle: { message: 'Google' },
@@ -68,10 +66,7 @@ describe('Popup', () => {
     expect(summary).not.toContain('当前站点');
     expect(document.documentElement.lang).toBe('en');
 
-    await vi.waitFor(() => {
-      expect(target.querySelector('.header-unavailable')?.textContent).toContain('Unavailable');
-      expect(target.querySelector('.chart-empty-state')).toBeNull();
-    });
+    expect(target.querySelector('.header-unavailable')).toBeNull();
 
     target.querySelector<HTMLButtonElement>('.current-site-card')?.click();
 
@@ -111,7 +106,6 @@ describe('Popup', () => {
       otherLabel: 'Other',
       searchEnginePageHint: 'Currently supported on these search engines',
       supportedSearchEngines: '$1',
-      siteUnavailableShort: 'Unavailable',
       searchEngineGoogle: 'Google',
       searchEngineBaidu: 'Baidu',
       searchEngineBing: 'Bing',
@@ -135,6 +129,7 @@ describe('Popup', () => {
       expect(target.querySelector('.today-card')?.getAttribute('aria-pressed')).toBe('true');
       expect(target.querySelector('.chart-label')?.textContent)
         .toContain("Today's block types");
+      expect(target.textContent).not.toContain('Unavailable');
       expect(target.querySelector('.chart-empty-state')).toBeNull();
     });
 

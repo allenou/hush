@@ -5,13 +5,11 @@
 
   let {
     activeTab = 'dashboard' as TabId,
-    enabled = true,
     currentLocale = 'zh_CN',
     onTabChange,
     onLocaleChange,
   } = $props<{
     activeTab: TabId;
-    enabled?: boolean;
     currentLocale?: string;
     onTabChange?: (tab: TabId) => void;
     onLocaleChange?: (locale: string) => void;
@@ -58,10 +56,6 @@
         title={currentLocale === 'zh_CN' ? 'Switch to English' : '切换到中文'}
         onclick={toggleLocale}
       >{currentLocale === 'zh_CN' ? '中' : 'EN'}</button>
-      <span class="rule-badge" class:disabled={!enabled}>
-        <span class="badge-dot"></span>
-        {t(enabled ? 'enabled' : 'disabled')}
-      </span>
     </div>
   </div>
 </nav>
@@ -161,40 +155,12 @@
     outline: none;
     box-shadow: var(--srb-focus-ring);
   }
-  .rule-badge {
-    display: flex;
-    align-items: center;
-    gap: var(--srb-space-xs);
-    padding: 6px 14px;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-status-bg);
-    color: var(--srb-text-strong);
-    font-size: var(--srb-font-size-sm);
-    font-weight: var(--srb-weight-semibold);
-  }
-  .badge-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-primary);
-    box-shadow: 0 0 0 2px var(--srb-accent-light);
-  }
-  .rule-badge.disabled {
-    background: var(--srb-control-hover-bg);
-    color: var(--srb-text-muted);
-  }
-  .rule-badge.disabled .badge-dot {
-    background: var(--srb-text-muted);
-    box-shadow: none;
-  }
-
   @media (max-width: 760px) {
     .nav-left { gap: var(--srb-space-lg); }
     .nav-link { padding: 8px 12px; }
   }
 
   @media (max-width: 560px) {
-    .rule-badge { display: none; }
     .nav-right { gap: var(--srb-space-sm); }
   }
 

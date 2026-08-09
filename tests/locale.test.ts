@@ -35,7 +35,7 @@ describe('content script locale fallback', () => {
     vi.resetModules();
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('en-US');
     vi.stubGlobal('fetch', vi.fn(async () => ({
-      json: async () => ({ disabled: { message: '已停用' } }),
+      json: async () => ({ domainHit: { message: '域名命中' } }),
     })));
 
     const { initLocale, subscribe, t } = await import('@/utils/locale');
@@ -44,7 +44,7 @@ describe('content script locale fallback', () => {
 
     await initLocale('zh_CN');
 
-    expect(t('disabled')).toBe('已停用');
+    expect(t('domainHit')).toBe('域名命中');
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
   });

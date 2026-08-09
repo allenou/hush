@@ -556,20 +556,42 @@ describe('recordBlock', () => {
     await recordBlock('domain', 'news.example.com', 'subdomain', 'www.baidu.com');
     await recordBlock('url', 'example.com', undefined, 'baidu.com');
     await recordBlock('selector', 'elements.example', undefined, 'baidu.com');
+    await recordBlock('url', 'google.example', undefined, 'google.com.hk');
+    await recordBlock('domain', 'bing.example', 'target', 'cn.bing.com');
+    await recordBlock('ad', 'yahoo.example', undefined, 'ca.search.yahoo.com');
+    await recordBlock('selector', 'yandex.example', undefined, 'yandex.kz');
+    await recordBlock('domain', 'duck.example', 'target', 'start.duckduckgo.com');
 
     const today = formatLocalDateKey(new Date());
     const entry = (await get()).stats.find((item) => item.date === today);
     expect(entry?.engineStats).toMatchObject({
       'google.com': {
-        count: 2,
+        count: 3,
         adCount: 1,
         targetDomainCount: 1,
+        urlCount: 1,
       },
       'baidu.com': {
         count: 3,
         subdomainCount: 1,
         urlCount: 1,
         selectorCount: 1,
+      },
+      'bing.com': {
+        count: 1,
+        targetDomainCount: 1,
+      },
+      'search.yahoo.com': {
+        count: 1,
+        adCount: 1,
+      },
+      'yandex.com': {
+        count: 1,
+        selectorCount: 1,
+      },
+      'duckduckgo.com': {
+        count: 1,
+        targetDomainCount: 1,
       },
     });
   });
@@ -1094,6 +1116,25 @@ describe('search history mutations', () => {
     await recordSearch('query', 'Google', 'www.google.com');
 
     expect((await get()).searchHistory).toHaveLength(1);
+  });
+
+  it.each([
+    ['Google', 'google.com.hk', 'google.com'],
+    ['Bing', 'cn.bing.com', 'bing.com'],
+    ['Yahoo!', 'ca.search.yahoo.com', 'search.yahoo.com'],
+    ['Yandex', 'yandex.kz', 'yandex.com'],
+    ['DuckDuckGo', 'start.duckduckgo.com', 'duckduckgo.com'],
+  ])('stores %s alias %s under canonical engine %s', async (engineName, alias, canonical) => {
+    await recordSearch('query', engineName, alias);
+    await recordSearch('query', engineName, canonical);
+
+    expect((await get()).searchHistory).toEqual([
+      expect.objectContaining({
+        query: 'query',
+        engineName,
+        engineHostname: canonical,
+      }),
+    ]);
   });
 
   it('removes one record and clears all records', async () => {

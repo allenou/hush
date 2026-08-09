@@ -729,7 +729,8 @@ export function recordBlock(
 }
 
 export async function recordSearch(query: string, engineName: string, engineHostname: string): Promise<void> {
-  const normalizedHostname = normalizeHostname(engineHostname);
+  const normalizedHostname = getSearchEngineRule(engineHostname)?.hostname
+    ?? normalizeHostname(engineHostname);
   await mutateStorage((current) => {
     const record: SearchRecord = {
       query,

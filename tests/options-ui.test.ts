@@ -174,23 +174,9 @@ describe('Options UI', () => {
     expect(navSource).not.toContain('.nav-link.active::after');
   });
 
-  it('renders the disabled storage state in the options navigation', async () => {
-    await fakeBrowser.storage.local.set({ blocker: { enabled: false } });
-    vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('en-US');
-    vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
-      enabled: 'Enabled',
-      disabled: 'Disabled',
-    })[key] ?? key);
-
-    const target = document.createElement('div');
-    document.body.appendChild(target);
-    component = mount(App, { target });
-
-    await vi.waitFor(() => {
-      const badge = target.querySelector('.rule-badge');
-      expect(badge?.textContent).toContain('Disabled');
-      expect(badge?.classList.contains('disabled')).toBe(true);
-    });
+  it('keeps the global enabled status out of the options navigation', () => {
+    expect(navSource).not.toContain('rule-badge');
+    expect(navSource).not.toContain("t(enabled ? 'enabled' : 'disabled')");
   });
 
   it('hides search and filters when there are no rules', () => {
@@ -339,6 +325,17 @@ describe('Options UI', () => {
     });
 
     expect(target.querySelector('.empty p')?.textContent).toContain('noHistoryDisabledDesc');
+    expect(target.querySelector('.empty-settings-link')?.textContent).toContain('settingsPageTitle');
+    expect(target.querySelector('.empty p')?.textContent).toContain('enableHistoryInSettings');
+    const chineseMessages = JSON.parse(readFileSync(
+      resolve(process.cwd(), 'public/_locales/zh_CN/messages.json'),
+      'utf8',
+    )) as Record<string, { message: string }>;
+    expect(
+      chineseMessages.noHistoryDisabledDesc.message
+      + chineseMessages.settingsPageTitle.message
+      + chineseMessages.enableHistoryInSettings.message,
+    ).toBe('搜索记录功能未开启，你可前往设置开启。');
     expect(target.querySelector('.history-clear')).toBeNull();
     target.querySelector<HTMLButtonElement>('.empty-settings-link')?.click();
     expect(onOpenSettings).toHaveBeenCalledTimes(1);

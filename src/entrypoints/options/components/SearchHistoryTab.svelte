@@ -2,7 +2,7 @@
   import type { SearchRecord } from '@/utils/storage';
   import { SEARCH_ENGINES } from '@/constants';
   import { formatRelativeTime } from '@/utils/time';
-  import { getSearchEngineDisplayName, t } from '@/utils/locale-store.svelte';
+  import { getLocale, getSearchEngineDisplayName, t } from '@/utils/locale-store.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   let { searchHistory = [], recordSearchHistory = false, onSearch, onRemove, onClear, onOpenSettings } = $props<{
@@ -60,9 +60,11 @@
       {#if recordSearchHistory}
         <p>{t('noHistoryDesc')}</p>
       {:else}
-        <p>
+        <p class="empty-settings-message">
           {t('noHistoryDisabledDesc')}
-          <button type="button" class="empty-settings-link" onclick={() => onOpenSettings?.()}>{t('enableHistoryInSettings')}</button>
+          {#if getLocale() === 'en'}{' '}{/if}
+          <button type="button" class="empty-settings-link" onclick={() => onOpenSettings?.()}>{t('settingsPageTitle')}</button>
+          {t('enableHistoryInSettings')}
         </p>
       {/if}
     </div>
@@ -204,16 +206,20 @@
   .empty-settings-link {
     padding: 0;
     border: 0;
-    background: transparent;
+    background: linear-gradient(transparent 62%, var(--srb-accent-highlight) 62%);
     color: var(--srb-primary);
     font: inherit;
-    font-weight: var(--srb-weight-semibold);
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    font-weight: var(--srb-weight-bold);
     cursor: pointer;
+    transition: color var(--srb-transition-fast);
   }
-  .empty-settings-link:hover { color: var(--srb-primary-hover); }
-  .empty-settings-link:focus-visible { outline: none; box-shadow: var(--srb-focus-ring); }
+  .empty-settings-link:hover {
+    color: var(--srb-primary-hover);
+  }
+  .empty-settings-link:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
+  }
 
   .search-table {
     border: 1px solid var(--srb-border-light);

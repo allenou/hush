@@ -1,10 +1,11 @@
 import type { SearchEngineRule } from './types';
+import { YANDEX_SEARCH_ALIASES } from '@/constants/search-hosts';
 
 /** Yandex 搜索结果及广告识别规则。 */
 export const yandexSearchEngine: SearchEngineRule = {
   name: 'Yandex',
   hostname: 'yandex.com',
-  aliases: ['yandex.ru'],
+  aliases: YANDEX_SEARCH_ALIASES,
   linkSelector: 'a.OrganicTitle-Link[href], a.Link_theme_normal[href], h2 a[href]',
   queryParameterNames: ['text', 'query'],
   buildSearchUrl: (query) => `https://yandex.com/search/?text=${encodeURIComponent(query)}`,

@@ -11,10 +11,24 @@ import {
   matchEngineConfig,
 } from '@/helpers/search-engines';
 import {
+  BING_SEARCH_ALIASES,
+  DUCKDUCKGO_SEARCH_ALIASES,
+  GOOGLE_SEARCH_ALIASES,
+  SEARCH_ENGINE_HOSTS,
   SEARCH_ENGINE_MATCH_PATTERNS,
+  YAHOO_SEARCH_ALIASES,
+  YANDEX_SEARCH_ALIASES,
   isSupportedSearchHostname,
   normalizeSearchHostname,
 } from '@/constants/search-hosts';
+
+const SEARCH_ENGINE_ALIAS_CASES = [
+  ...GOOGLE_SEARCH_ALIASES.map((alias) => [alias, 'google.com', 'q'] as const),
+  ...BING_SEARCH_ALIASES.map((alias) => [alias, 'bing.com', 'q'] as const),
+  ...YAHOO_SEARCH_ALIASES.map((alias) => [alias, 'search.yahoo.com', 'p'] as const),
+  ...YANDEX_SEARCH_ALIASES.map((alias) => [alias, 'yandex.com', 'text'] as const),
+  ...DUCKDUCKGO_SEARCH_ALIASES.map((alias) => [alias, 'duckduckgo.com', 'q'] as const),
+];
 
 describe('supported search hostnames', () => {
   it('treats www and the root host as the same supported engine', () => {
@@ -28,31 +42,37 @@ describe('supported search hostnames', () => {
     expect(isSupportedSearchHostname('duckduckgo.com')).toBe(true);
   });
 
+  it.each(SEARCH_ENGINE_ALIAS_CASES)(
+    'supports desktop alias %s as %s',
+    (alias) => expect(isSupportedSearchHostname(alias)).toBe(true),
+  );
+
   it.each([
     'm.baidu.com',
-    'cn.bing.com',
+    'www.cn.bing.com',
     'wap.sogou.com',
     'www.search.yahoo.com',
+    'www.ca.search.yahoo.com',
     'sub.duckduckgo.com',
-    'google.com.hk',
+    'html.duckduckgo.com',
+    'lite.duckduckgo.com',
+    'search.yahoo.co.jp',
     'example.com',
   ])(
     'rejects non-enumerated hostname %s',
     (hostname) => expect(isSupportedSearchHostname(hostname)).toBe(false),
   );
 
-  it('exports exact Manifest match patterns for all supported hosts', () => {
-    expect(SEARCH_ENGINE_MATCH_PATTERNS).toEqual([
-      '*://google.com/*', '*://www.google.com/*',
-      '*://baidu.com/*', '*://www.baidu.com/*',
-      '*://bing.com/*', '*://www.bing.com/*',
-      '*://so.com/*', '*://www.so.com/*',
-      '*://sogou.com/*', '*://www.sogou.com/*',
-      '*://search.yahoo.com/*',
-      '*://yandex.com/*', '*://www.yandex.com/*',
-      '*://yandex.ru/*', '*://www.yandex.ru/*',
-      '*://duckduckgo.com/*', '*://www.duckduckgo.com/*',
-    ]);
+  it('exports exact Manifest match patterns for every supported desktop host', () => {
+    for (const hostname of SEARCH_ENGINE_HOSTS) {
+      expect(SEARCH_ENGINE_MATCH_PATTERNS).toContain(`*://${hostname}/*`);
+    }
+    expect(new Set(SEARCH_ENGINE_MATCH_PATTERNS).size).toBe(SEARCH_ENGINE_MATCH_PATTERNS.length);
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).toContain('*://www.google.com.hk/*');
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).toContain('*://www.yandex.kz/*');
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).not.toContain('*://www.cn.bing.com/*');
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).not.toContain('*://www.ca.search.yahoo.com/*');
+    expect(SEARCH_ENGINE_MATCH_PATTERNS).not.toContain('*://www.start.duckduckgo.com/*');
   });
 });
 
@@ -83,6 +103,16 @@ describe('detectSearchEngine', () => {
     expect(result!.name).toBe('Bing');
   });
 
+  it.each(SEARCH_ENGINE_ALIAS_CASES)(
+    'detects desktop alias %s as canonical engine %s',
+    (alias, canonical, queryParameter) => {
+      const result = detectSearchEngine(`https://${alias}/search?${queryParameter}=test`);
+      expect(result).not.toBeNull();
+      expect(result!.hostname).toBe(canonical);
+      expect(extractSearchQuery(`https://${alias}/search?${queryParameter}=你好`)).toBe('你好');
+    },
+  );
+
   it('detects 360搜索 (so.com)', () => {
     const result = detectSearchEngine('https://www.so.com/s?q=test');
     expect(result).not.toBeNull();
@@ -103,9 +133,8 @@ describe('detectSearchEngine', () => {
     expect(result!.hostname).toBe('search.yahoo.com');
   });
 
-  it('detects Yandex on both global and Russian domains', () => {
+  it('detects Yandex on its canonical domain', () => {
     expect(detectSearchEngine('https://yandex.com/search/?text=test')?.name).toBe('Yandex');
-    expect(detectSearchEngine('https://www.yandex.ru/search/?text=test')?.name).toBe('Yandex');
   });
 
   it('detects DuckDuckGo', () => {
@@ -220,6 +249,9 @@ describe('engine-specific rules', () => {
     expect(getSearchEngineRule('bing.com')?.resultSelectors).toEqual([
       expect.objectContaining({ containerSelector: '#b_results', itemSelector: '.b_algo' }),
     ]);
+    for (const [alias, canonical] of SEARCH_ENGINE_ALIAS_CASES) {
+      expect(getSearchEngineRule(alias)?.hostname).toBe(canonical);
+    }
     expect(getSearchEngineRule('so.com')?.resultSelectors).toEqual([
       expect.objectContaining({ containerSelector: '#main', itemSelector: '.res-list' }),
     ]);

@@ -45,7 +45,6 @@
   let currentSearchEngineName: string | null = null;
   let currentSiteBlocked = false;
   let currentSiteBlockIndex = -1;
-  let currentSiteAvailable: boolean | null = null;
   let pageMarkerSummary = { ...EMPTY_PAGE_MARKER_SUMMARY };
   let unblockingCurrentSite = false;
   let pageMarkerBars: {
@@ -153,13 +152,11 @@
 
     if (tab?.url) {
       const domain = extractDomain(tab.url);
-      currentSiteAvailable = domain !== null;
       currentSiteBlockIndex = domain
         ? findMatchingBlockedDomainIndex(domain, storage.urls, storage.blockSubdomains ?? false)
         : -1;
       currentSiteBlocked = currentSiteBlockIndex >= 0;
     } else {
-      currentSiteAvailable = false;
       currentSiteBlocked = false;
       currentSiteBlockIndex = -1;
     }
@@ -225,16 +222,6 @@
       <span class="brand-text">Hush</span>
     </div>
     <div class="header-actions">
-      {#if currentSiteAvailable === false}
-        <span
-          class="header-unavailable"
-          aria-label={t('siteUnavailable')}
-          title={t('siteUnavailable')}
-        >
-          <span class="header-status-dot" aria-hidden="true"></span>
-          {t('siteUnavailableShort')}
-        </span>
-      {/if}
       <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
         <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
         <span class="toggle-track">
@@ -300,7 +287,7 @@
       </span>
       <span class="chart-engine">
         {selectedChartScope === 'site'
-          ? currentSearchEngineName ?? t('siteUnavailableShort')
+          ? currentSearchEngineName ?? t('searchPageOnlyShort')
           : t('todayLabel')}
       </span>
     </div>
@@ -442,28 +429,6 @@
     justify-content: flex-end;
     gap: var(--srb-space-sm);
   }
-  .header-unavailable {
-    display: inline-flex;
-    min-width: 0;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-control-hover-bg);
-    color: var(--srb-text-muted);
-    font-size: 11px;
-    font-weight: var(--srb-weight-semibold);
-    line-height: 1;
-    white-space: nowrap;
-  }
-  .header-status-dot {
-    width: 6px;
-    height: 6px;
-    flex: 0 0 auto;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-text-muted);
-  }
-
   /* ===== Toggle Switch ===== */
   .toggle {
     cursor: pointer;
