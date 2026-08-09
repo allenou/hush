@@ -63,8 +63,12 @@ describe('product copy', () => {
 
     expect(englishSiteCopy).not.toContain('save configurations for custom search engines');
     expect(chineseSiteCopy).not.toContain('保存自定义搜索引擎配置');
-    expect(englishSiteCopy).toContain('"getHush": "GitHub"');
-    expect(chineseSiteCopy).toContain('"getHush": "GitHub"');
+    expect(englishSiteCopy).toContain('"getHush": "Get it for Edge"');
+    expect(chineseSiteCopy).toContain('"getHush": "在 Edge 上获取"');
+    expect(englishSiteCopy).toContain('"viewSource": "View source"');
+    expect(chineseSiteCopy).toContain('"viewSource": "查看源代码"');
+    expect(readFileSync(resolve(process.cwd(), 'web/src/components/HomePage.astro'), 'utf8'))
+      .toContain('https://microsoftedge.microsoft.com/addons/detail/hchngjlgnmfncglllbjpdgnhaglajemn');
     expect(englishSiteCopy.toLowerCase()).not.toContain('backup');
     expect(chineseSiteCopy).not.toContain('备份');
   });

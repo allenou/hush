@@ -227,14 +227,19 @@ button {
   transform: translateY(-2px);
 }
 
-.github-button {
+.icon-button {
   gap: 9px;
 }
 
-.github-button svg {
+.icon-button svg {
   width: 19px;
   height: 19px;
   flex: 0 0 auto;
+}
+
+.edge-button svg {
+  width: 21px;
+  height: 21px;
 }
 
 .button.primary {

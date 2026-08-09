@@ -32,7 +32,8 @@
     "hero": {
       "title": "Search with less noise.",
       "description": "Mark unwanted results and ads, manage local rules, and keep your search data on your device.",
-      "getHush": "GitHub",
+      "getHush": "Get it for Edge",
+      "viewSource": "View source",
       "note": "Hush supports Google, Baidu, Bing, 360 Search, Sogou, Yahoo!, Yandex, and DuckDuckGo."
     },
     "features": {

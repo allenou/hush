@@ -32,7 +32,8 @@
     "hero": {
       "title": "让搜索少一点噪音。",
       "description": "标记不需要的搜索结果和广告，在本地管理规则，并让搜索数据留在你的设备上。",
-      "getHush": "GitHub",
+      "getHush": "在 Edge 上获取",
+      "viewSource": "查看源代码",
       "note": "Hush 支持 Google、百度、Bing、360 搜索、搜狗搜索、雅虎、Yandex 与 DuckDuckGo。"
     },
     "features": {
