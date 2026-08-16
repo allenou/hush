@@ -84,6 +84,73 @@ describe('Popup', () => {
     });
   });
 
+  it('switches and persists the locale from the popup header', async () => {
+    await fakeBrowser.storage.local.set({
+      blocker: {
+        locale: 'zh_CN',
+        blockCount: 0,
+        enabled: true,
+      },
+    });
+    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('zh-CN');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const isEnglish = String(input).includes('/en/');
+      const messages = isEnglish
+        ? {
+            currentSiteStatsLabel: { message: 'Current site' },
+            searchPageOnlyShort: { message: 'Search pages only' },
+            todayLabel: { message: 'Today' },
+            times: { message: 'times' },
+            todayChartTitle: { message: "Today's block types" },
+            todayBarChartAria: { message: "Today's block type bar chart" },
+            domainLabel: { message: 'Domain' },
+            filterUrl: { message: 'URL' },
+            adLabel: { message: 'Ads' },
+            pageElementLabel: { message: 'Element' },
+            temporarySessionLabel: { message: 'Session controls' },
+          }
+        : {
+            currentSiteStatsLabel: { message: '当前站点' },
+            searchPageOnlyShort: { message: '仅搜索页统计' },
+            todayLabel: { message: '今日' },
+            times: { message: '次' },
+            todayChartTitle: { message: '今日拦截类型' },
+            todayBarChartAria: { message: '今日拦截类型柱状图' },
+            domainLabel: { message: '域名' },
+            filterUrl: { message: '链接' },
+            adLabel: { message: '广告' },
+            pageElementLabel: { message: '元素' },
+            temporarySessionLabel: { message: '本次会话控制' },
+          };
+      return { json: async () => messages } as Response;
+    });
+
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    component = await mountPopup(target);
+
+    await vi.waitFor(() => {
+      expect(target.querySelector<HTMLButtonElement>('.locale-switcher')?.disabled).toBe(false);
+      expect(target.querySelector<HTMLButtonElement>('.locale-switcher')?.textContent?.trim())
+        .toBe('中');
+      expect(target.querySelector('.current-site-card')?.textContent).toContain('当前站点');
+    });
+
+    target.querySelector<HTMLButtonElement>('.locale-switcher')?.click();
+
+    await vi.waitFor(async () => {
+      const stored = await fakeBrowser.storage.local.get('blocker') as {
+        blocker: { locale?: string };
+      };
+      expect(stored.blocker.locale).toBe('en');
+      expect(target.querySelector<HTMLButtonElement>('.locale-switcher')?.textContent?.trim())
+        .toBe('EN');
+      expect(target.querySelector('.current-site-card')?.textContent).toContain('Current site');
+      expect(document.documentElement.lang).toBe('en');
+    });
+  });
+
   it('shows the unsupported-page hint inside the fixed-height chart after selecting the site card', async () => {
     const today = formatLocalDateKey(new Date());
     await fakeBrowser.storage.local.set({
@@ -298,18 +365,33 @@ describe('Popup', () => {
       expect(target.querySelector<HTMLElement>('.bar-fill.ad')?.style.height).toBe('67%');
       expect(target.querySelector<HTMLElement>('.bar-fill.selector')?.style.height).toBe('4%');
       expect(target.querySelectorAll('.metric-toggle')).toHaveLength(4);
+      expect(target.querySelector('.metric-toggle.url .handling-mode-icon')).not.toBeNull();
       expect(target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.getAttribute('aria-pressed'))
         .toBe('true');
     });
 
     target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.click();
 
+    await vi.waitFor(() => {
+      expect(target.querySelectorAll('.bar-column.url .temporary-mode-menu button'))
+        .toHaveLength(3);
+      expect(target.querySelector<HTMLButtonElement>(
+        '.bar-column.url .temporary-mode-menu button[data-mode="mark"]',
+      )?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    target.querySelector<HTMLButtonElement>(
+      '.bar-column.url .temporary-mode-menu button[data-mode="off"]',
+    )?.click();
+
     await vi.waitFor(async () => {
       const stored = await fakeBrowser.storage.local.get('temporaryBlocker') as {
-        temporaryBlocker?: { url?: boolean };
+        temporaryBlocker?: { url?: string };
       };
-      expect(stored.temporaryBlocker?.url).toBe(false);
+      expect(stored.temporaryBlocker?.url).toBe('off');
       expect(target.querySelector('.bar-column.url')?.classList.contains('paused')).toBe(true);
+      expect(target.querySelector('.metric-toggle.url .handling-mode-icon')?.classList.contains('mode-off'))
+        .toBe(true);
       expect(target.querySelector<HTMLButtonElement>('.metric-toggle.url')?.getAttribute('aria-pressed'))
         .toBe('false');
       expect(target.querySelector('.bar-column.url .bar-value')?.textContent).toContain('1');

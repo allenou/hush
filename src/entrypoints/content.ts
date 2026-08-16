@@ -34,8 +34,8 @@ import {
 import { initLocale } from '@/utils/i18n';
 import { initSentry } from '@/utils/sentry';
 import {
+  getEffectiveHandlingMode,
   getTemporaryBlocking,
-  isBlockTargetEnabled,
   subscribeTemporaryBlocking,
 } from '@/utils/temporary-blocking';
 import type { TemporaryBlockingOverrides } from '@/utils/temporary-blocking';
@@ -59,6 +59,10 @@ export default defineContentScript({
     let persistentBlockDomains = true;
     let persistentBlockUrls = true;
     let persistentBlockSelectors = true;
+    let persistentAdDisplayMode: AdDisplayMode = 'mark';
+    let persistentDomainDisplayMode: AdDisplayMode = 'mark';
+    let persistentUrlDisplayMode: AdDisplayMode = 'mark';
+    let persistentSelectorDisplayMode: AdDisplayMode = 'mark';
     let temporaryBlocking: TemporaryBlockingOverrides = {};
     let adDisplayMode: AdDisplayMode = 'mark';
     let domainDisplayMode: AdDisplayMode = 'mark';
@@ -91,11 +95,23 @@ export default defineContentScript({
         blockDomains: persistentBlockDomains,
         blockUrls: persistentBlockUrls,
         blockSelectors: persistentBlockSelectors,
+        adDisplayMode: persistentAdDisplayMode,
+        domainDisplayMode: persistentDomainDisplayMode,
+        urlDisplayMode: persistentUrlDisplayMode,
+        selectorDisplayMode: persistentSelectorDisplayMode,
       };
-      blockAds = isBlockTargetEnabled('ad', persistent, temporaryBlocking);
-      blockDomains = isBlockTargetEnabled('domain', persistent, temporaryBlocking);
-      blockUrls = isBlockTargetEnabled('url', persistent, temporaryBlocking);
-      blockSelectors = isBlockTargetEnabled('selector', persistent, temporaryBlocking);
+      const adMode = getEffectiveHandlingMode('ad', persistent, temporaryBlocking);
+      const domainMode = getEffectiveHandlingMode('domain', persistent, temporaryBlocking);
+      const urlMode = getEffectiveHandlingMode('url', persistent, temporaryBlocking);
+      const selectorMode = getEffectiveHandlingMode('selector', persistent, temporaryBlocking);
+      blockAds = adMode !== 'off';
+      blockDomains = domainMode !== 'off';
+      blockUrls = urlMode !== 'off';
+      blockSelectors = selectorMode !== 'off';
+      adDisplayMode = adMode === 'off' ? persistentAdDisplayMode : adMode;
+      domainDisplayMode = domainMode === 'off' ? persistentDomainDisplayMode : domainMode;
+      urlDisplayMode = urlMode === 'off' ? persistentUrlDisplayMode : urlMode;
+      selectorDisplayMode = selectorMode === 'off' ? persistentSelectorDisplayMode : selectorMode;
     }
 
     function applyStorageState(storage: Awaited<ReturnType<typeof get>>): void {
@@ -107,11 +123,11 @@ export default defineContentScript({
       persistentBlockDomains = storage.blockDomains ?? true;
       persistentBlockUrls = storage.blockUrls ?? true;
       persistentBlockSelectors = storage.blockSelectors ?? true;
+      persistentAdDisplayMode = storage.adDisplayMode ?? 'mark';
+      persistentDomainDisplayMode = storage.domainDisplayMode ?? 'mark';
+      persistentUrlDisplayMode = storage.urlDisplayMode ?? 'mark';
+      persistentSelectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
       applyEffectiveBlockTargets();
-      adDisplayMode = storage.adDisplayMode ?? 'mark';
-      domainDisplayMode = storage.domainDisplayMode ?? 'mark';
-      urlDisplayMode = storage.urlDisplayMode ?? 'mark';
-      selectorDisplayMode = storage.selectorDisplayMode ?? 'mark';
       blockSubdomains = storage.blockSubdomains ?? false;
     }
 

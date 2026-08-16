@@ -1,11 +1,19 @@
 <script lang="ts">
   import { BUILT_IN_ENGINES, detectSearchEngine } from '@/helpers/search-engines';
-  import { get, removeBlockedItem, setEnabled, subscribe } from '@/utils/storage';
+  import {
+    get,
+    removeBlockedItem,
+    setEnabled,
+    setStoredLocale,
+    subscribe,
+  } from '@/utils/storage';
+  import type { AdDisplayMode } from '@/utils/storage';
   import { extractDomain, findMatchingBlockedDomainIndex } from '@/utils/domain';
   import {
     getSearchEngineDisplayName,
     t,
     initLocale,
+    setLocale as setAppLocale,
   } from '@/utils/locale-store.svelte';
   import { getLocale, setDocumentLocale } from '@/utils/locale';
   import { formatLocalDateKey } from '@/utils/statistics';
@@ -16,17 +24,19 @@
   } from '@/utils/page-badge';
   import type { PageMarkerSummary } from '@/utils/page-badge';
   import {
+    getEffectiveHandlingMode,
     getTemporaryBlocking,
-    isBlockTargetEnabled,
-    setTemporaryBlockEnabled,
+    setTemporaryHandlingMode,
     subscribeTemporaryBlocking,
   } from '@/utils/temporary-blocking';
   import type {
     TemporaryBlockingOverrides,
     TemporaryBlockTarget,
+    TemporaryHandlingMode,
   } from '@/utils/temporary-blocking';
   import { onMount } from 'svelte';
   import { browser, type Browser } from 'wxt/browser';
+  import HandlingModeIcon from './HandlingModeIcon.svelte';
   import packageJson from '../../../package.json';
 
   const EMPTY_PAGE_MARKER_SUMMARY: PageMarkerSummary = {
@@ -41,6 +51,9 @@
   type ControllableChartBarKey = Exclude<ChartBarKey, 'legacy'>;
 
   let todayCount = 0;
+  let currentLocale = getLocale();
+  let dataLoaded = false;
+  let switchingLocale = false;
   let todayBreakdown = {
     adCount: 0,
     targetDomainCount: 0,
@@ -59,12 +72,17 @@
   let pageMarkerSummary = { ...EMPTY_PAGE_MARKER_SUMMARY };
   let unblockingCurrentSite = false;
   let togglingBlockTarget: TemporaryBlockTarget | null = null;
+  let modeMenuTarget: TemporaryBlockTarget | null = null;
   let temporaryBlocking: TemporaryBlockingOverrides = {};
   let persistentBlockTargets = {
     blockAds: false,
     blockDomains: true,
     blockUrls: true,
     blockSelectors: true,
+    adDisplayMode: 'mark' as AdDisplayMode,
+    domainDisplayMode: 'mark' as AdDisplayMode,
+    urlDisplayMode: 'mark' as AdDisplayMode,
+    selectorDisplayMode: 'mark' as AdDisplayMode,
   };
   let pageMarkerBars: {
     key: ChartBarKey;
@@ -72,6 +90,7 @@
     count: number;
     height: number;
     enabled: boolean;
+    mode: TemporaryHandlingMode | null;
   }[] = [];
   let supportedEngineNames = '';
 
@@ -117,23 +136,23 @@
             : []),
         ];
     const maxCount = Math.max(1, ...markerTypes.map((item) => item.count));
-    const activeBlockTargets = {
-      domain: isBlockTargetEnabled('domain', persistentBlockTargets, temporaryBlocking),
-      url: isBlockTargetEnabled('url', persistentBlockTargets, temporaryBlocking),
-      ad: isBlockTargetEnabled('ad', persistentBlockTargets, temporaryBlocking),
-      selector: isBlockTargetEnabled('selector', persistentBlockTargets, temporaryBlocking),
+    const activeHandlingModes = {
+      domain: getEffectiveHandlingMode('domain', persistentBlockTargets, temporaryBlocking),
+      url: getEffectiveHandlingMode('url', persistentBlockTargets, temporaryBlocking),
+      ad: getEffectiveHandlingMode('ad', persistentBlockTargets, temporaryBlocking),
+      selector: getEffectiveHandlingMode('selector', persistentBlockTargets, temporaryBlocking),
     };
-    pageMarkerBars = markerTypes.map((item) => ({
-      ...item,
-      height: item.count === 0
-        ? 4
-        : Math.max(18, Math.round((item.count / maxCount) * 100)),
-      enabled: item.key === 'legacy' ? true : activeBlockTargets[item.key],
-    }));
-  }
-
-  function isChartBarEnabled(target: ControllableChartBarKey): boolean {
-    return isBlockTargetEnabled(target, persistentBlockTargets, temporaryBlocking);
+    pageMarkerBars = markerTypes.map((item) => {
+      const mode = item.key === 'legacy' ? null : activeHandlingModes[item.key];
+      return {
+        ...item,
+        height: item.count === 0
+          ? 4
+          : Math.max(18, Math.round((item.count / maxCount) * 100)),
+        enabled: mode !== 'off',
+        mode,
+      };
+    });
   }
 
   async function loadData() {
@@ -145,12 +164,17 @@
       await initLocale();
     }
     setDocumentLocale(getLocale());
+    currentLocale = getLocale();
     enabled = storage.enabled;
     persistentBlockTargets = {
       blockAds: storage.blockAds ?? false,
       blockDomains: storage.blockDomains ?? true,
       blockUrls: storage.blockUrls ?? true,
       blockSelectors: storage.blockSelectors ?? true,
+      adDisplayMode: storage.adDisplayMode ?? 'mark',
+      domainDisplayMode: storage.domainDisplayMode ?? 'mark',
+      urlDisplayMode: storage.urlDisplayMode ?? 'mark',
+      selectorDisplayMode: storage.selectorDisplayMode ?? 'mark',
     };
     temporaryBlocking = temporary;
     const today = formatLocalDateKey(new Date());
@@ -198,6 +222,7 @@
       currentSiteBlocked = false;
       currentSiteBlockIndex = -1;
     }
+    dataLoaded = true;
   }
 
   async function toggleEnabled() {
@@ -205,17 +230,54 @@
     await setEnabled(enabled);
   }
 
-  async function toggleBlockTarget(target: ControllableChartBarKey): Promise<void> {
+  async function toggleLocale(): Promise<void> {
+    if (!dataLoaded || switchingLocale) return;
+    switchingLocale = true;
+    const nextLocale = currentLocale === 'zh_CN' ? 'en' : 'zh_CN';
+    try {
+      await setAppLocale(nextLocale);
+      currentLocale = nextLocale;
+      setDocumentLocale(nextLocale);
+      await setStoredLocale(nextLocale);
+    } finally {
+      switchingLocale = false;
+    }
+  }
+
+  function getModeLabel(mode: TemporaryHandlingMode): string {
+    if (mode === 'mark') return t('mark');
+    if (mode === 'hide') return t('adDisplayModeHide');
+    return t('notProcess');
+  }
+
+  function toggleModeMenu(target: ControllableChartBarKey, event: MouseEvent): void {
+    event.stopPropagation();
     if (!enabled || togglingBlockTarget) return;
+    modeMenuTarget = modeMenuTarget === target ? null : target;
+  }
+
+  async function selectHandlingMode(
+    target: ControllableChartBarKey,
+    mode: TemporaryHandlingMode,
+    event: MouseEvent,
+  ): Promise<void> {
+    event.stopPropagation();
+    if (!enabled || togglingBlockTarget) return;
+    modeMenuTarget = null;
     togglingBlockTarget = target;
     try {
-      temporaryBlocking = await setTemporaryBlockEnabled(
-        target,
-        !isChartBarEnabled(target),
-      );
+      temporaryBlocking = await setTemporaryHandlingMode(target, mode);
     } finally {
       togglingBlockTarget = null;
     }
+  }
+
+  function closeModeMenu(): void {
+    modeMenuTarget = null;
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') closeModeMenu();
   }
 
   async function unblockCurrentSite() {
@@ -267,6 +329,9 @@
   });
 </script>
 
+<svelte:window onclick={closeModeMenu} onkeydown={handleWindowKeydown} />
+
+{#key currentLocale}
 <main class={enabled ? 'enabled' : 'disabled'}>
   <!-- ===== Header ===== -->
   <header>
@@ -277,6 +342,14 @@
       <span class="brand-text">Hush</span>
     </div>
     <div class="header-actions">
+      <button
+        type="button"
+        class="locale-switcher"
+        aria-label={currentLocale === 'zh_CN' ? 'Switch to English' : '切换到中文'}
+        title={currentLocale === 'zh_CN' ? 'Switch to English' : '切换到中文'}
+        disabled={!dataLoaded || switchingLocale}
+        onclick={() => void toggleLocale()}
+      >{currentLocale === 'zh_CN' ? '中' : 'EN'}</button>
       <label class="toggle" aria-label={enabled ? t('toggleDisable') : t('toggleEnable')}>
         <input type="checkbox" checked={enabled} onchange={toggleEnabled} />
         <span class="toggle-track">
@@ -345,11 +418,11 @@
           <span class="session-control-label">{t('temporarySessionLabel')}</span>
         {/if}
       </div>
-      <span class="chart-engine">
-        {selectedChartScope === 'site'
-          ? currentSearchEngineName ?? t('searchPageOnlyShort')
-          : t('todayLabel')}
-      </span>
+      {#if selectedChartScope === 'site'}
+        <span class="chart-engine">
+          {currentSearchEngineName ?? t('searchPageOnlyShort')}
+        </span>
+      {/if}
     </div>
     {#if selectedChartScope === 'site' && !currentSearchEngineName}
       <div
@@ -406,6 +479,7 @@
           <div
             class={`bar-column ${item.key}`}
             class:paused={!item.enabled}
+            class:blocked={item.mode === 'hide'}
             title={`${item.label}: ${item.count}`}
           >
             <span class="bar-value">{item.count}</span>
@@ -421,16 +495,37 @@
               <button
                 type="button"
                 class={`bar-label metric-toggle ${item.key}`}
+                class:menu-open={modeMenuTarget === item.key}
                 class:toggling={togglingBlockTarget === item.key}
                 aria-pressed={item.enabled}
-                aria-label={`${item.label} · ${item.enabled ? t('temporaryDisable') : t('temporaryEnable')}`}
-                title={item.enabled ? t('temporaryDisable') : t('temporaryEnable')}
+                aria-haspopup="menu"
+                aria-expanded={modeMenuTarget === item.key}
+                aria-label={`${item.label} · ${getModeLabel(item.mode ?? 'off')} · ${t('temporarySessionLabel')}`}
+                title={`${t('temporarySessionLabel')} · ${getModeLabel(item.mode ?? 'off')}`}
                 disabled={!enabled || togglingBlockTarget === item.key}
-                onclick={() => void toggleBlockTarget(item.key)}
+                onclick={(event) => toggleModeMenu(item.key, event)}
               >
-                <span class="metric-status" aria-hidden="true"></span>
+                <HandlingModeIcon mode={item.mode ?? 'off'} />
                 <span class="metric-label-text">{item.label}</span>
               </button>
+              {#if modeMenuTarget === item.key}
+                <div class="temporary-mode-menu" role="menu" aria-label={`${item.label} · ${t('temporarySessionLabel')}`}>
+                  {#each ['mark', 'hide', 'off'] as mode}
+                    <button
+                      type="button"
+                      data-mode={mode}
+                      role="menuitemradio"
+                      aria-checked={item.mode === mode}
+                      class:selected={item.mode === mode}
+                      onclick={(event) => void selectHandlingMode(item.key, mode as TemporaryHandlingMode, event)}
+                    >
+                      <HandlingModeIcon mode={mode as TemporaryHandlingMode} size={12} />
+                      <span>{getModeLabel(mode as TemporaryHandlingMode)}</span>
+                      {#if item.mode === mode}<span class="menu-check" aria-hidden="true">✓</span>{/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
             {/if}
           </div>
         {/each}
@@ -446,6 +541,7 @@
     <span class="version">v{packageJson.version}</span>
   </footer>
 </main>
+{/key}
 
 <style>
   :global(body) {
@@ -505,6 +601,41 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--srb-space-sm);
+  }
+  .locale-switcher {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--srb-border-light);
+    border-radius: var(--srb-radius-full);
+    background: var(--srb-surface);
+    color: var(--srb-text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    font-weight: var(--srb-weight-bold);
+    line-height: 1;
+    transition:
+      border-color var(--srb-transition-fast),
+      background var(--srb-transition-fast),
+      color var(--srb-transition-fast),
+      box-shadow var(--srb-transition-fast);
+  }
+  .locale-switcher:hover {
+    border-color: var(--srb-accent-border);
+    background: var(--srb-accent-soft);
+    color: var(--srb-accent-hover);
+  }
+  .locale-switcher:disabled {
+    cursor: wait;
+    opacity: 0.56;
+  }
+  .locale-switcher:focus-visible {
+    outline: none;
+    box-shadow: var(--srb-focus-ring);
   }
   /* ===== Toggle Switch ===== */
   .toggle {
@@ -782,13 +913,14 @@
   }
   .chart-heading-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--srb-space-sm);
     margin-bottom: 14px;
   }
   .chart-title-group {
     display: flex;
+    flex: 1 1 auto;
     min-width: 0;
     align-items: center;
     gap: 6px;
@@ -798,6 +930,7 @@
     font-size: 11px;
     font-weight: var(--srb-weight-semibold);
     letter-spacing: var(--srb-tracking-caps);
+    line-height: 1.25;
   }
   .chart-engine {
     max-width: 96px;
@@ -823,10 +956,11 @@
     display: grid;
     height: 112px;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    padding: 0 4px;
+    gap: 6px;
+    padding: 0;
   }
   .bar-column {
+    position: relative;
     display: grid;
     min-width: 0;
     grid-template-rows: 16px 1fr 22px;
@@ -881,6 +1015,10 @@
     filter: grayscale(0.7);
     opacity: 0.22;
   }
+  .bar-column.blocked .bar-fill {
+    filter: saturate(0.72);
+    opacity: 0.72;
+  }
   .bar-fill.domain {
     background: linear-gradient(180deg, #60a5fa, var(--srb-chart-blue));
   }
@@ -912,13 +1050,14 @@
     height: 22px;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 0 5px;
+    gap: 2px;
+    padding: 0 2px;
     border: 1px solid transparent;
     border-radius: 999px;
     background: var(--metric-soft);
     cursor: pointer;
     font-family: inherit;
+    font-size: 9px;
     transition:
       background var(--srb-transition-fast),
       border-color var(--srb-transition-fast),
@@ -929,27 +1068,77 @@
     background: transparent;
     color: var(--srb-text-muted);
   }
+  .metric-toggle.menu-open {
+    border-color: var(--metric-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--metric-color) 12%, transparent);
+  }
   .metric-toggle:disabled {
     cursor: not-allowed;
   }
   .metric-toggle.toggling {
     cursor: wait;
   }
-  .metric-status {
-    width: 6px;
-    height: 6px;
-    flex: 0 0 auto;
-    border: 1px solid var(--metric-color);
-    border-radius: 50%;
-    background: var(--metric-color);
-  }
-  .metric-toggle[aria-pressed='false'] .metric-status {
-    background: transparent;
-  }
   .metric-label-text {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+  }
+  .temporary-mode-menu {
+    position: absolute;
+    z-index: 20;
+    bottom: 28px;
+    left: 50%;
+    box-sizing: border-box;
+    width: 138px;
+    padding: 4px;
+    border: 1px solid var(--srb-border-light);
+    border-radius: 10px;
+    background: var(--srb-surface);
+    box-shadow: 0 8px 24px rgba(41, 39, 38, 0.16), var(--srb-shadow-sm);
+    transform: translateX(-50%);
+  }
+  .bar-column.domain .temporary-mode-menu {
+    left: 0;
+    transform: none;
+  }
+  .bar-column.selector .temporary-mode-menu {
+    right: 0;
+    left: auto;
+    transform: none;
+  }
+  .temporary-mode-menu button {
+    display: grid;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 28px;
+    grid-template-columns: 14px minmax(0, 1fr) 12px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--srb-text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    font-weight: var(--srb-weight-medium);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .temporary-mode-menu button:hover,
+  .temporary-mode-menu button.selected {
+    background: var(--srb-control-hover-bg);
+    color: var(--srb-text-strong);
+  }
+  .temporary-mode-menu button:focus-visible {
+    outline: 2px solid var(--srb-accent-ring);
+    outline-offset: -1px;
+  }
+  .menu-check {
+    color: var(--metric-color);
+    font-weight: var(--srb-weight-bold);
+    text-align: right;
   }
   @media (hover: hover) and (pointer: fine) {
     .metric-toggle:hover:not(:disabled) {
@@ -959,7 +1148,8 @@
   @media (prefers-reduced-motion: reduce) {
     .stat-card,
     .bar-fill,
-    .metric-toggle {
+    .metric-toggle,
+    .locale-switcher {
       transition: none;
     }
   }
