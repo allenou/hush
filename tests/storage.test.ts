@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 
 // ------ Imports ------
 import {
@@ -284,6 +284,9 @@ describe('selector rule recovery', () => {
     }, null);
 
     applyBlockedSelectors();
+    await vi.waitFor(async () => {
+      expect((await get()).selectorBlockCount).toBe(1);
+    });
     (document.querySelector('.srb-blocked-badge') as HTMLElement).click();
 
     await vi.waitFor(async () => {

@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import sentry from '@sentry/astro';
 
-const site = process.env.SITE_URL ?? process.env.CF_PAGES_URL ?? 'http://localhost:4321';
+const site = process.env.SITE_URL ?? 'https://hush.toyou.xyz';
 const shouldUploadSourceMaps = Boolean(
   process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT,
 );

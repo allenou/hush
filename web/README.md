@@ -2,7 +2,7 @@
 
 Astro 7 static website for the Hush product pages and privacy policy.
 
-The site includes English and Simplified Chinese pages, a bilingual changelog,
+The site includes English and Simplified Chinese product and privacy pages,
 canonical and alternate-language metadata, structured data, and a generated sitemap.
 
 ## Commands
@@ -33,8 +33,6 @@ Deploy the site with Cloudflare Pages using these settings:
 - Build output directory: `dist`
 - Node.js version: read from `.nvmrc`
 
-Cloudflare provides `CF_PAGES_URL` automatically. The production `*.pages.dev` deployment is indexable, while hash-prefixed preview deployments receive `noindex, nofollow` metadata automatically.
-
-When using a custom domain, add a production-only `SITE_URL` environment variable containing the canonical origin, for example `https://hush.example.com` (without a trailing slash). This keeps canonical and alternate-language URLs stable across deployments. Do not expose `SITE_URL` to preview deployments, otherwise they will publish the production canonical URL and become indexable.
+Canonical and sitemap URLs default to `https://hush.toyou.xyz`. Set `SITE_URL` only when intentionally deploying the same site under a different canonical origin.
 
 No Astro Cloudflare adapter or Wrangler configuration is required because the site is built as static files.

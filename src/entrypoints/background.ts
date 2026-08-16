@@ -6,7 +6,7 @@ import {
   isSupportedSearchHostname,
 } from '@/constants/search-hosts';
 import { findMatchingBlockedDomainIndex } from '@/utils/domain';
-import { addBlockedUrl, addDomain, get, recordBlock, removeBlockedItem } from '@/utils/storage';
+import { addBlockedUrl, addDomain, get, removeBlockedItem } from '@/utils/storage';
 import { isPageMarkerCountMessage } from '@/utils/page-badge';
 import { isDomainHomepageUrl } from '@/utils/url';
 import { initSentry } from '@/utils/sentry';
@@ -31,10 +31,6 @@ interface DynamicContextMenus {
     ) => void;
   };
   refresh?: () => Promise<void>;
-}
-
-interface ToggleResult {
-  shouldRecord: boolean;
 }
 
 function getDynamicContextMenus(): typeof browser.contextMenus & DynamicContextMenus {
@@ -90,7 +86,7 @@ export async function updateShownContextMenus(info: ContextMenuShownData): Promi
   await getDynamicContextMenus().refresh?.();
 }
 
-async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
+async function toggleDomainBlock(domain: string): Promise<void> {
   const storage = await get();
   const blockedIndex = findMatchingBlockedDomainIndex(
     domain,
@@ -99,21 +95,19 @@ async function toggleDomainBlock(domain: string): Promise<ToggleResult> {
   );
   if (blockedIndex >= 0) {
     await removeBlockedItem('domain', blockedIndex);
-    return { shouldRecord: false };
+    return;
   }
   await addDomain(domain);
-  return { shouldRecord: true };
 }
 
-async function toggleUrlBlock(url: string): Promise<ToggleResult> {
+async function toggleUrlBlock(url: string): Promise<void> {
   const storage = await get();
   const blockedIndex = storage.blockedUrls.indexOf(url);
   if (blockedIndex >= 0) {
     await removeBlockedItem('url', blockedIndex);
-    return { shouldRecord: false };
+    return;
   }
   await addBlockedUrl(url);
-  return { shouldRecord: true };
 }
 
 async function createContextMenus(): Promise<void> {
@@ -184,17 +178,9 @@ export default defineBackground(() => {
 
     const domain = target.hostname.replace(/^www\./, '');
     if (info.menuItemId === CONTEXT_MENU.domain) {
-      void toggleDomainBlock(domain)
-        .then(async ({ shouldRecord }) => {
-          if (shouldRecord) await recordBlock('domain', domain);
-        })
-        .catch(() => {});
+      void toggleDomainBlock(domain).catch(() => {});
     } else if (info.menuItemId === CONTEXT_MENU.url) {
-      void toggleUrlBlock(target.href)
-        .then(async ({ shouldRecord }) => {
-          if (shouldRecord) await recordBlock('url', domain);
-        })
-        .catch(() => {});
+      void toggleUrlBlock(target.href).catch(() => {});
     }
   });
 

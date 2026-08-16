@@ -67,7 +67,7 @@ function isSearchEngineTrackingDomain(domain: string): boolean {
 
 async function recordBlockOnce(
   item: Element,
-  type: 'ad' | 'domain' | 'url',
+  type: 'ad' | 'domain' | 'url' | 'selector',
   domain?: string,
   domainKind?: DomainBlockKind,
 ): Promise<void> {
@@ -485,6 +485,7 @@ export function applyBlockedSelectors(): void {
     const selector = entry.slice(sep + 2);
     try {
       document.querySelectorAll(selector).forEach((el) => {
+        void recordBlockOnce(el, 'selector', curHost).catch(() => {});
         if ((_state.selectorDisplayMode ?? 'mark') === 'hide') {
           if (!el.hasAttribute('data-srb-rule-hidden')) {
             el.setAttribute('data-srb-rule-hidden', 'true');

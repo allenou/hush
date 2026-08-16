@@ -4,7 +4,7 @@ import { sitePath } from '../utils/paths';
 
 interface Props {
   lang: Locale;
-  page: 'home' | 'changelog' | 'privacy';
+  page: 'home' | 'privacy';
 }
 
 const { lang, page } = Astro.props;
@@ -14,7 +14,6 @@ const homeHref = isZh ? sitePath('zh/') : sitePath();
 const privacyHref = isZh ? sitePath('zh/privacy/') : sitePath('privacy/');
 const pagePaths = {
   home: ['', 'zh/'],
-  changelog: ['changelog/', 'zh/changelog/'],
   privacy: ['privacy/', 'zh/privacy/'],
 } as const;
 const switchHref = sitePath(pagePaths[page][isZh ? 0 : 1]);

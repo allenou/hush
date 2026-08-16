@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { mount, tick, unmount } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 import App from '@/entrypoints/options/App.svelte';
 import RulesTab from '@/entrypoints/options/components/RulesTab.svelte';
 import SearchHistoryTab from '@/entrypoints/options/components/SearchHistoryTab.svelte';
@@ -418,6 +418,15 @@ describe('Options UI', () => {
       expect(onResetPageHandling).toHaveBeenCalledTimes(1);
       expect(target.querySelector('[role="dialog"]')).toBeNull();
     });
+  });
+
+  it('clears session overrides when resetting page handling', () => {
+    const handler = appSource.slice(
+      appSource.indexOf('async function handleResetPageHandling()'),
+      appSource.indexOf('async function loadData()'),
+    );
+    expect(handler).toContain('resetPageHandling()');
+    expect(handler).toContain('clearTemporaryBlocking()');
   });
 
   it('uses handling modes instead of parent category switches', async () => {

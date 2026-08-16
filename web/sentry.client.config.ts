@@ -14,14 +14,25 @@ Sentry.init({
   sendDefaultPii: false,
   // 完整采集页面加载事务，用于 Sentry 的访问量、页面与 Web Vitals 概览。
   tracesSampleRate: 1,
-  integrations: [
-    Sentry.browserTracingIntegration({
-      // 静态站点的每次跳转都是新文档，使用 sessionStorage 保持一次访问内的关联。
-      linkPreviousTrace: 'session-storage',
-    }),
-  ],
+  integrations(defaultIntegrations) {
+    return [
+      ...defaultIntegrations.filter((integration) => integration.name !== 'Breadcrumbs'),
+      Sentry.browserTracingIntegration({
+        // 静态站点的每次跳转都是新文档，使用 sessionStorage 保持一次访问内的关联。
+        linkPreviousTrace: 'session-storage',
+      }),
+    ];
+  },
   beforeSend(event) {
-    const { user: _user, request, ...safeEvent } = event;
+    const {
+      user: _user,
+      request,
+      breadcrumbs: _breadcrumbs,
+      contexts: _contexts,
+      extra: _extra,
+      logentry: _logentry,
+      ...safeEvent
+    } = event;
     const safeRequest = request ? sanitizeRequest(request) : undefined;
     return {
       ...safeEvent,

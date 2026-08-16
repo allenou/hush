@@ -22,6 +22,11 @@ describe('Manifest permissions', () => {
     expect(configSource).not.toContain("'activeTab'");
   });
 
+  it('requests diagnostics host access only when a diagnostics DSN is configured', () => {
+    expect(configSource).toContain('const hasSentryDsn = Boolean(process.env.WXT_PUBLIC_SENTRY_DSN)');
+    expect(configSource).toContain("env.browser === 'firefox' || !hasSentryDsn");
+  });
+
   it('targets Chromium Edge and Firefox with Manifest V3', () => {
     expect(configSource).toContain("targetBrowsers: ['chrome', 'edge', 'firefox']");
     expect(configSource).toContain('manifestVersion: 3');

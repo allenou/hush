@@ -6,18 +6,13 @@ type RuntimeArea = 'background' | 'content' | 'options' | 'popup';
 const SENSITIVE_KEY = /authorization|cookie|email|password|query|search|token|url|href/i;
 const URL_PATTERN = /\bhttps?:\/\/[^\s"']+/gi;
 
-function stripUrl(value: string): string {
-  try {
-    const url = new URL(value);
-    return `${url.origin}${url.pathname}`;
-  } catch {
-    return value.replace(URL_PATTERN, (url) => stripUrl(url));
-  }
+function sanitizeText(value: string): string {
+  return value.replace(URL_PATTERN, '[redacted-url]');
 }
 
 function sanitizeData(value: unknown, depth = 0): unknown {
   if (depth > 4 || value === null || value === undefined) return value;
-  if (typeof value === 'string') return stripUrl(value);
+  if (typeof value === 'string') return sanitizeText(value);
   if (Array.isArray(value)) return value.map((item) => sanitizeData(item, depth + 1));
   if (typeof value !== 'object') return value;
 
@@ -40,55 +35,37 @@ export function initSentry(area: RuntimeArea): void {
     environment: import.meta.env.MODE,
     release: `extension@${browser.runtime.getManifest().version}`,
     sendDefaultPii: false,
-    tracesSampleRate: 0.05,
+    // 扩展只上报错误诊断，不采集搜索页性能事务或 Web Vitals DOM 信息。
+    tracesSampleRate: 0,
+    integrations(defaultIntegrations) {
+      // DOM/console breadcrumb 可能包含搜索结果元素属性或页面文本，扩展端全部禁用。
+      return defaultIntegrations.filter((integration) => integration.name !== 'Breadcrumbs');
+    },
     initialScope: {
       tags: {
         runtime_area: area,
       },
     },
-    beforeBreadcrumb(breadcrumb) {
-      return {
-        ...breadcrumb,
-        data: sanitizeData(breadcrumb.data) as typeof breadcrumb.data,
-      };
-    },
     beforeSend(event) {
       const {
         user: _user,
-        request,
-        breadcrumbs,
+        request: _request,
+        breadcrumbs: _breadcrumbs,
+        contexts: _contexts,
+        extra: _extra,
+        logentry: _logentry,
         ...safeEvent
       } = event;
 
       return {
         ...safeEvent,
-        ...(request ? {
-          request: sanitizeRequest(request),
+        ...(event.message ? { message: sanitizeText(event.message) } : {}),
+        ...(event.transaction ? { transaction: sanitizeText(event.transaction) } : {}),
+        ...(event.exception ? {
+          exception: sanitizeData(event.exception) as typeof event.exception,
         } : {}),
-        ...(breadcrumbs ? {
-          breadcrumbs: breadcrumbs.map((breadcrumb) => ({
-            ...breadcrumb,
-            data: sanitizeData(breadcrumb.data) as typeof breadcrumb.data,
-          })),
-        } : {}),
+        ...(event.tags ? { tags: sanitizeData(event.tags) as typeof event.tags } : {}),
       };
     },
   });
-}
-
-function sanitizeRequest(
-  request: NonNullable<Sentry.ErrorEvent['request']>,
-): NonNullable<Sentry.ErrorEvent['request']> {
-  const {
-    data: _data,
-    cookies: _cookies,
-    headers: _headers,
-    query_string: _queryString,
-    url,
-    ...safeRequest
-  } = request;
-  return {
-    ...safeRequest,
-    ...(url ? { url: stripUrl(url) } : {}),
-  };
 }

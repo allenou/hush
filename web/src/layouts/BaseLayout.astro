@@ -20,14 +20,6 @@ const chinesePath = canonicalPath.startsWith('/zh/')
   : `/zh${canonicalPath === '/' ? '/' : canonicalPath}`;
 const englishUrl = new URL(sitePath(englishPath), Astro.site);
 const chineseUrl = new URL(sitePath(chinesePath), Astro.site);
-const cloudflareHostname = process.env.CF_PAGES_URL
-  ? new URL(process.env.CF_PAGES_URL).hostname
-  : '';
-const isPreview = Boolean(
-  !process.env.SITE_URL
-  && cloudflareHostname.endsWith('.pages.dev')
-  && cloudflareHostname.split('.').length > 3
-);
 const isHome = canonicalPath === '/' || canonicalPath === '/zh/';
 const structuredData = {
   '@context': 'https://schema.org',
@@ -42,7 +34,7 @@ const structuredData = {
       '@type': 'SoftwareApplication',
       name: 'Hush',
       applicationCategory: 'BrowserApplication',
-      operatingSystem: 'Google Chrome',
+      operatingSystem: 'Microsoft Edge, Google Chrome, Mozilla Firefox',
       description,
       url: canonical.href,
       offers: {
@@ -61,7 +53,7 @@ const structuredData = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="robots" content={isPreview ? 'noindex, nofollow' : 'index, follow'} />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" type="image/png" href={sitePath('icon.png')} />

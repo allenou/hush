@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 import background from '@/entrypoints/background';
 import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
+import { get } from '@/utils/storage';
 
 interface TriggerableEvent {
   trigger: (...args: unknown[]) => Promise<unknown[]>;
+}
+
+interface DynamicContextMenus {
+  onShown: {
+    addListener(listener: ContextMenuShownListener): void;
+  };
+  refresh(): Promise<void>;
 }
 
 type ContextMenuClickListener = (info: {
@@ -19,6 +27,8 @@ type ContextMenuShownListener = (info: { linkUrl?: string; pageUrl?: string }, t
 
 let contextMenuClickListener: ContextMenuClickListener | undefined;
 let contextMenuShownListener: ContextMenuShownListener | undefined;
+
+const dynamicContextMenus = fakeBrowser.contextMenus as unknown as DynamicContextMenus;
 
 async function getStoredBlocker(): Promise<{ urls: string[]; blockedUrls: string[] }> {
   const stored = await fakeBrowser.storage.local.get('blocker') as {
@@ -37,17 +47,19 @@ beforeEach(() => {
   vi.spyOn(fakeBrowser.contextMenus.onClicked, 'addListener').mockImplementation((listener) => {
     contextMenuClickListener = listener as unknown as ContextMenuClickListener;
   });
-  vi.spyOn(fakeBrowser.contextMenus.onShown, 'addListener').mockImplementation((listener) => {
-    contextMenuShownListener = listener as unknown as ContextMenuShownListener;
-  });
-  vi.spyOn(fakeBrowser.contextMenus, 'refresh').mockResolvedValue();
+  dynamicContextMenus.onShown = {
+    addListener: vi.fn((listener) => {
+      contextMenuShownListener = listener;
+    }),
+  };
+  dynamicContextMenus.refresh = vi.fn(async () => {});
   vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => key);
   document.body.innerHTML = '';
 });
 
 describe('toolbar page badge', () => {
   it('starts when the browser does not provide dynamic context-menu APIs', () => {
-    const dynamicMenus = fakeBrowser.contextMenus as unknown as {
+    const dynamicMenus = dynamicContextMenus as {
       onShown?: unknown;
       refresh?: unknown;
     };
@@ -173,7 +185,7 @@ describe('toolbar page badge', () => {
 
   it('hides every dynamic action for a non-web target and refreshes the menu', async () => {
     const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
-    const refresh = vi.mocked(fakeBrowser.contextMenus.refresh);
+    const refresh = vi.mocked(dynamicContextMenus.refresh);
     background.main?.();
     contextMenuShownListener?.({ pageUrl: 'chrome://extensions/' }, { id: 7 });
 
@@ -202,6 +214,7 @@ describe('toolbar page badge', () => {
 
     await vi.waitFor(async () => {
       expect((await getStoredBlocker()).urls).toEqual(['example.com']);
+      expect((await get()).blockCount).toBe(0);
     });
 
     contextMenuShownListener?.({
@@ -333,6 +346,7 @@ describe('toolbar page badge', () => {
         selectorCount: 1,
       },
       expect.anything(),
+      expect.any(Function),
     );
   });
 
@@ -353,6 +367,7 @@ describe('toolbar page badge', () => {
         selectorCount: 0,
       },
       expect.anything(),
+      expect.any(Function),
     );
   });
 });

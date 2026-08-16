@@ -7,17 +7,12 @@
     "privacy": {
       "title": "隐私政策 — Hush",
       "description": "了解 Hush 如何让搜索数据留在本地，并使用经过隐私过滤的诊断信息。"
-    },
-    "changelog": {
-      "title": "更新日志 — Hush",
-      "description": "了解 Hush 的开发进展与重要变化。"
     }
   },
   "header": {
     "homeAriaLabel": "Hush 首页",
     "navigationAriaLabel": "主导航",
     "home": "首页",
-    "changelog": "更新日志",
     "privacy": "隐私",
     "switchLanguage": "EN",
     "switchLanguageAriaLabel": "切换到英文"
@@ -25,7 +20,6 @@
   "footer": {
     "tagline": "让搜索结果更安静、更可控。",
     "privacy": "隐私政策",
-    "changelog": "更新日志",
     "localData": "所有数据均保存在本地。"
   },
   "home": {
@@ -41,7 +35,7 @@
       "description": "只处理你明确选择的内容，其余搜索页面保持原样。",
       "items": [
         { "title": "右键快速屏蔽", "description": "在任意网页右键屏蔽整个域名，或只屏蔽某一个具体链接。" },
-        { "title": "元素选择器", "description": "直接选择页面元素，创建仅对当前站点生效的规则。" },
+        { "title": "元素选择器", "description": "在支持的搜索页面选择元素，创建仅对当前搜索站点生效的规则。" },
         { "title": "广告处理", "description": "可标记或隐藏广告与推广内容。" },
         { "title": "搜索历史", "description": "默认关闭；可选择在本地保存，也可随时关闭或清空。" }
       ]
@@ -51,7 +45,7 @@
       "description": "无需账户，无需云端同步，也无需改变你的搜索习惯。",
       "steps": [
         { "title": "右键目标", "description": "在网页或搜索结果链接上打开鼠标右键菜单。" },
-        { "title": "创建本地规则", "description": "从 Hush 菜单选择域名、URL 或页面元素作为匹配范围。" },
+        { "title": "创建本地规则", "description": "从 Hush 菜单选择域名或 URL，或在支持的搜索页面选取元素。" },
         { "title": "随时恢复", "description": "标记不会破坏页面结构，可快速显示或删除规则。" }
       ]
     },
@@ -116,9 +110,5 @@
       "email": "tsdino@outlook.com",
       "punctuation": "。"
     }
-  },
-  "changelog": {
-    "title": "更新日志",
-    "description": "记录 Hush 各版本的重要变化。"
   }
 }

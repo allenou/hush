@@ -7,17 +7,12 @@
     "privacy": {
       "title": "Privacy Policy — Hush",
       "description": "Learn how Hush keeps search data local and uses privacy-filtered diagnostics."
-    },
-    "changelog": {
-      "title": "Changelog — Hush",
-      "description": "Follow the development of Hush and see what has changed."
     }
   },
   "header": {
     "homeAriaLabel": "Hush home",
     "navigationAriaLabel": "Main navigation",
     "home": "Home",
-    "changelog": "Changelog",
     "privacy": "Privacy",
     "switchLanguage": "中",
     "switchLanguageAriaLabel": "Switch to Chinese"
@@ -25,7 +20,6 @@
   "footer": {
     "tagline": "A quieter, more controllable search experience.",
     "privacy": "Privacy policy",
-    "changelog": "Changelog",
     "localData": "All extension data stays local."
   },
   "home": {
@@ -41,7 +35,7 @@
       "description": "Act only on what you choose while leaving the rest of the search page intact.",
       "items": [
         { "title": "Quick right-click blocking", "description": "Right-click on any webpage to block a whole domain or one specific link." },
-        { "title": "Element picker", "description": "Select a page element and create a rule scoped to that site." },
+        { "title": "Element picker", "description": "Select an element on a supported search page and create a rule scoped to that search site." },
         { "title": "Ad handling", "description": "Mark or hide advertising and sponsored results." },
         { "title": "Search history", "description": "Off by default. Choose to keep it locally, or disable and clear it anytime." }
       ]
@@ -51,7 +45,7 @@
       "description": "No account, no cloud sync, and no need to change how you search.",
       "steps": [
         { "title": "Right-click a target", "description": "Open the browser context menu on a webpage or search-result link." },
-        { "title": "Create a local rule", "description": "Use the Hush menu to target a domain, URL, or selected page element." },
+        { "title": "Create a local rule", "description": "Use the Hush menu to target a domain or URL, or select an element on a supported search page." },
         { "title": "Recover anytime", "description": "Reveal the result or remove the rule without breaking the page." }
       ]
     },
@@ -116,9 +110,5 @@
       "email": "tsdino@outlook.com",
       "punctuation": "."
     }
-  },
-  "changelog": {
-    "title": "Changelog",
-    "description": "Notable changes in each Hush release."
   }
 }

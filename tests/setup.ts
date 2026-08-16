@@ -1,5 +1,5 @@
 import { beforeEach, vi } from 'vitest';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 
 vi.stubGlobal('browser', fakeBrowser);
 vi.stubGlobal('chrome', fakeBrowser);

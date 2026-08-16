@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -67,10 +67,24 @@ describe('product copy', () => {
     expect(chineseSiteCopy).toContain('"getHush": "在 Edge 上获取"');
     expect(englishSiteCopy).toContain('"viewSource": "View source"');
     expect(chineseSiteCopy).toContain('"viewSource": "查看源代码"');
+    expect(englishSiteCopy).toContain('supported search page');
+    expect(chineseSiteCopy).toContain('支持的搜索页面');
     expect(readFileSync(resolve(process.cwd(), 'web/src/components/HomePage.astro'), 'utf8'))
       .toContain('https://microsoftedge.microsoft.com/addons/detail/hchngjlgnmfncglllbjpdgnhaglajemn');
     expect(englishSiteCopy.toLowerCase()).not.toContain('backup');
     expect(chineseSiteCopy).not.toContain('备份');
+  });
+
+  it('does not ship changelog pages in the product website', () => {
+    expect(existsSync(resolve(process.cwd(), 'web/src/components/ChangelogPage.astro'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'web/src/utils/changelog.ts'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'web/src/pages/changelog/index.astro'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'web/src/pages/zh/changelog/index.astro'))).toBe(false);
+
+    const englishSiteCopy = readFileSync(resolve(process.cwd(), 'web/src/locales/en.json'), 'utf8');
+    const chineseSiteCopy = readFileSync(resolve(process.cwd(), 'web/src/locales/zh-CN.json'), 'utf8');
+    expect(englishSiteCopy.toLowerCase()).not.toContain('changelog');
+    expect(chineseSiteCopy).not.toContain('更新日志');
   });
 
   it('keeps decorative website demos out of keyboard focus', () => {

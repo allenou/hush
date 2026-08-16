@@ -35,6 +35,8 @@ jobs:
         run: npm test
 
       - name: Package Microsoft Edge
+        env:
+          WXT_PUBLIC_SENTRY_DSN: ${{ secrets.WXT_PUBLIC_SENTRY_DSN }}
         run: npm run zip:edge
 
       - name: Verify Microsoft Edge package

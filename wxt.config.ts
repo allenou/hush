@@ -2,6 +2,8 @@ import { defineConfig } from 'wxt';
 import packageJson from './package.json' with { type: 'json' };
 import { SEARCH_ENGINE_MATCH_PATTERNS } from './src/constants/search-hosts';
 
+const hasSentryDsn = Boolean(process.env.WXT_PUBLIC_SENTRY_DSN);
+
 export default defineConfig({
   srcDir: 'src',
   // Edge 与 Chrome 共用 Chromium MV3 构建；Firefox 也使用 MV3，避免维护两套入口实现。
@@ -42,7 +44,7 @@ export default defineConfig({
     permissions: ['storage', 'contextMenus'],
     host_permissions: [
       ...SEARCH_ENGINE_MATCH_PATTERNS,
-      ...(env.browser === 'firefox' ? [] : [
+      ...(env.browser === 'firefox' || !hasSentryDsn ? [] : [
         'https://*.ingest.sentry.io/*',
         'https://*.ingest.us.sentry.io/*',
         'https://*.ingest.de.sentry.io/*',

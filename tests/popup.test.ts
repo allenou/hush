@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fakeBrowser } from 'wxt/testing';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 import App from '@/entrypoints/popup/App.svelte';
 import { mountPopup } from '@/entrypoints/popup/bootstrap';
 import { formatLocalDateKey } from '@/utils/statistics';
@@ -12,6 +12,23 @@ const popupSource = readFileSync(
   resolve(process.cwd(), 'src/entrypoints/popup/App.svelte'),
   'utf8',
 );
+
+interface PopupTab {
+  id?: number;
+  index: number;
+  highlighted: boolean;
+  active: boolean;
+  pinned: boolean;
+  incognito: boolean;
+  url?: string;
+}
+
+interface PopupTabsApi {
+  query(...args: unknown[]): Promise<PopupTab[]>;
+  sendMessage(...args: unknown[]): Promise<unknown>;
+}
+
+const popupTabs = fakeBrowser.tabs as unknown as PopupTabsApi;
 
 describe('Popup', () => {
   let component: ReturnType<typeof mount> | undefined;
@@ -31,7 +48,7 @@ describe('Popup', () => {
         enabled: true,
       },
     });
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    vi.spyOn(popupTabs, 'query').mockResolvedValue([]);
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('zh-CN');
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       currentSiteStatsLabel: '当前站点',
@@ -92,7 +109,7 @@ describe('Popup', () => {
         enabled: true,
       },
     });
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    vi.spyOn(popupTabs, 'query').mockResolvedValue([]);
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('zh-CN');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const isEnglish = String(input).includes('/en/');
@@ -160,7 +177,7 @@ describe('Popup', () => {
         stats: [{ date: today, count: 3 }],
       },
     });
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+    vi.spyOn(popupTabs, 'query').mockResolvedValue([]);
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('en-US');
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => ({
       searchPageOnlyShort: 'Search pages only',
@@ -229,7 +246,7 @@ describe('Popup', () => {
         blockSubdomains: true,
       },
     });
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([{
+    vi.spyOn(popupTabs, 'query').mockResolvedValue([{
       id: 1,
       index: 0,
       highlighted: true,
@@ -307,7 +324,7 @@ describe('Popup', () => {
         }],
       },
     });
-    vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([{
+    vi.spyOn(popupTabs, 'query').mockResolvedValue([{
       id: 7,
       index: 0,
       highlighted: true,
@@ -316,7 +333,7 @@ describe('Popup', () => {
       incognito: false,
       url: 'https://www.google.com/search?q=hush',
     }]);
-    vi.spyOn(fakeBrowser.tabs, 'sendMessage').mockResolvedValue({
+    vi.spyOn(popupTabs, 'sendMessage').mockResolvedValue({
       count: 6,
       adCount: 2,
       domainCount: 3,

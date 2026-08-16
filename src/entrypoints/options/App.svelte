@@ -37,6 +37,7 @@
   import { t, initLocale, setLocale as setAppLocale, getLocale } from '@/utils/locale-store.svelte';
   import { setStoredLocale } from '@/utils/storage';
   import { parseRuleInput } from '@/utils/rule-input';
+  import { clearTemporaryBlocking } from '@/utils/temporary-blocking';
 
   import AppNav from './components/AppNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
@@ -154,7 +155,7 @@
   }
 
   async function handleResetPageHandling() {
-    await resetPageHandling();
+    await Promise.all([resetPageHandling(), clearTemporaryBlocking()]);
     await loadData();
     showToast(t('resetPageHandlingSuccess'));
   }

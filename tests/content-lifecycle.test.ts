@@ -18,6 +18,17 @@ describe('marking lifecycle', () => {
     expect(dynamicScan).toContain('injectStyles()');
   });
 
+  it('reloads content-script translations before rescanning stored state', () => {
+    const contentSource = readFileSync(resolve(process.cwd(), 'src/entrypoints/content.ts'), 'utf8');
+    const storageSubscription = contentSource.slice(
+      contentSource.indexOf('const unsubscribeStorage'),
+      contentSource.indexOf('ctx.onInvalidated(unsubscribeStorage)'),
+    );
+    expect(storageSubscription).toContain('initLocale(storage.locale)');
+    expect(storageSubscription.indexOf('initLocale(storage.locale)'))
+      .toBeLessThan(storageSubscription.indexOf('rescanWithCurrentState()'));
+  });
+
   it('removes markers and scan attributes', () => {
     document.body.innerHTML = `
       <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge data-srb-ad-hidden data-srb-rule-hidden data-srb-rule-type="domain" data-srb-target-url="https://example.com/">

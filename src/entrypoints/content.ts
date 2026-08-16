@@ -315,9 +315,14 @@ export default defineContentScript({
 
     // ===== Storage 订阅 =====
 
+    let storageSyncVersion = 0;
     const unsubscribeStorage = subscribe((storage) => {
-      applyStorageState(storage);
-      rescanWithCurrentState();
+      const version = ++storageSyncVersion;
+      void initLocale(storage.locale).then(() => {
+        if (version !== storageSyncVersion) return;
+        applyStorageState(storage);
+        rescanWithCurrentState();
+      });
     });
     ctx.onInvalidated(unsubscribeStorage);
 
@@ -333,7 +338,8 @@ export default defineContentScript({
 
     ctx.addEventListener(document, 'visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
-      void Promise.all([get(), getTemporaryBlocking()]).then(([storage, temporary]) => {
+      void Promise.all([get(), getTemporaryBlocking()]).then(async ([storage, temporary]) => {
+        await initLocale(storage.locale);
         temporaryBlocking = temporary;
         applyStorageState(storage);
         recordCurrentSearch();
@@ -342,7 +348,8 @@ export default defineContentScript({
     });
 
     ctx.addEventListener(window, 'pageshow', () => {
-      void Promise.all([get(), getTemporaryBlocking()]).then(([storage, temporary]) => {
+      void Promise.all([get(), getTemporaryBlocking()]).then(async ([storage, temporary]) => {
+        await initLocale(storage.locale);
         temporaryBlocking = temporary;
         applyStorageState(storage);
         rescanWithCurrentState();

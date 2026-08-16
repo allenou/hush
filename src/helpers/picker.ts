@@ -207,6 +207,8 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
   document.body.appendChild(overlay);
 
   overlay.querySelector('.srb-picker-ok')?.addEventListener('click', async () => {
+    const wasCounted = el.hasAttribute('data-srb-counted');
+    if (!wasCounted) el.setAttribute('data-srb-counted', 'true');
     try {
       const full = currentHost + '||' + selector;
       await addBlockedSelector(full);
@@ -232,6 +234,7 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
        reportPageMarkerCount();
        overlay.remove();
     } catch (err) {
+      if (!wasCounted) el.removeAttribute('data-srb-counted');
       console.error('[SRB] Failed to block by selector:', err);
       overlay.remove();
     }
