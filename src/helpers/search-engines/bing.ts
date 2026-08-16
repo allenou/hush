@@ -13,8 +13,12 @@ export const bingSearchEngine: SearchEngineRule = {
     { containerSelector: '#b_results', itemSelector: '.b_algo', linkSelector: 'a[href]' },
   ],
   adItemSelectors: [
-    '[aria-label*="sponsor" i]',
+    '[aria-label="ad" i]',
+    '[aria-label="ads" i]',
+    '[aria-label="advertisement" i]',
+    '[aria-label="sponsored" i]',
+    '[aria-label="广告"]',
+    '[aria-label="推广"]',
     '[class*="ad-label" i]',
   ],
-  adLabelTexts: ['ad', 'sponsored', '广告', '推广'],
 };

@@ -1008,9 +1008,9 @@ describe('result domain matching', () => {
 });
 
 describe('search engine ad detection', () => {
-  function enableSoAdMarking(): void {
+  function enableAdMarking(hostname = 'so.com'): void {
     initBlocker({
-      getHostname: () => 'so.com',
+      getHostname: () => hostname,
       extractResultUrl: () => '',
     });
     syncBlockerState({
@@ -1061,133 +1061,102 @@ describe('search engine ad detection', () => {
     expect(isAdItem(ordinaryResult)).toBe(false);
   });
 
-  it('keeps a 360 sidebar ad inside its local module instead of masking the whole sidebar', () => {
-    enableSoAdMarking();
-    const style = document.createElement('style');
-    style.setAttribute('data-test-ad-style', '');
-    style.textContent = '.test-sticky-sidebar { position: fixed; }';
-    document.head.appendChild(style);
+  it.each([
+    ['google.com', '<span aria-label="Sponsored">广告客户</span>'],
+    ['baidu.com', '<span class="ec-tuiguang">广告</span>'],
+    ['bing.com', '<span class="ad-label">Sponsored</span>'],
+    ['sogou.com', '<div class="ad-results">推广结果</div>'],
+    ['duckduckgo.com', '<span data-testid="ad">Ad</span>'],
+    ['search.yahoo.com', '<span data-advertisement>Sponsored</span>'],
+    ['yandex.com', '<span data-fast-name="adv">Реклама</span>'],
+  ])('recognizes explicit advertising structure on %s', (hostname, marker) => {
+    initBlocker({
+      getHostname: () => hostname,
+      extractResultUrl: () => '',
+    });
+    const result = document.createElement('article');
+    result.innerHTML = `${marker}<a href="https://advertiser.example">广告客户内容</a>`;
+
+    expect(isAdItem(result)).toBe(true);
+  });
+
+  it.each([
+    ['google.com', 'g'],
+    ['baidu.com', 'result'],
+    ['bing.com', 'b_algo'],
+    ['so.com', 'res-list'],
+    ['sogou.com', 'vrwrap'],
+    ['duckduckgo.com', 'result'],
+    ['search.yahoo.com', 'algo'],
+    ['yandex.com', 'serp-item'],
+  ])('does not treat query highlights as ads on %s', (hostname, className) => {
+    initBlocker({
+      getHostname: () => hostname,
+      extractResultUrl: () => '',
+    });
+    const result = document.createElement('article');
+    result.className = className;
+    result.innerHTML = `
+      <h2><a href="https://example.com"><em>广告</em>与 Sponsored 的含义</a></h2>
+      <p><span>推广</span>、Ad 和 Advertisement 都是当前搜索词正文。</p>
+    `;
+
+    expect(isAdItem(result)).toBe(false);
+  });
+
+  it('does not scan Baidu natural results merely because their text contains ad words', () => {
+    enableAdMarking('baidu.com');
     document.body.innerHTML = `
-      <div class="test-sticky-sidebar" data-test="sidebar">
-        <div><a href="https://news.example/1">热搜榜一及相关内容</a></div>
-        <div><a href="https://news.example/2">热搜榜二及相关内容</a></div>
-        <div data-test="ad-slot">
-          <div data-test="ad-module">
-            <div><h3>猜你想搜</h3><span>广告</span></div>
-            <ul><li><a href="https://advertiser.example">推广内容</a></li></ul>
-          </div>
-        </div>
-        <div><a href="https://news.example/3">更多侧栏内容</a></div>
+      <div class="result" style="display:block;visibility:visible">
+        <h3><a href="https://hanyu.baidu.com"><em>广告</em> - 百度汉语</a></h3>
+        <p>广告是向公众介绍商品、服务的一种传播方式。</p>
+      </div>
+      <div class="result-op" style="display:block;visibility:visible">
+        <h3><a href="https://baike.baidu.com"><em>广告</em> - 百度百科</a></h3>
+        <p>正文中多次出现广告和推广等搜索关键词。</p>
       </div>
     `;
 
     scanForAds();
 
-    const sidebar = document.querySelector<HTMLElement>('[data-test="sidebar"]')!;
-    const adModule = document.querySelector<HTMLElement>('[data-test="ad-module"]')!;
-    expect(sidebar.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(sidebar.querySelector(':scope > .hush-ad-badge')).toBeNull();
-    expect(sidebar.children[0].querySelector('.hush-ad-badge')).toBeNull();
-    expect(adModule.hasAttribute('data-hush-ad-scanned')).toBe(true);
-    expect(adModule.querySelector('.hush-ad-badge')).not.toBeNull();
+    expect(document.querySelectorAll('.hush-ad-badge')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-hush-ad-scanned]')).toHaveLength(0);
   });
 
-  it('does not depend on sidebar IDs or classes when separating independent modules', () => {
-    enableSoAdMarking();
+  it('does not scan repeated 360 query highlights as advertising labels', () => {
+    enableAdMarking();
     document.body.innerHTML = `
-      <div data-test="layout">
-        <div><a href="https://example.com/a">第一个独立内容模块，包含普通链接</a></div>
-        <div><a href="https://example.com/b">第二个独立内容模块，包含普通链接</a></div>
-        <div>
-          <div data-test="local-ad">
-            <div><span>广告</span></div>
-            <div><a href="https://advertiser.example">纯 div 广告正文</a></div>
-          </div>
-        </div>
-        <div><a href="https://example.com/c">第三个独立内容模块，包含普通链接</a></div>
-        <div><a href="https://example.com/d">第四个独立内容模块，包含普通链接</a></div>
+      <div class="res-list">
+        <h3><a href="https://example.com"><em>广告</em>传媒门户</a></h3>
+        <p><em>广告</em>制作、户外<em>广告</em>和<em>推广</em>服务。</p>
       </div>
     `;
 
     scanForAds();
 
-    const layout = document.querySelector<HTMLElement>('[data-test="layout"]')!;
-    const localAd = document.querySelector<HTMLElement>('[data-test="local-ad"]')!;
-    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(layout.querySelector(':scope > .hush-ad-badge')).toBeNull();
-    expect(localAd.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(document.querySelectorAll('.hush-ad-badge')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-hush-ad-scanned]')).toHaveLength(0);
   });
 
-  it('does not mask an unpositioned multi-module layout when an ad slot is incomplete', () => {
-    enableSoAdMarking();
+  it('deduplicates multiple structural markers in one Baidu ad result', () => {
+    enableAdMarking('baidu.com');
     document.body.innerHTML = `
-      <div data-test="plain-layout">
-        <div><a href="https://example.com/a">普通模块一，包含独立内容链接</a></div>
-        <div><a href="https://example.com/b">普通模块二，包含独立内容链接</a></div>
-        <div data-test="incomplete-ad"><div><span data-test="plain-label">广告</span></div></div>
-        <div><a href="https://example.com/c">普通模块三，包含独立内容链接</a></div>
-        <div><a href="https://example.com/d">普通模块四，包含独立内容链接</a></div>
+      <div class="result" data-test="baidu-ad">
+        <span class="ec-tuiguang">广告</span>
+        <span class="other-tuiguang-marker">推广</span>
+        <a href="https://advertiser.example">广告客户内容</a>
       </div>
     `;
 
     scanForAds();
 
-    const layout = document.querySelector<HTMLElement>('[data-test="plain-layout"]')!;
-    const incompleteAd = document.querySelector<HTMLElement>('[data-test="incomplete-ad"]')!;
-    const label = document.querySelector<HTMLElement>('[data-test="plain-label"]')!;
-    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(incompleteAd.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(label.hasAttribute('data-hush-ad-badge')).toBe(false);
-  });
-
-  it('still recognizes an ordinary pure-div advertising card', () => {
-    enableSoAdMarking();
-    document.body.innerHTML = `
-      <main>
-        <div data-test="div-ad-card">
-          <div><strong>推荐内容</strong><span>推广</span></div>
-          <div><a href="https://advertiser.example/product">查看产品详情与优惠信息</a></div>
-        </div>
-      </main>
-    `;
-
-    scanForAds();
-
-    const card = document.querySelector<HTMLElement>('[data-test="div-ad-card"]')!;
-    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(true);
-    expect(card.querySelector('.hush-ad-badge')).not.toBeNull();
-  });
-
-  it('retries an unresolved ad label after its local content loads asynchronously', () => {
-    enableSoAdMarking();
-    document.body.innerHTML = `
-      <div data-test="async-layout" style="position: sticky">
-        <div><a href="https://example.com/a">普通侧栏模块一</a></div>
-        <div><a href="https://example.com/b">普通侧栏模块二</a></div>
-        <div data-test="async-card"><div><span data-test="async-label">广告</span></div></div>
-      </div>
-    `;
-
-    scanForAds();
-
-    const layout = document.querySelector<HTMLElement>('[data-test="async-layout"]')!;
-    const card = document.querySelector<HTMLElement>('[data-test="async-card"]')!;
-    const label = document.querySelector<HTMLElement>('[data-test="async-label"]')!;
-    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(false);
-    expect(label.hasAttribute('data-hush-ad-badge')).toBe(false);
-
-    const content = document.createElement('div');
-    content.innerHTML = '<a href="https://advertiser.example">异步加载的广告正文</a>';
-    card.appendChild(content);
-    scanForAds();
-
-    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(true);
-    expect(card.querySelector('.hush-ad-badge')).not.toBeNull();
+    const result = document.querySelector<HTMLElement>('[data-test="baidu-ad"]')!;
+    expect(result.querySelectorAll('.hush-ad-badge')).toHaveLength(1);
+    expect(result.querySelectorAll('.hush-ad-mask')).toHaveLength(1);
   });
 
   it('does not inject or count a hidden 360 ad slot until it becomes visible', () => {
-    enableSoAdMarking();
+    enableAdMarking();
     document.body.innerHTML = `
       <div data-test="hidden-wrapper" style="visibility: hidden">
         <div class="e-pc-li-131-1" data-test="ad-slot">
@@ -1211,7 +1180,7 @@ describe('search engine ad detection', () => {
   });
 
   it('retries a zero-size 360 ad slot after the page gives it layout space', () => {
-    enableSoAdMarking();
+    enableAdMarking();
     document.body.innerHTML = `
       <div class="e-pc-li-131-1" data-test="ad-slot">
         <span>广告</span><a href="https://advertiser.example">推广内容</a>

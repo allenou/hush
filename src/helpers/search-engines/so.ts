@@ -1,9 +1,11 @@
 import type { SearchEngineRule } from './types';
 
 function hasAdLabel(element: Element): boolean {
-  return Array.from(element.querySelectorAll('*')).some((child) => {
+  const labels = new Set(['广告', '推广']);
+  return Array.from(element.querySelectorAll('span, small, label, i, b')).some((child) => {
+    if (child.children.length > 0) return false;
     const text = (child.textContent ?? '').trim();
-    return text.length <= 20 && text.includes('广告');
+    return labels.has(text);
   });
 }
 
@@ -23,7 +25,6 @@ export const soSearchEngine: SearchEngineRule = {
   resultSelectors: [
     { containerSelector: '#main', itemSelector: '.res-list', linkSelector: 'a[href]' },
   ],
-  adLabelTexts: ['广告', '推广'],
   isAdItem(item) {
     if (isImageAdContainer(item)) return true;
 

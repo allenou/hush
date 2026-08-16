@@ -25,5 +25,4 @@ export const yahooSearchEngine: SearchEngineRule = {
     '[data-advertisement]',
     '[class*="sponsored" i]',
   ],
-  adLabelTexts: ['ad', 'ads', 'sponsored', '广告', '廣告', '広告'],
 };

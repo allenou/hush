@@ -25,5 +25,4 @@ export const duckDuckGoSearchEngine: SearchEngineRule = {
     '[data-testid="ad"]',
     '[class*="result--ad" i]',
   ],
-  adLabelTexts: ['ad', 'ads', 'sponsored', '广告', '廣告'],
 };

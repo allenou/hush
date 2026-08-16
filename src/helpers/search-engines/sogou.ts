@@ -12,7 +12,6 @@ export const sogouSearchEngine: SearchEngineRule = {
     { containerSelector: '#main', itemSelector: '.rb', linkSelector: 'a' },
   ],
   adItemSelectors: ['.ad-results'],
-  adLabelTexts: ['广告', '推广'],
   findAdContainers(root) {
     return Array.from(root.querySelectorAll<HTMLElement>('.ad-results'));
   },

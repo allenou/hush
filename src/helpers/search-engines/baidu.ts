@@ -14,19 +14,12 @@ export const baiduSearchEngine: SearchEngineRule = {
     '.ec-tuiguang',
     '[class*="tuiguang" i]',
   ],
-  adLabelTexts: ['广告', '推广'],
   findAdContainers(root) {
-    const candidates = root.querySelectorAll<HTMLElement>(
-      'div[style*="display:block"][style*="visibility:visible"], ' +
-      'li[style*="display:block"][style*="visibility:visible"], ' +
-      'section[style*="display:block"][style*="visibility:visible"], ' +
-      'table[style*="display:block"][style*="visibility:visible"]',
+    const markers = root.querySelectorAll<HTMLElement>(
+      '.ec-tuiguang, [class*="tuiguang" i]',
     );
-
-    return Array.from(candidates).filter((element) =>
-      Boolean(element.querySelector('.ec-tuiguang'))
-      || element.textContent?.includes('广告')
-      || element.textContent?.includes('推广'),
+    return Array.from(markers).map((marker) =>
+      marker.closest<HTMLElement>('.result, .result-op') ?? marker,
     );
   },
 };

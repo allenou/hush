@@ -383,11 +383,13 @@ describe('engine-specific rules', () => {
   it('requires a child ad label for 360 ad candidate containers', () => {
     document.body.innerHTML = `
       <div id="ordinary" class="e-pc-li-131-1"><span>普通搜索结果</span></div>
+      <div id="query-highlight" class="e-pc-li-131-1"><em>广告</em><a href="https://example.com">广告相关内容</a></div>
       <div id="advertisement" class="e-pc-li-131-1"><span>广告</span></div>
     `;
 
     const rule = getSearchEngineRule('so.com')!;
     expect(rule.isAdItem?.(document.querySelector('#ordinary')!)).toBe(false);
+    expect(rule.isAdItem?.(document.querySelector('#query-highlight')!)).toBe(false);
     expect(rule.isAdItem?.(document.querySelector('#advertisement')!)).toBe(true);
     expect(rule.findAdContainers?.(document).map((element) => element.id)).toEqual([
       'advertisement',

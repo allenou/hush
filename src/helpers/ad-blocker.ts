@@ -90,7 +90,7 @@ function matchBlockedDomain(href: string, domains: string[], includeSubdomains =
   );
 }
 
-// ========== Ad Text Detection ==========
+// ========== Ad Structure Detection ==========
 
 /** 判断搜索结果项是否包含广告标记 */
 export function isAdItem(item: Element): boolean {
@@ -105,14 +105,6 @@ export function isAdItem(item: Element): boolean {
 
   const cls = (item.className as string).toLowerCase();
   if (/\b(?:ad|sponsor)\b/.test(cls)) return true;
-
-  const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
-  for (const el of item.querySelectorAll('span, small, label, em, b, i, div, a, strong, p')) {
-    if (el.children.length > 3) continue;
-    const t = (el.textContent ?? '').trim();
-    if (t.length === 0 || t.length > 20) continue;
-    if (adLabels.has(t.toLowerCase())) return true;
-  }
   return false;
 }
 
@@ -157,77 +149,6 @@ function findContentContainer(source: Element): HTMLElement | null {
 
   const best = hintedDiv ?? fallbackDiv;
   return best && isReasonableContentSize(best) ? best : null;
-}
-
-/**
- * 从通用广告短标签定位局部组件。广告标签常位于侧栏模块中，不能复用结果项的
- * 回溯策略，否则可能跨过多个组件并将整列侧栏误标为广告。
- */
-function findAdLabelContainer(source: HTMLElement): HTMLElement | null {
-  let branch: HTMLElement = source;
-  let cur: HTMLElement | null = branch.parentElement;
-  let depth = 0;
-
-  while (cur && cur !== document.body && depth < 8) {
-    if (isLayoutShell(cur)) return null;
-    if (isReasonableContentSize(cur) && hasSiblingContent(cur, branch)) return cur;
-
-    branch = cur;
-    cur = cur.parentElement;
-    depth++;
-  }
-
-  // 没有清晰的“标题 + 内容”结构时保留旧版通用定位，兼容普通结果和纯 div 卡片；
-  // 但最终命中页面布局壳时必须放弃，避免一条广告标签遮住整列内容。
-  const fallback = findContentContainer(source);
-  return fallback && !isLayoutShell(fallback) ? fallback : null;
-}
-
-/** 标签所在分支之外还有内容区时，当前节点可视为一个局部广告组件。 */
-function hasSiblingContent(container: HTMLElement, labelBranch: HTMLElement): boolean {
-  return Array.from(container.children).some((child) =>
-    child !== labelBranch && isContentBranch(child as HTMLElement),
-  );
-}
-
-/** 判断一个直接子分支是否像广告正文、媒体或待异步填充的内容槽。 */
-function isContentBranch(element: HTMLElement): boolean {
-  const tag = element.tagName.toLowerCase();
-  if (['ul', 'ol', 'table', 'dl', 'form', 'iframe', 'video', 'picture', 'img'].includes(tag)) {
-    return true;
-  }
-
-  if (element.matches('a[href], [role="list"], [role="grid"], [role="article"]')) return true;
-  if (element.querySelector('a[href], img, picture, video, iframe, button, [role="list"], [role="grid"], [role="article"]')) {
-    return true;
-  }
-
-  // 标题文字不能单独证明当前节点包含广告正文，否则会只遮住标题行。
-  if (/^h[1-6]$/.test(tag)) return false;
-  return (element.textContent ?? '').trim().length >= 20;
-}
-
-/**
- * 识别承载多个独立模块的页面布局壳。只依据计算样式与分支结构，避免绑定站点 ID/class。
- */
-function isLayoutShell(element: HTMLElement): boolean {
-  const children = Array.from(element.children).filter((child) =>
-    !['script', 'style', 'template'].includes(child.tagName.toLowerCase()),
-  ) as HTMLElement[];
-  const contentBranches = children.filter(isContentBranch).length;
-
-  let position = element.style.position;
-  try {
-    position = window.getComputedStyle(element).position || position;
-  } catch {
-    // 未连接到文档的测试节点继续使用行内样式。
-  }
-
-  if ((position === 'fixed' || position === 'sticky')
-    && children.length >= 3
-    && contentBranches >= 2) return true;
-
-  return children.length >= 5 && contentBranches >= 3;
 }
 
 function isReasonableContentSize(element: HTMLElement): boolean {
@@ -360,6 +281,9 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
 
 export function injectAdBadge(item: Element, href: string): boolean {
   const adDisplayMode = _state.adDisplayMode ?? 'mark';
+  // 一个明确广告容器的祖先或后代已经完成标记时，不再为重叠候选重复注入。
+  if (item.parentElement?.closest('[data-hush-ad-scanned]')) return true;
+  if (item.querySelector('[data-hush-ad-scanned]')) return true;
   if (adDisplayMode === 'hide' && item.hasAttribute('data-hush-ad-hidden')) return true;
   if (adDisplayMode === 'mark' && item.querySelector('.hush-ad-badge')) return true;
   if (!isRenderableAdTarget(item)) return false;
@@ -373,6 +297,7 @@ export function injectAdBadge(item: Element, href: string): boolean {
   if (adDisplayMode === 'hide') {
     // 仅修改当前页面的呈现，不拦截广告请求或改写页面网络通信。
     item.setAttribute('data-hush-ad-hidden', 'true');
+    item.setAttribute('data-hush-ad-scanned', 'true');
     return true;
   }
 
@@ -392,6 +317,7 @@ export function injectAdBadge(item: Element, href: string): boolean {
   });
   item.appendChild(mask);
   item.appendChild(badge);
+  item.setAttribute('data-hush-ad-scanned', 'true');
   return true;
 }
 
@@ -498,7 +424,7 @@ export function scanResults(engine: SearchEngineConfig): void {
 
 // ========== Ad Scanning ==========
 
-/** 广告扫描 — 引擎提供命中特征，公共层负责标记和从标签向上定位容器。 */
+/** 广告扫描 — 仅处理引擎通过专属 DOM 结构明确返回的广告容器。 */
 export function scanForAds(): void {
   if (!_state.blockAds || !_state.isEnabled) {
     reportPageMarkerCount();
@@ -511,42 +437,18 @@ export function scanForAds(): void {
     return;
   }
 
-  engine.findAdContainers?.(document).forEach((element) => {
+  const candidates = Array.from(new Set(engine.findAdContainers?.(document) ?? []));
+  const containers = candidates.filter((element) =>
+    !candidates.some((candidate) => candidate !== element && candidate.contains(element)),
+  );
+
+  containers.forEach((element) => {
     // 搜索引擎可能异步重写广告容器内容，导致已注入的遮罩被移除，
     // 但容器上的扫描标记仍保留；此时需要重新注入。
     if (_state.adDisplayMode === 'hide'
       ? element.hasAttribute('data-hush-ad-hidden')
       : Boolean(element.querySelector('.hush-ad-mask, .hush-ad-badge'))) return;
-    if (injectAdBadge(element, '')) {
-      element.setAttribute('data-hush-ad-scanned', 'true');
-    }
-  });
-
-  const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
-  if (adLabels.size === 0) {
-    reportPageMarkerCount();
-    return;
-  }
-
-  // 通用定位算法：通过当前引擎定义的短文本标签向上查找结果容器。
-  document.querySelectorAll<HTMLElement>(
-    'span, small, label, em, i, b, strong, a, ' +
-    '[class*="ad-label"], [class*="ad-badge"], [class*="badge"]',
-  ).forEach((badge) => {
-    if (badge.hasAttribute('data-hush-ad-badge')) return;
-    const t = (badge.textContent ?? '').trim();
-    if (t.length === 0 || t.length > 20) return;
-    if (badge.children.length > 3) return;
-
-    if (!adLabels.has(t.toLowerCase())) return;
-    if (badge.closest('[data-hush-ad-scanned]')) return;
-    const best = findAdLabelContainer(badge);
-    if (best
-      && !best.hasAttribute('data-hush-ad-scanned')
-      && injectAdBadge(best, '')) {
-      badge.setAttribute('data-hush-ad-badge', 'true');
-      best.setAttribute('data-hush-ad-scanned', 'true');
-    }
+    injectAdBadge(element, '');
   });
   reportPageMarkerCount();
 }

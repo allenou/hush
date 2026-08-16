@@ -25,5 +25,4 @@ export const yandexSearchEngine: SearchEngineRule = {
     '[data-fast-name="adv"]',
     '[class*="AdvLabel" i]',
   ],
-  adLabelTexts: ['ad', 'ads', 'advertisement', 'реклама', '广告', '廣告'],
 };
