@@ -3,7 +3,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import background from '@/entrypoints/background';
-import { clearPageMarkerCount, reportPageMarkerCount } from '@/utils/page-badge';
+import {
+  clearPageMarkerCount,
+  countPageMarkerSummary,
+  reportPageMarkerCount,
+} from '@/utils/page-badge';
 import { get } from '@/utils/storage';
 
 interface TriggerableEvent {
@@ -43,7 +47,7 @@ beforeEach(() => {
   contextMenuClickListener = undefined;
   contextMenuShownListener = undefined;
   vi.spyOn(fakeBrowser.contextMenus, 'removeAll').mockResolvedValue();
-  vi.spyOn(fakeBrowser.contextMenus, 'create').mockImplementation(() => 'srb-test-menu');
+  vi.spyOn(fakeBrowser.contextMenus, 'create').mockImplementation(() => 'hush-test-menu');
   vi.spyOn(fakeBrowser.contextMenus.onClicked, 'addListener').mockImplementation((listener) => {
     contextMenuClickListener = listener as unknown as ContextMenuClickListener;
   });
@@ -84,12 +88,12 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: true });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: true });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'blockDomain',
         visible: false,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: false,
       });
@@ -111,12 +115,12 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: true });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: true });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'unblockDomain',
         visible: true,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'unblockUrl',
         visible: true,
       });
@@ -131,12 +135,12 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'blockDomain',
         visible: true,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: false,
       });
@@ -151,12 +155,12 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'blockDomain',
         visible: true,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: true,
       });
@@ -171,12 +175,12 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'blockDomain',
         visible: true,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: true,
       });
@@ -190,12 +194,12 @@ describe('toolbar page badge', () => {
     contextMenuShownListener?.({ pageUrl: 'chrome://extensions/' }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-picker', { visible: false });
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-picker', { visible: false });
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'blockDomain',
         visible: false,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: false,
       });
@@ -207,7 +211,7 @@ describe('toolbar page badge', () => {
     const update = vi.spyOn(fakeBrowser.contextMenus, 'update').mockResolvedValue();
     background.main?.();
     contextMenuClickListener?.({
-      menuItemId: 'srb-block-domain',
+      menuItemId: 'hush-block-domain',
       editable: false,
       pageUrl: 'https://example.com/article',
     }, { id: 7 });
@@ -222,11 +226,11 @@ describe('toolbar page badge', () => {
     }, { id: 7 });
 
     await vi.waitFor(() => {
-      expect(update).toHaveBeenCalledWith('srb-block-domain', {
+      expect(update).toHaveBeenCalledWith('hush-block-domain', {
         title: 'unblockDomain',
         visible: true,
       });
-      expect(update).toHaveBeenCalledWith('srb-block-url', {
+      expect(update).toHaveBeenCalledWith('hush-block-url', {
         title: 'blockUrl',
         visible: true,
       });
@@ -238,12 +242,12 @@ describe('toolbar page badge', () => {
     background.main?.();
 
     contextMenuClickListener?.({
-      menuItemId: 'srb-picker',
+      menuItemId: 'hush-picker',
       editable: false,
       pageUrl: 'https://www.google.com/search?q=test',
     }, { id: 7 });
 
-    expect(sendMessage).toHaveBeenCalledWith(7, { type: 'srb-start-picker' });
+    expect(sendMessage).toHaveBeenCalledWith(7, { type: 'hush-start-picker' });
   });
 
   it('unblocks the matched parent-domain rule from the context menu', async () => {
@@ -255,7 +259,7 @@ describe('toolbar page badge', () => {
     });
     background.main?.();
     contextMenuClickListener?.({
-      menuItemId: 'srb-block-domain',
+      menuItemId: 'hush-block-domain',
       editable: false,
       linkUrl: 'https://sub.example.com/article',
       pageUrl: 'https://www.google.com/search?q=test',
@@ -274,7 +278,7 @@ describe('toolbar page badge', () => {
     });
     background.main?.();
     contextMenuClickListener?.({
-      menuItemId: 'srb-block-url',
+      menuItemId: 'hush-block-url',
       editable: false,
       linkUrl: 'https://example.com/article',
       pageUrl: 'https://www.google.com/search?q=test',
@@ -305,12 +309,75 @@ describe('toolbar page badge', () => {
     const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
 
     await onMessage.trigger(
-      { type: 'srb-page-marker-count', count: 3 },
+      { type: 'hush-page-marker-count', count: 3 },
       { tab: { id: 7 } },
     );
 
     expect(await fakeBrowser.action.getBadgeText({ tabId: 7 })).toBe('3');
     expect(await fakeBrowser.action.getBadgeText({})).toBe('');
+  });
+
+  it('uses one content report for both the popup summary and toolbar badge', async () => {
+    background.main?.();
+    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
+    const sendMessage = vi.spyOn(fakeBrowser.tabs, 'sendMessage').mockImplementation(
+      async (tabId, message) => {
+        queueMicrotask(() => {
+          void onMessage.trigger({
+            type: 'hush-page-marker-count',
+            count: 6,
+            adCount: 2,
+            domainCount: 3,
+            urlCount: 1,
+            selectorCount: 0,
+          }, { tab: { id: tabId } });
+        });
+        return undefined;
+      },
+    );
+
+    const summary = await fakeBrowser.runtime.sendMessage({
+      type: 'hush-get-page-marker-summary',
+      tabId: 7,
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(7, {
+      type: 'hush-report-page-marker-summary',
+    });
+    expect(summary).toEqual({
+      count: 6,
+      adCount: 2,
+      domainCount: 3,
+      urlCount: 1,
+      selectorCount: 0,
+    });
+    expect(await fakeBrowser.action.getBadgeText({ tabId: 7 })).toBe('6');
+  });
+
+  it('returns the last reported summary when the content script is temporarily unavailable', async () => {
+    background.main?.();
+    const onMessage = fakeBrowser.runtime.onMessage as unknown as TriggerableEvent;
+    await onMessage.trigger({
+      type: 'hush-page-marker-count',
+      count: 4,
+      adCount: 1,
+      domainCount: 2,
+      urlCount: 1,
+      selectorCount: 0,
+    }, { tab: { id: 7 } });
+    vi.spyOn(fakeBrowser.tabs, 'sendMessage').mockRejectedValue(new Error('No receiver'));
+
+    await expect(fakeBrowser.runtime.sendMessage({
+      type: 'hush-get-page-marker-summary',
+      tabId: 7,
+    })).resolves.toEqual({
+      count: 4,
+      adCount: 1,
+      domainCount: 2,
+      urlCount: 1,
+      selectorCount: 0,
+    });
+    expect(await fakeBrowser.action.getBadgeText({ tabId: 7 })).toBe('4');
   });
 
   it('clears a tab badge when the tab starts navigating', async () => {
@@ -327,10 +394,10 @@ describe('toolbar page badge', () => {
     const listener = vi.fn();
     fakeBrowser.runtime.onMessage.addListener(listener);
     document.body.innerHTML = `
-      <div class="srb-blocked-badge" data-rule-type="domain"></div>
-      <div class="srb-blocked-badge" data-rule-type="url"></div>
-      <div class="srb-blocked-badge"></div>
-      <div data-srb-ad-hidden></div>
+      <div class="hush-blocked-badge" data-rule-type="domain"></div>
+      <div class="hush-blocked-badge" data-rule-type="url"></div>
+      <div class="hush-blocked-badge"></div>
+      <div data-hush-ad-hidden></div>
     `;
 
     reportPageMarkerCount();
@@ -338,7 +405,7 @@ describe('toolbar page badge', () => {
 
     expect(listener).toHaveBeenCalledWith(
       {
-        type: 'srb-page-marker-count',
+        type: 'hush-page-marker-count',
         count: 4,
         adCount: 1,
         domainCount: 1,
@@ -350,6 +417,51 @@ describe('toolbar page badge', () => {
     );
   });
 
+  it('ignores hidden marker nodes but keeps deliberately hidden results in the summary', () => {
+    document.body.innerHTML = `
+      <div class="hush-blocked-badge" data-rule-type="domain"></div>
+      <div style="display: none">
+        <div class="hush-ad-badge"></div>
+      </div>
+      <div class="hush-blocked-badge" data-rule-type="url" style="visibility: hidden"></div>
+      <div data-hush-rule-hidden data-hush-rule-type="domain"></div>
+      <div data-hush-rule-hidden data-hush-rule-type="url"></div>
+      <div data-hush-rule-hidden data-hush-rule-type="selector"></div>
+      <div data-hush-ad-hidden></div>
+    `;
+
+    expect(countPageMarkerSummary()).toEqual({
+      count: 5,
+      adCount: 1,
+      domainCount: 2,
+      urlCount: 1,
+      selectorCount: 1,
+    });
+  });
+
+  it('does not count zero-size marker nodes in a real layout environment', () => {
+    document.body.innerHTML = `
+      <div class="hush-blocked-badge" data-rule-type="domain"></div>
+      <div class="hush-ad-badge"></div>
+    `;
+    const blockedBadge = document.querySelector<HTMLElement>('.hush-blocked-badge')!;
+    const adBadge = document.querySelector<HTMLElement>('.hush-ad-badge')!;
+    vi.spyOn(document.documentElement, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 1200, height: 800 }));
+    vi.spyOn(blockedBadge, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 80, height: 20 }));
+    vi.spyOn(adBadge, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 0, height: 0 }));
+
+    expect(countPageMarkerSummary()).toEqual({
+      count: 1,
+      adCount: 0,
+      domainCount: 1,
+      urlCount: 0,
+      selectorCount: 0,
+    });
+  });
+
   it('reports zero when marking is disabled', async () => {
     const listener = vi.fn();
     fakeBrowser.runtime.onMessage.addListener(listener);
@@ -359,7 +471,7 @@ describe('toolbar page badge', () => {
 
     expect(listener).toHaveBeenCalledWith(
       {
-        type: 'srb-page-marker-count',
+        type: 'hush-page-marker-count',
         count: 0,
         adCount: 0,
         domainCount: 0,

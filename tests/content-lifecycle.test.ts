@@ -31,15 +31,15 @@ describe('marking lifecycle', () => {
 
   it('removes markers and scan attributes', () => {
     document.body.innerHTML = `
-      <div data-srb-processed data-srb-domain-blocked data-srb-ad-scanned data-srb-ad-badge data-srb-ad-hidden data-srb-rule-hidden data-srb-rule-type="domain" data-srb-target-url="https://example.com/">
-        <div class="srb-blocked-badge"></div>
-        <div class="srb-ad-badge"></div>
+      <div data-hush-processed data-hush-domain-blocked data-hush-ad-scanned data-hush-ad-badge data-hush-ad-hidden data-hush-rule-hidden data-hush-rule-type="domain" data-hush-target-url="https://example.com/">
+        <div class="hush-blocked-badge"></div>
+        <div class="hush-ad-badge"></div>
       </div>
     `;
 
     clearAllMarkers();
 
-    expect(document.querySelector('.srb-blocked-badge, .srb-ad-badge')).toBeNull();
-    expect(document.querySelector('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-ad-hidden], [data-srb-rule-hidden], [data-srb-target-url]')).toBeNull();
+    expect(document.querySelector('.hush-blocked-badge, .hush-ad-badge')).toBeNull();
+    expect(document.querySelector('[data-hush-processed], [data-hush-domain-blocked], [data-hush-ad-scanned], [data-hush-ad-badge], [data-hush-ad-hidden], [data-hush-rule-hidden], [data-hush-target-url]')).toBeNull();
   });
 });

@@ -7,16 +7,21 @@ import {
 } from '@/constants/search-hosts';
 import { findMatchingBlockedDomainIndex } from '@/utils/domain';
 import { addBlockedUrl, addDomain, get, removeBlockedItem } from '@/utils/storage';
-import { isPageMarkerCountMessage } from '@/utils/page-badge';
+import {
+  PAGE_MARKER_REPORT_REQUEST,
+  isPageMarkerCountMessage,
+  isPageMarkerSummaryRequest,
+} from '@/utils/page-badge';
+import type { PageMarkerSummary } from '@/utils/page-badge';
 import { isDomainHomepageUrl } from '@/utils/url';
 import { initSentry } from '@/utils/sentry';
 import { clearTemporaryBlocking } from '@/utils/temporary-blocking';
 
 const CONTEXT_MENU = {
-  root: 'srb-root',
-  picker: 'srb-picker',
-  domain: 'srb-block-domain',
-  url: 'srb-block-url',
+  root: 'hush-root',
+  picker: 'hush-picker',
+  domain: 'hush-block-domain',
+  url: 'hush-block-url',
 } as const;
 
 interface ContextMenuShownData {
@@ -146,7 +151,53 @@ function updateTabBadge(tabId: number, count: number): void {
   void browser.action.setBadgeText({ tabId, text });
 }
 
+const EMPTY_PAGE_MARKER_SUMMARY: PageMarkerSummary = {
+  count: 0,
+  adCount: 0,
+  domainCount: 0,
+  urlCount: 0,
+  selectorCount: 0,
+};
+
 export default defineBackground(() => {
+  const pageMarkerSummaries = new Map<number, PageMarkerSummary>();
+  const pendingSummaryRequests = new Map<number, Set<(summary: PageMarkerSummary) => void>>();
+
+  function publishPageMarkerSummary(tabId: number, summary: PageMarkerSummary): void {
+    pageMarkerSummaries.set(tabId, summary);
+    updateTabBadge(tabId, summary.count);
+    pendingSummaryRequests.get(tabId)?.forEach((resolve) => resolve(summary));
+    pendingSummaryRequests.delete(tabId);
+  }
+
+  function requestPageMarkerSummary(tabId: number): Promise<PageMarkerSummary> {
+    return new Promise((resolve) => {
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout>;
+      const finish = (summary: PageMarkerSummary) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        pendingSummaryRequests.get(tabId)?.delete(finish);
+        resolve(summary);
+      };
+
+      const waiters = pendingSummaryRequests.get(tabId) ?? new Set();
+      waiters.add(finish);
+      pendingSummaryRequests.set(tabId, waiters);
+
+      timeoutId = setTimeout(() => {
+        finish(pageMarkerSummaries.get(tabId) ?? { ...EMPTY_PAGE_MARKER_SUMMARY });
+      }, 300);
+
+      void browser.tabs.sendMessage(tabId, {
+        type: PAGE_MARKER_REPORT_REQUEST,
+      }).catch(() => {
+        finish(pageMarkerSummaries.get(tabId) ?? { ...EMPTY_PAGE_MARKER_SUMMARY });
+      });
+    });
+  }
+
   initSentry('background');
   // 清除旧版本留下的全局累计 Badge，仅保留每个标签页自己的计数。
   void browser.action.setBadgeText({ text: '' });
@@ -168,7 +219,7 @@ export default defineBackground(() => {
   browser.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === CONTEXT_MENU.picker) {
       if (tab?.id !== undefined) {
-        void browser.tabs.sendMessage(tab.id, { type: 'srb-start-picker' }).catch(() => {});
+        void browser.tabs.sendMessage(tab.id, { type: 'hush-start-picker' }).catch(() => {});
       }
       return;
     }
@@ -184,15 +235,34 @@ export default defineBackground(() => {
     }
   });
 
-  browser.runtime.onMessage.addListener((message, sender) => {
-    const tabId = sender.tab?.id;
-    if (tabId === undefined || !isPageMarkerCountMessage(message)) return;
-    updateTabBadge(tabId, message.count);
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isPageMarkerCountMessage(message)) {
+      const tabId = sender.tab?.id;
+      if (tabId === undefined) return;
+      publishPageMarkerSummary(tabId, {
+        count: message.count,
+        adCount: message.adCount ?? 0,
+        domainCount: message.domainCount ?? 0,
+        urlCount: message.urlCount ?? 0,
+        selectorCount: message.selectorCount ?? 0,
+      });
+      return;
+    }
+
+    if (isPageMarkerSummaryRequest(message)) {
+      void requestPageMarkerSummary(message.tabId).then(sendResponse);
+      return true;
+    }
   });
 
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === 'loading') {
-      updateTabBadge(tabId, 0);
+      publishPageMarkerSummary(tabId, { ...EMPTY_PAGE_MARKER_SUMMARY });
     }
+  });
+
+  browser.tabs.onRemoved.addListener((tabId) => {
+    pageMarkerSummaries.delete(tabId);
+    pendingSummaryRequests.delete(tabId);
   });
 });

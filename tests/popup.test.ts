@@ -25,10 +25,14 @@ interface PopupTab {
 
 interface PopupTabsApi {
   query(...args: unknown[]): Promise<PopupTab[]>;
+}
+
+interface PopupRuntimeApi {
   sendMessage(...args: unknown[]): Promise<unknown>;
 }
 
 const popupTabs = fakeBrowser.tabs as unknown as PopupTabsApi;
+const popupRuntime = fakeBrowser.runtime as unknown as PopupRuntimeApi;
 
 describe('Popup', () => {
   let component: ReturnType<typeof mount> | undefined;
@@ -333,12 +337,12 @@ describe('Popup', () => {
       incognito: false,
       url: 'https://www.google.com/search?q=hush',
     }]);
-    vi.spyOn(popupTabs, 'sendMessage').mockResolvedValue({
-      count: 6,
-      adCount: 2,
-      domainCount: 3,
-      urlCount: 1,
-      selectorCount: 0,
+    const sendMessage = vi.spyOn(popupRuntime, 'sendMessage').mockResolvedValue({
+        count: 6,
+        adCount: 2,
+        domainCount: 3,
+        urlCount: 1,
+        selectorCount: 0,
     });
     vi.spyOn(fakeBrowser.i18n, 'getUILanguage').mockReturnValue('en-US');
     vi.spyOn(fakeBrowser.i18n, 'getMessage').mockImplementation((key) => {
@@ -362,6 +366,10 @@ describe('Popup', () => {
     component = mount(App, { target });
 
     await vi.waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'hush-get-page-marker-summary',
+        tabId: 7,
+      });
       const siteCard = target.querySelector('.current-site-card')?.textContent ?? '';
       expect(siteCard).toContain('Current site');
       expect(siteCard).toContain('6');

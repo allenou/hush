@@ -51,72 +51,72 @@
   .overlay {
     position: fixed;
     inset: 0;
-    z-index: var(--srb-z-dialog);
+    z-index: var(--hush-z-dialog);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--srb-space-xl);
-    background: var(--srb-overlay);
+    padding: var(--hush-space-xl);
+    background: var(--hush-overlay);
     backdrop-filter: blur(2px);
   }
   .dialog {
     width: min(400px, 100%);
-    padding: var(--srb-space-2xl);
-    border-radius: var(--srb-radius-dialog);
-    background: var(--srb-surface);
-    box-shadow: var(--srb-shadow-dialog);
+    padding: var(--hush-space-2xl);
+    border-radius: var(--hush-radius-dialog);
+    background: var(--hush-surface);
+    box-shadow: var(--hush-shadow-dialog);
   }
   h2 {
-    margin: 0 0 var(--srb-space-sm);
-    font-size: var(--srb-font-size-title);
-    font-weight: var(--srb-weight-bold);
-    line-height: var(--srb-line-height-tight);
+    margin: 0 0 var(--hush-space-sm);
+    font-size: var(--hush-font-size-title);
+    font-weight: var(--hush-weight-bold);
+    line-height: var(--hush-line-height-tight);
   }
   p {
     margin: 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-body);
-    line-height: var(--srb-line-height-body);
+    color: var(--hush-text-subtle);
+    font-size: var(--hush-font-size-body);
+    line-height: var(--hush-line-height-body);
   }
   .dialog-actions {
     display: flex;
     justify-content: flex-end;
-    gap: var(--srb-space-sm);
-    margin-top: var(--srb-space-2xl);
+    gap: var(--hush-space-sm);
+    margin-top: var(--hush-space-2xl);
   }
   .dialog-actions button {
-    height: var(--srb-button-height-compact);
+    height: var(--hush-button-height-compact);
     padding: 0 16px;
-    border-radius: var(--srb-radius-lg);
+    border-radius: var(--hush-radius-lg);
     font: inherit;
-    font-size: var(--srb-font-size-sm);
-    font-weight: var(--srb-weight-bold);
+    font-size: var(--hush-font-size-sm);
+    font-weight: var(--hush-weight-bold);
     cursor: pointer;
-    transition: background var(--srb-transition-base), border-color var(--srb-transition-base);
+    transition: background var(--hush-transition-base), border-color var(--hush-transition-base);
   }
   .btn-cancel {
-    border: 1px solid var(--srb-border-strong);
-    background: var(--srb-surface);
-    color: var(--srb-text-secondary);
+    border: 1px solid var(--hush-border-strong);
+    background: var(--hush-surface);
+    color: var(--hush-text-secondary);
   }
   .btn-cancel:hover {
-    background: var(--srb-control-hover-bg);
+    background: var(--hush-control-hover-bg);
   }
   .btn-cancel:focus-visible {
     outline: none;
-    box-shadow: var(--srb-focus-ring);
+    box-shadow: var(--hush-focus-ring);
   }
   .btn-danger {
-    border: 1px solid var(--srb-danger);
-    background: var(--srb-danger);
-    color: var(--srb-on-primary);
+    border: 1px solid var(--hush-danger);
+    background: var(--hush-danger);
+    color: var(--hush-on-primary);
   }
   .btn-danger:hover {
-    border-color: var(--srb-danger-strong);
-    background: var(--srb-danger-strong);
+    border-color: var(--hush-danger-strong);
+    background: var(--hush-danger-strong);
   }
   .btn-danger:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--srb-danger-ring);
+    box-shadow: 0 0 0 3px var(--hush-danger-ring);
   }
 </style>

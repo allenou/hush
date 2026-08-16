@@ -71,12 +71,12 @@ async function recordBlockOnce(
   domain?: string,
   domainKind?: DomainBlockKind,
 ): Promise<void> {
-  if (item.hasAttribute('data-srb-counted')) return;
-  item.setAttribute('data-srb-counted', 'true');
+  if (item.hasAttribute('data-hush-counted')) return;
+  item.setAttribute('data-hush-counted', 'true');
   try {
     await recordBlock(type, domain, domainKind, _getHostname());
   } catch (error) {
-    item.removeAttribute('data-srb-counted');
+    item.removeAttribute('data-hush-counted');
     throw error;
   }
 }
@@ -159,10 +159,101 @@ function findContentContainer(source: Element): HTMLElement | null {
   return best && isReasonableContentSize(best) ? best : null;
 }
 
+/**
+ * 从通用广告短标签定位局部组件。广告标签常位于侧栏模块中，不能复用结果项的
+ * 回溯策略，否则可能跨过多个组件并将整列侧栏误标为广告。
+ */
+function findAdLabelContainer(source: HTMLElement): HTMLElement | null {
+  let branch: HTMLElement = source;
+  let cur: HTMLElement | null = branch.parentElement;
+  let depth = 0;
+
+  while (cur && cur !== document.body && depth < 8) {
+    if (isLayoutShell(cur)) return null;
+    if (isReasonableContentSize(cur) && hasSiblingContent(cur, branch)) return cur;
+
+    branch = cur;
+    cur = cur.parentElement;
+    depth++;
+  }
+
+  // 没有清晰的“标题 + 内容”结构时保留旧版通用定位，兼容普通结果和纯 div 卡片；
+  // 但最终命中页面布局壳时必须放弃，避免一条广告标签遮住整列内容。
+  const fallback = findContentContainer(source);
+  return fallback && !isLayoutShell(fallback) ? fallback : null;
+}
+
+/** 标签所在分支之外还有内容区时，当前节点可视为一个局部广告组件。 */
+function hasSiblingContent(container: HTMLElement, labelBranch: HTMLElement): boolean {
+  return Array.from(container.children).some((child) =>
+    child !== labelBranch && isContentBranch(child as HTMLElement),
+  );
+}
+
+/** 判断一个直接子分支是否像广告正文、媒体或待异步填充的内容槽。 */
+function isContentBranch(element: HTMLElement): boolean {
+  const tag = element.tagName.toLowerCase();
+  if (['ul', 'ol', 'table', 'dl', 'form', 'iframe', 'video', 'picture', 'img'].includes(tag)) {
+    return true;
+  }
+
+  if (element.matches('a[href], [role="list"], [role="grid"], [role="article"]')) return true;
+  if (element.querySelector('a[href], img, picture, video, iframe, button, [role="list"], [role="grid"], [role="article"]')) {
+    return true;
+  }
+
+  // 标题文字不能单独证明当前节点包含广告正文，否则会只遮住标题行。
+  if (/^h[1-6]$/.test(tag)) return false;
+  return (element.textContent ?? '').trim().length >= 20;
+}
+
+/**
+ * 识别承载多个独立模块的页面布局壳。只依据计算样式与分支结构，避免绑定站点 ID/class。
+ */
+function isLayoutShell(element: HTMLElement): boolean {
+  const children = Array.from(element.children).filter((child) =>
+    !['script', 'style', 'template'].includes(child.tagName.toLowerCase()),
+  ) as HTMLElement[];
+  const contentBranches = children.filter(isContentBranch).length;
+
+  let position = element.style.position;
+  try {
+    position = window.getComputedStyle(element).position || position;
+  } catch {
+    // 未连接到文档的测试节点继续使用行内样式。
+  }
+
+  if ((position === 'fixed' || position === 'sticky')
+    && children.length >= 3
+    && contentBranches >= 2) return true;
+
+  return children.length >= 5 && contentBranches >= 3;
+}
+
 function isReasonableContentSize(element: HTMLElement): boolean {
   const rect = element.getBoundingClientRect();
   const viewportArea = window.innerWidth * window.innerHeight;
   return viewportArea <= 0 || rect.width * rect.height <= viewportArea * 0.6;
+}
+
+/** 隐藏或尚未获得布局尺寸的广告槽不注入标记，等待后续 DOM 变化后重试。 */
+function isRenderableAdTarget(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) return false;
+  let current: HTMLElement | null = element;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (style.display === 'none'
+      || style.visibility === 'hidden'
+      || style.visibility === 'collapse'
+      || Number.parseFloat(style.opacity) === 0) return false;
+    current = current.parentElement;
+  }
+
+  const rootRect = document.documentElement.getBoundingClientRect();
+  if (rootRect.width <= 0 && rootRect.height <= 0) return true;
+
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
 // ========== UI Injection ==========
@@ -171,7 +262,7 @@ function rememberTargetUrl(item: Element, href: string): void {
   try {
     const url = new URL(href);
     if (url.protocol === 'http:' || url.protocol === 'https:') {
-      item.setAttribute('data-srb-target-url', url.href);
+      item.setAttribute('data-hush-target-url', url.href);
     }
   } catch {
     // 无效链接不记录。
@@ -183,21 +274,21 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
   const displayMode = ruleType === 'domain'
     ? (_state.domainDisplayMode ?? 'mark')
     : (_state.urlDisplayMode ?? 'mark');
-  if (displayMode === 'hide' && item.hasAttribute('data-srb-rule-hidden')) return;
-  if (displayMode === 'mark' && item.querySelector('.srb-blocked-badge')) return;
+  if (displayMode === 'hide' && item.hasAttribute('data-hush-rule-hidden')) return;
+  if (displayMode === 'mark' && item.querySelector('.hush-blocked-badge')) return;
   rememberTargetUrl(item, href);
   if (displayMode === 'hide') {
     // 仅修改当前页面的呈现，不拦截请求或改写页面网络通信。
-    item.setAttribute('data-srb-rule-hidden', 'true');
-    item.setAttribute('data-srb-rule-type', ruleType);
+    item.setAttribute('data-hush-rule-hidden', 'true');
+    item.setAttribute('data-hush-rule-type', ruleType);
     return;
   }
   const mask = document.createElement('div');
-  mask.className = 'srb-mask';
+  mask.className = 'hush-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
 
   const badge = document.createElement('div');
-  badge.className = 'srb-blocked-badge';
+  badge.className = 'hush-blocked-badge';
   badge.setAttribute('role', 'button');
   badge.tabIndex = 0;
   lockBadgeTypography(badge);
@@ -241,7 +332,7 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
       ) >= 0;
       const hasUrlRule = latest.blockedUrls.includes(href);
 
-      if (!hasDomainRule) item.removeAttribute('data-srb-domain-blocked');
+      if (!hasDomainRule) item.removeAttribute('data-hush-domain-blocked');
       if (hasDomainRule) {
         renderRuleBadge('domain');
       } else if (hasUrlRule) {
@@ -267,10 +358,11 @@ export function injectBadge(item: Element, domainMatch: boolean, urlMatch: boole
   item.appendChild(badge);
 }
 
-export function injectAdBadge(item: Element, href: string): void {
+export function injectAdBadge(item: Element, href: string): boolean {
   const adDisplayMode = _state.adDisplayMode ?? 'mark';
-  if (adDisplayMode === 'hide' && item.hasAttribute('data-srb-ad-hidden')) return;
-  if (adDisplayMode === 'mark' && item.querySelector('.srb-ad-badge')) return;
+  if (adDisplayMode === 'hide' && item.hasAttribute('data-hush-ad-hidden')) return true;
+  if (adDisplayMode === 'mark' && item.querySelector('.hush-ad-badge')) return true;
+  if (!isRenderableAdTarget(item)) return false;
   if (href) rememberTargetUrl(item, href);
   const adHref = href || item.querySelector<HTMLAnchorElement>('a[href]')?.href || '';
   const parsedDomain = tryParseHostname(adHref);
@@ -280,16 +372,16 @@ export function injectAdBadge(item: Element, href: string): void {
   void recordBlockOnce(item, 'ad', domain).catch(() => {});
   if (adDisplayMode === 'hide') {
     // 仅修改当前页面的呈现，不拦截广告请求或改写页面网络通信。
-    item.setAttribute('data-srb-ad-hidden', 'true');
-    return;
+    item.setAttribute('data-hush-ad-hidden', 'true');
+    return true;
   }
 
   const mask = document.createElement('div');
-  mask.className = 'srb-ad-mask';
+  mask.className = 'hush-ad-mask';
   (item as HTMLElement).style.position = (item as HTMLElement).style.position || 'relative';
 
   const badge = document.createElement('div');
-  badge.className = 'srb-ad-badge';
+  badge.className = 'hush-ad-badge';
   lockBadgeTypography(badge);
   badge.textContent = `📢 ${t('adBadge')}`;
   badge.title = t('adBadgeTitle');
@@ -300,10 +392,11 @@ export function injectAdBadge(item: Element, href: string): void {
   });
   item.appendChild(mask);
   item.appendChild(badge);
+  return true;
 }
 
 function clearActionMarkers(item: Element): void {
-  item.querySelectorAll('.srb-block-btn, .srb-popup, .srb-ad-mask, .srb-ad-badge').forEach((el) => el.remove());
+  item.querySelectorAll('.hush-block-btn, .hush-popup, .hush-ad-mask, .hush-ad-badge').forEach((el) => el.remove());
 }
 
 function applyBlockedRuleMarker(item: Element, href: string): boolean {
@@ -337,8 +430,8 @@ export function scanBlockedDomains(): void {
       : null;
   const matchedContainers = new Map<HTMLElement, string>();
   document.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
-    if (link.closest('.srb-popup, .srb-blocked-badge')) return;
-    if (link.closest('[data-srb-domain-blocked]')) return;
+    if (link.closest('.hush-popup, .hush-blocked-badge')) return;
+    if (link.closest('[data-hush-domain-blocked]')) return;
 
     const candidateUrls = isSogouPage
       ? [...extractSogouLinkUrls(link), ...extractAnchorSpanUrls(link)]
@@ -362,7 +455,7 @@ export function scanBlockedDomains(): void {
     // 同一结果中可能嵌套多个命中链接，只标记最外层的完整内容块。
     if (containers.some((candidate) => candidate !== container && candidate.contains(container))) return;
     if (applyBlockedRuleMarker(container, matchedUrl)) {
-      container.setAttribute('data-srb-domain-blocked', 'true');
+      container.setAttribute('data-hush-domain-blocked', 'true');
     }
   });
 
@@ -373,8 +466,8 @@ export function scanBlockedDomains(): void {
 
 export function processItem(item: Element): void {
   if (!_state.isEnabled) return;
-  if (item.closest('[data-srb-domain-blocked]')) return;
-  const wasProcessed = item.hasAttribute('data-srb-processed');
+  if (item.closest('[data-hush-domain-blocked]')) return;
+  const wasProcessed = item.hasAttribute('data-hush-processed');
   if (!_currentEngine) return;
   const href = _extractResultUrl(item, _currentEngine.linkSelector);
   if (!href) { return; }
@@ -383,12 +476,14 @@ export function processItem(item: Element): void {
     return;
   }
 
-  item.setAttribute('data-srb-processed', 'true');
+  item.setAttribute('data-hush-processed', 'true');
   if (applyBlockedRuleMarker(item, href)) return;
   else if (_state.blockAds && isAdItem(item)) {
     const adContainer = findAdContainer(item);
-    if (adContainer) { injectAdBadge(adContainer, href); }
-    else { injectAdBadge(item, href); }
+    const injected = adContainer
+      ? injectAdBadge(adContainer, href)
+      : injectAdBadge(item, href);
+    if (!injected) item.removeAttribute('data-hush-processed');
   }
 }
 
@@ -420,10 +515,11 @@ export function scanForAds(): void {
     // 搜索引擎可能异步重写广告容器内容，导致已注入的遮罩被移除，
     // 但容器上的扫描标记仍保留；此时需要重新注入。
     if (_state.adDisplayMode === 'hide'
-      ? element.hasAttribute('data-srb-ad-hidden')
-      : Boolean(element.querySelector('.srb-ad-mask, .srb-ad-badge'))) return;
-    element.setAttribute('data-srb-ad-scanned', 'true');
-    injectAdBadge(element, '');
+      ? element.hasAttribute('data-hush-ad-hidden')
+      : Boolean(element.querySelector('.hush-ad-mask, .hush-ad-badge'))) return;
+    if (injectAdBadge(element, '')) {
+      element.setAttribute('data-hush-ad-scanned', 'true');
+    }
   });
 
   const adLabels = new Set((engine.adLabelTexts ?? []).map((text) => text.toLowerCase()));
@@ -437,19 +533,19 @@ export function scanForAds(): void {
     'span, small, label, em, i, b, strong, a, ' +
     '[class*="ad-label"], [class*="ad-badge"], [class*="badge"]',
   ).forEach((badge) => {
-    if (badge.hasAttribute('data-srb-ad-badge')) return;
+    if (badge.hasAttribute('data-hush-ad-badge')) return;
     const t = (badge.textContent ?? '').trim();
     if (t.length === 0 || t.length > 20) return;
     if (badge.children.length > 3) return;
 
     if (!adLabels.has(t.toLowerCase())) return;
-    if (badge.closest('[data-srb-ad-scanned]')) return;
-    badge.setAttribute('data-srb-ad-badge', 'true');
-
-    const best = findContentContainer(badge);
-    if (best && !best.hasAttribute('data-srb-ad-scanned')) {
-      best.setAttribute('data-srb-ad-scanned', 'true');
-      injectAdBadge(best, '');
+    if (badge.closest('[data-hush-ad-scanned]')) return;
+    const best = findAdLabelContainer(badge);
+    if (best
+      && !best.hasAttribute('data-hush-ad-scanned')
+      && injectAdBadge(best, '')) {
+      badge.setAttribute('data-hush-ad-badge', 'true');
+      best.setAttribute('data-hush-ad-scanned', 'true');
     }
   });
   reportPageMarkerCount();
@@ -466,9 +562,9 @@ export function restoreBlockedSelectors(): void {
     if (entry.slice(0, sep) !== curHost) return;
     try {
       document.querySelectorAll(entry.slice(sep + 2)).forEach((el) => {
-        el.querySelectorAll('.srb-mask, .srb-blocked-badge').forEach((b) => b.remove());
-        el.removeAttribute('data-srb-rule-hidden');
-        el.removeAttribute('data-srb-rule-type');
+        el.querySelectorAll('.hush-mask, .hush-blocked-badge').forEach((b) => b.remove());
+        el.removeAttribute('data-hush-rule-hidden');
+        el.removeAttribute('data-hush-rule-type');
       });
     } catch { /* skip */ }
   });
@@ -487,19 +583,19 @@ export function applyBlockedSelectors(): void {
       document.querySelectorAll(selector).forEach((el) => {
         void recordBlockOnce(el, 'selector', curHost).catch(() => {});
         if ((_state.selectorDisplayMode ?? 'mark') === 'hide') {
-          if (!el.hasAttribute('data-srb-rule-hidden')) {
-            el.setAttribute('data-srb-rule-hidden', 'true');
-            el.setAttribute('data-srb-rule-type', 'selector');
+          if (!el.hasAttribute('data-hush-rule-hidden')) {
+            el.setAttribute('data-hush-rule-hidden', 'true');
+            el.setAttribute('data-hush-rule-type', 'selector');
           }
           return;
         }
-        if (el.querySelector('.srb-mask, .srb-blocked-badge')) return;
+        if (el.querySelector('.hush-mask, .hush-blocked-badge')) return;
         (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
         const mask = document.createElement('div');
-        mask.className = 'srb-mask';
+        mask.className = 'hush-mask';
         el.appendChild(mask);
         const badge = document.createElement('div');
-        badge.className = 'srb-blocked-badge';
+        badge.className = 'hush-blocked-badge';
         lockBadgeTypography(badge);
         badge.textContent = `🎯 ${t('elementHit')}`;
         badge.title = t('elementBlocked');
@@ -525,17 +621,17 @@ export function checkSavedSelectors(): void {
 // ========== Cleanup ==========
 
 export function clearAllMarkers(options: { preserveCounts?: boolean; clearPageCount?: boolean } = {}): void {
-  document.querySelectorAll('.srb-mask, .srb-blocked-badge, .srb-ad-mask, .srb-ad-badge, .srb-block-btn, .srb-popup').forEach((el) => el.remove());
-  document.querySelectorAll('[data-srb-processed], [data-srb-domain-blocked], [data-srb-ad-scanned], [data-srb-ad-badge], [data-srb-ad-hidden], [data-srb-rule-hidden], [data-srb-counted], [data-srb-target-url]').forEach((el) => {
-    el.removeAttribute('data-srb-processed');
-    el.removeAttribute('data-srb-domain-blocked');
-    el.removeAttribute('data-srb-ad-scanned');
-    el.removeAttribute('data-srb-ad-badge');
-    el.removeAttribute('data-srb-ad-hidden');
-    el.removeAttribute('data-srb-rule-hidden');
-    el.removeAttribute('data-srb-rule-type');
-    el.removeAttribute('data-srb-target-url');
-    if (!options.preserveCounts) el.removeAttribute('data-srb-counted');
+  document.querySelectorAll('.hush-mask, .hush-blocked-badge, .hush-ad-mask, .hush-ad-badge, .hush-block-btn, .hush-popup').forEach((el) => el.remove());
+  document.querySelectorAll('[data-hush-processed], [data-hush-domain-blocked], [data-hush-ad-scanned], [data-hush-ad-badge], [data-hush-ad-hidden], [data-hush-rule-hidden], [data-hush-counted], [data-hush-target-url]').forEach((el) => {
+    el.removeAttribute('data-hush-processed');
+    el.removeAttribute('data-hush-domain-blocked');
+    el.removeAttribute('data-hush-ad-scanned');
+    el.removeAttribute('data-hush-ad-badge');
+    el.removeAttribute('data-hush-ad-hidden');
+    el.removeAttribute('data-hush-rule-hidden');
+    el.removeAttribute('data-hush-rule-type');
+    el.removeAttribute('data-hush-target-url');
+    if (!options.preserveCounts) el.removeAttribute('data-hush-counted');
   });
   if (options.clearPageCount !== false) clearPageMarkerCount();
   else reportPageMarkerCount();

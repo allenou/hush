@@ -149,80 +149,80 @@
 
 <style>
   .search-section {
-    border: 1px solid var(--srb-border);
-    border-radius: var(--srb-radius-card);
-    background: var(--srb-surface);
-    padding: var(--srb-space-xl);
-    box-shadow: var(--srb-shadow-xs);
+    border: 1px solid var(--hush-border);
+    border-radius: var(--hush-radius-card);
+    background: var(--hush-surface);
+    padding: var(--hush-space-xl);
+    box-shadow: var(--hush-shadow-xs);
   }
   .search-section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--srb-space-md);
+    gap: var(--hush-space-md);
     margin-bottom: 16px;
   }
   .search-heading-copy { min-width: 0; }
   .search-recording-notice {
-    margin: var(--srb-space-2xs) 0 0;
-    color: var(--srb-text-secondary);
-    font-size: var(--srb-font-size-xs);
-    line-height: var(--srb-line-height-body);
+    margin: var(--hush-space-2xs) 0 0;
+    color: var(--hush-text-secondary);
+    font-size: var(--hush-font-size-xs);
+    line-height: var(--hush-line-height-body);
   }
   .history-clear {
     border: none;
     background: transparent;
-    color: var(--srb-danger);
+    color: var(--hush-danger);
     font: inherit;
-    font-size: var(--srb-font-size-sm);
-    font-weight: var(--srb-weight-semibold);
+    font-size: var(--hush-font-size-sm);
+    font-weight: var(--hush-weight-semibold);
     cursor: pointer;
   }
   .card-title {
     margin: 0;
-    font-size: var(--srb-font-size-title);
-    font-weight: var(--srb-weight-bold);
+    font-size: var(--hush-font-size-title);
+    font-weight: var(--hush-weight-bold);
     letter-spacing: -0.02em;
-    line-height: var(--srb-line-height-tight);
+    line-height: var(--hush-line-height-tight);
   }
   .empty {
-    padding: var(--srb-space-4xl) var(--srb-space-2xl);
+    padding: var(--hush-space-4xl) var(--hush-space-2xl);
     text-align: center;
   }
   .empty-icon {
-    color: var(--srb-segment-other);
-    margin-bottom: var(--srb-space-md);
+    color: var(--hush-segment-other);
+    margin-bottom: var(--hush-space-md);
   }
   .empty h3 {
     margin: 0 0 6px;
     font-size: 17px;
-    font-weight: var(--srb-weight-bold);
+    font-weight: var(--hush-weight-bold);
   }
   .empty p {
     margin: 0;
-    color: var(--srb-text-subtle);
-    font-size: var(--srb-font-size-body);
+    color: var(--hush-text-subtle);
+    font-size: var(--hush-font-size-body);
   }
   .empty-settings-link {
     padding: 0;
     border: 0;
-    background: linear-gradient(transparent 62%, var(--srb-accent-highlight) 62%);
-    color: var(--srb-primary);
+    background: linear-gradient(transparent 62%, var(--hush-accent-highlight) 62%);
+    color: var(--hush-primary);
     font: inherit;
-    font-weight: var(--srb-weight-bold);
+    font-weight: var(--hush-weight-bold);
     cursor: pointer;
-    transition: color var(--srb-transition-fast);
+    transition: color var(--hush-transition-fast);
   }
   .empty-settings-link:hover {
-    color: var(--srb-primary-hover);
+    color: var(--hush-primary-hover);
   }
   .empty-settings-link:focus-visible {
     outline: none;
-    box-shadow: var(--srb-focus-ring);
+    box-shadow: var(--hush-focus-ring);
   }
 
   .search-table {
-    border: 1px solid var(--srb-border-light);
+    border: 1px solid var(--hush-border-light);
     border-radius: 12px;
     overflow: visible;
   }
@@ -232,11 +232,11 @@
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
-    background: var(--srb-table-head);
-    color: var(--srb-text-secondary);
-    font-size: var(--srb-font-size-xs);
-    font-weight: var(--srb-weight-bold);
-    letter-spacing: var(--srb-tracking-caps);
+    background: var(--hush-table-head);
+    color: var(--hush-text-secondary);
+    font-size: var(--hush-font-size-xs);
+    font-weight: var(--hush-weight-bold);
+    letter-spacing: var(--hush-tracking-caps);
     text-transform: uppercase;
     border-radius: 11px 11px 0 0;
   }
@@ -246,83 +246,83 @@
     gap: 12px;
     align-items: center;
     padding: 12px 16px;
-    border-top: 1px solid var(--srb-row-divider);
-    transition: background var(--srb-transition-fast);
+    border-top: 1px solid var(--hush-row-divider);
+    transition: background var(--hush-transition-fast);
   }
   .search-table-row:last-child { border-radius: 0 0 11px 11px; }
-  .search-table-row:hover { background: var(--srb-row-hover); }
+  .search-table-row:hover { background: var(--hush-row-hover); }
   .search-table-query {
     display: flex;
     align-items: center;
-    gap: var(--srb-space-sm);
-    font-size: var(--srb-font-size-body);
-    font-weight: var(--srb-weight-semibold);
-    color: var(--srb-text);
+    gap: var(--hush-space-sm);
+    font-size: var(--hush-font-size-body);
+    font-weight: var(--hush-weight-semibold);
+    color: var(--hush-text);
   }
-  .search-table-query .search-icon { color: var(--srb-text-muted); flex-shrink: 0; }
+  .search-table-query .search-icon { color: var(--hush-text-muted); flex-shrink: 0; }
   .search-engine-tag {
     padding: 2px 7px;
-    border-radius: var(--srb-radius-full);
-    background: var(--srb-accent-soft);
-    color: var(--srb-domain-text);
-    font-size: var(--srb-font-size-2xs);
-    font-weight: var(--srb-weight-bold);
-    letter-spacing: var(--srb-tracking-label);
+    border-radius: var(--hush-radius-full);
+    background: var(--hush-accent-soft);
+    color: var(--hush-domain-text);
+    font-size: var(--hush-font-size-2xs);
+    font-weight: var(--hush-weight-bold);
+    letter-spacing: var(--hush-tracking-label);
   }
   .search-table-time {
-    font-size: var(--srb-font-size-sm);
-    color: var(--srb-text-subtle);
+    font-size: var(--hush-font-size-sm);
+    color: var(--hush-text-subtle);
   }
   .search-table-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--srb-space-sm);
+    gap: var(--hush-space-sm);
   }
   .search-action-group {
     display: inline-flex;
     align-items: stretch;
-    border: 1px solid var(--srb-border-strong);
-    border-radius: var(--srb-radius-md);
-    background: var(--srb-surface);
+    border: 1px solid var(--hush-border-strong);
+    border-radius: var(--hush-radius-md);
+    background: var(--hush-surface);
     overflow: visible;
   }
   .search-again-btn,
   .history-delete {
     font: inherit;
-    font-size: var(--srb-font-size-xs);
-    font-weight: var(--srb-weight-bold);
+    font-size: var(--hush-font-size-xs);
+    font-weight: var(--hush-weight-bold);
     cursor: pointer;
-    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
+    transition: background var(--hush-transition-fast), color var(--hush-transition-fast);
   }
   .search-again-btn {
     padding: 5px 9px;
     border: none;
-    border-radius: calc(var(--srb-radius-md) - 1px) 0 0 calc(var(--srb-radius-md) - 1px);
+    border-radius: calc(var(--hush-radius-md) - 1px) 0 0 calc(var(--hush-radius-md) - 1px);
     background: transparent;
-    color: var(--srb-text-neutral);
+    color: var(--hush-text-neutral);
   }
   .search-again-btn:hover {
-    background: var(--srb-accent-soft);
-    color: var(--srb-text-strong);
+    background: var(--hush-accent-soft);
+    color: var(--hush-text-strong);
   }
   .history-delete {
     padding: 5px 8px;
     border: none;
-    border-radius: var(--srb-radius-md);
+    border-radius: var(--hush-radius-md);
     background: transparent;
-    color: var(--srb-text-subtle);
+    color: var(--hush-text-subtle);
   }
   .history-delete:hover {
-    background: var(--srb-danger-soft-bg);
-    color: var(--srb-danger);
+    background: var(--hush-danger-soft-bg);
+    color: var(--hush-danger);
   }
   .search-again-btn:focus-visible,
   .search-switch-btn:focus-visible,
   .history-delete:focus-visible,
   .search-engine-opt:focus-visible {
     outline: none;
-    box-shadow: var(--srb-focus-ring);
+    box-shadow: var(--hush-focus-ring);
   }
 
   .search-switch-wrapper {
@@ -336,57 +336,57 @@
     width: 26px;
     min-height: 26px;
     border: none;
-    border-left: 1px solid var(--srb-border-strong);
-    border-radius: 0 calc(var(--srb-radius-md) - 1px) calc(var(--srb-radius-md) - 1px) 0;
+    border-left: 1px solid var(--hush-border-strong);
+    border-radius: 0 calc(var(--hush-radius-md) - 1px) calc(var(--hush-radius-md) - 1px) 0;
     background: transparent;
-    color: var(--srb-text-muted);
+    color: var(--hush-text-muted);
     cursor: pointer;
-    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
+    transition: background var(--hush-transition-fast), color var(--hush-transition-fast);
   }
-  .search-switch-btn:hover { background: var(--srb-accent-soft); color: var(--srb-text); }
+  .search-switch-btn:hover { background: var(--hush-accent-soft); color: var(--hush-text); }
   .search-engine-menu {
     position: absolute;
     top: 100%;
     right: 0;
-    z-index: var(--srb-z-dropdown);
+    z-index: var(--hush-z-dropdown);
     min-width: 130px;
     padding: 4px;
-    border: 1px solid var(--srb-border);
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-surface);
-    box-shadow: var(--srb-shadow-md);
+    border: 1px solid var(--hush-border);
+    border-radius: var(--hush-radius-lg);
+    background: var(--hush-surface);
+    box-shadow: var(--hush-shadow-md);
     margin-top: 4px;
   }
   .search-engine-opt {
     display: flex;
     align-items: center;
-    gap: var(--srb-space-sm);
+    gap: var(--hush-space-sm);
     width: 100%;
     padding: 8px 12px;
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: var(--srb-text);
+    color: var(--hush-text);
     font: inherit;
-    font-size: var(--srb-font-size-sm);
-    font-weight: var(--srb-weight-medium);
+    font-size: var(--hush-font-size-sm);
+    font-weight: var(--hush-weight-medium);
     cursor: pointer;
     text-align: left;
-    transition: background var(--srb-transition-fast);
+    transition: background var(--hush-transition-fast);
   }
-  .search-engine-opt:hover { background: var(--srb-menu-hover-bg); }
+  .search-engine-opt:hover { background: var(--hush-menu-hover-bg); }
   .search-engine-opt.current {
-    background: var(--srb-accent-soft);
-    font-weight: var(--srb-weight-bold);
+    background: var(--hush-accent-soft);
+    font-weight: var(--hush-weight-bold);
   }
   .se-dot {
     width: 8px;
     height: 8px;
-    border-radius: var(--srb-radius-full);
+    border-radius: var(--hush-radius-full);
     flex-shrink: 0;
   }
   .current-engine-check {
     margin-left: auto;
-    color: var(--srb-primary);
+    color: var(--hush-primary);
   }
 </style>

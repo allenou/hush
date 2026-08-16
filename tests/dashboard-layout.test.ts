@@ -54,7 +54,7 @@ describe('Dashboard layout', () => {
     expect(desktopStyles).not.toMatch(/\.kpi-card\.(lime|teal|lavender)/);
     expect(desktopStyles).not.toMatch(/\.kpi-card[^}]*border-top:/s);
     expect(desktopStyles).toMatch(
-      /\.dash-hero\s*\{[^}]*background:\s*var\(--srb-surface\);/s,
+      /\.dash-hero\s*\{[^}]*background:\s*var\(--hush-surface\);/s,
     );
     expect(dashboardSource).not.toContain('dash-hero-accent');
     expect(dashboardSource).not.toContain('dash-hero-watermark');
@@ -75,9 +75,9 @@ describe('Dashboard layout', () => {
   });
 
   it('keeps all empty states on transparent backgrounds', () => {
-    expect(dashboardSource).not.toContain('background: var(--srb-empty-bg);');
+    expect(dashboardSource).not.toContain('background: var(--hush-empty-bg);');
     expect(dashboardSource).not.toMatch(/\.chart-empty-overlay\s*\{[^}]*background:/s);
-    expect(rulesSource).not.toContain('background: var(--srb-empty-bg);');
-    expect(searchHistorySource).not.toContain('background: var(--srb-empty-bg);');
+    expect(rulesSource).not.toContain('background: var(--hush-empty-bg);');
+    expect(searchHistorySource).not.toContain('background: var(--hush-empty-bg);');
   });
 });

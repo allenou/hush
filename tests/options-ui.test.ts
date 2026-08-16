@@ -82,14 +82,14 @@ describe('Options UI', () => {
   });
 
   it('aligns the main content edges with the options header', () => {
-    expect(appSource).toContain('--srb-options-page-gutter: var(--srb-space-2xl);');
-    expect(appSource).toMatch(/\.main\s*\{[^}]*max-width:\s*calc\([\s\S]*var\(--srb-options-max-width\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*var\(--srb-options-page-gutter\)[\s\S]*\);/);
-    expect(appSource).toContain('padding: var(--srb-space-2xl) var(--srb-options-page-gutter);');
-    expect(navSource).toContain('padding: 0 var(--srb-options-page-gutter);');
+    expect(appSource).toContain('--hush-options-page-gutter: var(--hush-space-2xl);');
+    expect(appSource).toMatch(/\.main\s*\{[^}]*max-width:\s*calc\([\s\S]*var\(--hush-options-max-width\)[\s\S]*var\(--hush-options-page-gutter\)[\s\S]*var\(--hush-options-page-gutter\)[\s\S]*\);/);
+    expect(appSource).toContain('padding: var(--hush-space-2xl) var(--hush-options-page-gutter);');
+    expect(navSource).toContain('padding: 0 var(--hush-options-page-gutter);');
   });
 
   it('keeps settings sections aligned to the shared content width', () => {
-    expect(settingsSource).not.toContain('max-width: var(--srb-settings-width);');
+    expect(settingsSource).not.toContain('max-width: var(--hush-settings-width);');
     expect(settingsSource).toMatch(/\.settings-page\s*\{[^}]*width:\s*100%;/s);
     expect(settingsSource).toContain('class="settings-layout"');
     expect(settingsSource).toContain('class="settings-main"');
@@ -101,7 +101,7 @@ describe('Options UI', () => {
   });
 
   it('uses a bordered danger button for clearing data without tinting the data row', () => {
-    expect(settingsSource).toMatch(/\.clear-data-btn\s*\{[^}]*border-color:\s*var\(--srb-danger-border\);/s);
+    expect(settingsSource).toMatch(/\.clear-data-btn\s*\{[^}]*border-color:\s*var\(--hush-danger-border\);/s);
     expect(settingsSource).not.toMatch(/\.data-item-danger\s+strong\s*\{[^}]*color:/s);
   });
 

@@ -55,15 +55,15 @@ describe('element picker', () => {
     activatePicker(() => 'google.com');
 
     expect(isPickerActive()).toBe(true);
-    expect(document.body.classList.contains('srb-picker-active')).toBe(true);
-    expect(document.querySelector('.srb-picker-tooltip')).not.toBeNull();
-    expect(document.querySelector('.srb-picker-highlight')).not.toBeNull();
+    expect(document.body.classList.contains('hush-picker-active')).toBe(true);
+    expect(document.querySelector('.hush-picker-tooltip')).not.toBeNull();
+    expect(document.querySelector('.hush-picker-highlight')).not.toBeNull();
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     expect(isPickerActive()).toBe(false);
-    expect(document.body.classList.contains('srb-picker-active')).toBe(false);
-    expect(document.querySelector('.srb-picker-tooltip, .srb-picker-highlight')).toBeNull();
+    expect(document.body.classList.contains('hush-picker-active')).toBe(false);
+    expect(document.querySelector('.hush-picker-tooltip, .hush-picker-highlight')).toBeNull();
   });
 
   it('highlights a result block and opens a confirmation with a stable selector', () => {
@@ -76,7 +76,7 @@ describe('element picker', () => {
       bubbles: true,
     }));
 
-    const highlight = document.querySelector<HTMLElement>('.srb-picker-highlight')!;
+    const highlight = document.querySelector<HTMLElement>('.hush-picker-highlight')!;
     expect(highlight.style.display).toBe('block');
     expect(highlight.style.left).toBe('100px');
     expect(highlight.style.width).toBe('640px');
@@ -89,9 +89,9 @@ describe('element picker', () => {
     }));
 
     expect(isPickerActive()).toBe(false);
-    expect(document.querySelector('.srb-picker-confirm-overlay')).not.toBeNull();
-    expect(document.querySelector('.srb-picker-confirm-code')?.textContent).toBe('google.com');
-    expect(document.querySelectorAll('.srb-picker-confirm-code')[1]?.textContent)
+    expect(document.querySelector('.hush-picker-confirm-overlay')).not.toBeNull();
+    expect(document.querySelector('.hush-picker-confirm-code')?.textContent).toBe('google.com');
+    expect(document.querySelectorAll('.hush-picker-confirm-code')[1]?.textContent)
       .toBe('article.result-card');
   });
 
@@ -105,9 +105,9 @@ describe('element picker', () => {
       cancelable: true,
     }));
 
-    document.querySelector<HTMLButtonElement>('.srb-picker-cancel')?.click();
+    document.querySelector<HTMLButtonElement>('.hush-picker-cancel')?.click();
 
-    expect(document.querySelector('.srb-picker-confirm-overlay')).toBeNull();
+    expect(document.querySelector('.hush-picker-confirm-overlay')).toBeNull();
     expect((await get()).blockedSelectors).toEqual([]);
   });
 
@@ -122,25 +122,25 @@ describe('element picker', () => {
       cancelable: true,
     }));
 
-    document.querySelector<HTMLButtonElement>('.srb-picker-ok')?.click();
+    document.querySelector<HTMLButtonElement>('.hush-picker-ok')?.click();
 
     await vi.waitFor(async () => {
       const storage = await get();
       expect(storage.blockedSelectors).toContain('google.com||article.result-card');
       expect(storage.selectorBlockCount).toBe(1);
-      expect(article.querySelector('.srb-mask')).not.toBeNull();
-      expect(article.querySelector('.srb-blocked-badge')).not.toBeNull();
+      expect(article.querySelector('.hush-mask')).not.toBeNull();
+      expect(article.querySelector('.hush-blocked-badge')).not.toBeNull();
     });
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'srb-page-marker-count',
+      type: 'hush-page-marker-count',
       selectorCount: 1,
     }));
 
-    article.querySelector<HTMLElement>('.srb-blocked-badge')?.click();
+    article.querySelector<HTMLElement>('.hush-blocked-badge')?.click();
 
     await vi.waitFor(async () => {
       expect((await get()).blockedSelectors).toEqual([]);
-      expect(article.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+      expect(article.querySelector('.hush-mask, .hush-blocked-badge')).toBeNull();
     });
   });
 });

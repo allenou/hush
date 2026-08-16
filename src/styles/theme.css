@@ -7,188 +7,188 @@
 
 :root {
   /* Brand */
-  --srb-brand-yellow: #eab308;
-  --srb-brand-soft: #fef9c3;
-  --srb-primary: #2563eb;
-  --srb-primary-hover: #1d4ed8;
-  --srb-primary-active: #1e40af;
-  --srb-primary-action: #2563eb;
-  --srb-primary-action-hover: #1d4ed8;
-  --srb-accent: #3b82f6;
-  --srb-accent-hover: #2563eb;
-  --srb-accent-light: #dbeafe;
-  --srb-accent-soft: #eff6ff;
-  --srb-accent-mid: #bfdbfe;
-  --srb-accent-ring: #93c5fd;
-  --srb-on-primary: #ffffff;
-  --srb-on-primary-muted: rgba(255, 255, 255, 0.65);
-  --srb-on-primary-soft: rgba(255, 255, 255, 0.85);
-  --srb-on-primary-hover-bg: rgba(255, 255, 255, 0.08);
-  --srb-on-primary-active-bg: rgba(255, 255, 255, 0.12);
-  --srb-on-primary-badge-bg: rgba(255, 255, 255, 0.13);
+  --hush-brand-yellow: #eab308;
+  --hush-brand-soft: #fef9c3;
+  --hush-primary: #2563eb;
+  --hush-primary-hover: #1d4ed8;
+  --hush-primary-active: #1e40af;
+  --hush-primary-action: #2563eb;
+  --hush-primary-action-hover: #1d4ed8;
+  --hush-accent: #3b82f6;
+  --hush-accent-hover: #2563eb;
+  --hush-accent-light: #dbeafe;
+  --hush-accent-soft: #eff6ff;
+  --hush-accent-mid: #bfdbfe;
+  --hush-accent-ring: #93c5fd;
+  --hush-on-primary: #ffffff;
+  --hush-on-primary-muted: rgba(255, 255, 255, 0.65);
+  --hush-on-primary-soft: rgba(255, 255, 255, 0.85);
+  --hush-on-primary-hover-bg: rgba(255, 255, 255, 0.08);
+  --hush-on-primary-active-bg: rgba(255, 255, 255, 0.12);
+  --hush-on-primary-badge-bg: rgba(255, 255, 255, 0.13);
 
   /* Surfaces */
-  --srb-surface: #ffffff;
-  --srb-bg: #f5f7fb;
-  --srb-popup-bg: #f8f9fc;
-  --srb-table-head: #f6f8fc;
-  --srb-row-hover: #f9faff;
-  --srb-empty-bg: #fafbfe;
-  --srb-control-hover-bg: #eef2fa;
-  --srb-menu-hover-bg: #f2f5fb;
-  --srb-breakdown-bg: #eef2f8;
-  --srb-hero-border: #dce3f0;
-  --srb-nav-active-bg: rgba(79, 114, 232, 0.11);
-  --srb-status-bg: rgba(79, 114, 232, 0.1);
+  --hush-surface: #ffffff;
+  --hush-bg: #f5f7fb;
+  --hush-popup-bg: #f8f9fc;
+  --hush-table-head: #f6f8fc;
+  --hush-row-hover: #f9faff;
+  --hush-empty-bg: #fafbfe;
+  --hush-control-hover-bg: #eef2fa;
+  --hush-menu-hover-bg: #f2f5fb;
+  --hush-breakdown-bg: #eef2f8;
+  --hush-hero-border: #dce3f0;
+  --hush-nav-active-bg: rgba(79, 114, 232, 0.11);
+  --hush-status-bg: rgba(79, 114, 232, 0.1);
 
   /* Text */
-  --srb-text: #292d38;
-  --srb-text-strong: #20232d;
-  --srb-text-code: #343946;
-  --srb-text-secondary: #626978;
-  --srb-text-subtle: #707787;
-  --srb-text-soft: #626978;
-  --srb-text-muted: #747b8b;
-  --srb-text-neutral: #454b59;
+  --hush-text: #292d38;
+  --hush-text-strong: #20232d;
+  --hush-text-code: #343946;
+  --hush-text-secondary: #626978;
+  --hush-text-subtle: #707787;
+  --hush-text-soft: #626978;
+  --hush-text-muted: #747b8b;
+  --hush-text-neutral: #454b59;
 
   /* Borders */
-  --srb-border: #e1e5ee;
-  --srb-border-strong: #d1d7e3;
-  --srb-border-light: #ebedf3;
-  --srb-border-muted: #d6dce7;
-  --srb-divider: #ebedf3;
-  --srb-row-divider: #edf0f5;
-  --srb-dashed-border: #d5dbe7;
+  --hush-border: #e1e5ee;
+  --hush-border-strong: #d1d7e3;
+  --hush-border-light: #ebedf3;
+  --hush-border-muted: #d6dce7;
+  --hush-divider: #ebedf3;
+  --hush-row-divider: #edf0f5;
+  --hush-dashed-border: #d5dbe7;
 
   /* States */
-  --srb-danger: #c43d3d;
-  --srb-danger-strong: #991b1b;
-  --srb-danger-light: #fef2f2;
-  --srb-danger-hover: #fee2e2;
-  --srb-danger-ring: #fca5a5;
-  --srb-danger-border: rgba(220, 38, 38, 0.25);
-  --srb-warning: #92400e;
-  --srb-warning-light: #fffbeb;
-  --srb-success: #10b981;
-  --srb-success-dot: #4ade80;
-  --srb-success-dot-ring: rgba(74, 222, 128, 0.25);
-  --srb-success-light: #f0fdf4;
-  --srb-success-text: #166534;
-  --srb-toggle-off: #c9c9cc;
-  --srb-danger-soft-bg: #fef1f1;
-  --srb-selector-bg: #f0f0f1;
-  --srb-url-bg: #f1efff;
-  --srb-url-text: #6657a8;
-  --srb-domain-bg: #ebf5ff;
-  --srb-domain-text: #39709d;
-  --srb-segment-other: #b9b9bc;
-  --srb-accent-border: rgba(79, 114, 232, 0.38);
-  --srb-accent-border-soft: rgba(79, 114, 232, 0.22);
-  --srb-accent-highlight: rgba(79, 114, 232, 0.11);
-  --srb-on-dark-border: rgba(255, 255, 255, 0.3);
-  --srb-on-dark-hover-bg: rgba(255, 255, 255, 0.1);
+  --hush-danger: #c43d3d;
+  --hush-danger-strong: #991b1b;
+  --hush-danger-light: #fef2f2;
+  --hush-danger-hover: #fee2e2;
+  --hush-danger-ring: #fca5a5;
+  --hush-danger-border: rgba(220, 38, 38, 0.25);
+  --hush-warning: #92400e;
+  --hush-warning-light: #fffbeb;
+  --hush-success: #10b981;
+  --hush-success-dot: #4ade80;
+  --hush-success-dot-ring: rgba(74, 222, 128, 0.25);
+  --hush-success-light: #f0fdf4;
+  --hush-success-text: #166534;
+  --hush-toggle-off: #c9c9cc;
+  --hush-danger-soft-bg: #fef1f1;
+  --hush-selector-bg: #f0f0f1;
+  --hush-url-bg: #f1efff;
+  --hush-url-text: #6657a8;
+  --hush-domain-bg: #ebf5ff;
+  --hush-domain-text: #39709d;
+  --hush-segment-other: #b9b9bc;
+  --hush-accent-border: rgba(79, 114, 232, 0.38);
+  --hush-accent-border-soft: rgba(79, 114, 232, 0.22);
+  --hush-accent-highlight: rgba(79, 114, 232, 0.11);
+  --hush-on-dark-border: rgba(255, 255, 255, 0.3);
+  --hush-on-dark-hover-bg: rgba(255, 255, 255, 0.1);
 
   /* Search engine accents */
-  --srb-engine-google: #0d8f66;
-  --srb-engine-bing: #0078d4;
-  --srb-engine-baidu: #2932e1;
-  --srb-engine-so: #ff6600;
+  --hush-engine-google: #0d8f66;
+  --hush-engine-bing: #0078d4;
+  --hush-engine-baidu: #2932e1;
+  --hush-engine-so: #ff6600;
 
   /* Charts */
-  --srb-chart-blue: #3b82f6;
-  --srb-chart-purple: #a855f7;
-  --srb-chart-pink: #ec4899;
-  --srb-chart-orange: #f97316;
-  --srb-chart-fill: rgba(59, 130, 246, 0.12);
+  --hush-chart-blue: #3b82f6;
+  --hush-chart-purple: #a855f7;
+  --hush-chart-pink: #ec4899;
+  --hush-chart-orange: #f97316;
+  --hush-chart-fill: rgba(59, 130, 246, 0.12);
 
   /* Typography */
-  --srb-font: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;
-  --srb-mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
-  --srb-font-size-display: 42px;
-  --srb-font-size-stat: 26px;
-  --srb-font-size-title: 18px;
-  --srb-font-size-body: 14px;
-  --srb-font-size-sm: 13px;
-  --srb-font-size-xs: 12px;
-  --srb-font-size-2xs: 10px;
-  --srb-line-height-tight: 1.2;
-  --srb-line-height-body: 1.45;
-  --srb-line-height-code: 1.5;
-  --srb-weight-regular: 400;
-  --srb-weight-medium: 500;
-  --srb-weight-semibold: 600;
-  --srb-weight-bold: 700;
-  --srb-weight-heavy: 800;
-  --srb-tracking-none: 0;
-  --srb-tracking-label: 0.02em;
-  --srb-tracking-caps: 0.06em;
+  --hush-font: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;
+  --hush-mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --hush-font-size-display: 42px;
+  --hush-font-size-stat: 26px;
+  --hush-font-size-title: 18px;
+  --hush-font-size-body: 14px;
+  --hush-font-size-sm: 13px;
+  --hush-font-size-xs: 12px;
+  --hush-font-size-2xs: 10px;
+  --hush-line-height-tight: 1.2;
+  --hush-line-height-body: 1.45;
+  --hush-line-height-code: 1.5;
+  --hush-weight-regular: 400;
+  --hush-weight-medium: 500;
+  --hush-weight-semibold: 600;
+  --hush-weight-bold: 700;
+  --hush-weight-heavy: 800;
+  --hush-tracking-none: 0;
+  --hush-tracking-label: 0.02em;
+  --hush-tracking-caps: 0.06em;
 
   /* Spacing */
-  --srb-space-2xs: 4px;
-  --srb-space-xs: 6px;
-  --srb-space-sm: 8px;
-  --srb-space-md: 12px;
-  --srb-space-lg: 16px;
-  --srb-space-xl: 20px;
-  --srb-space-2xl: 24px;
-  --srb-space-3xl: 32px;
-  --srb-space-4xl: 48px;
+  --hush-space-2xs: 4px;
+  --hush-space-xs: 6px;
+  --hush-space-sm: 8px;
+  --hush-space-md: 12px;
+  --hush-space-lg: 16px;
+  --hush-space-xl: 20px;
+  --hush-space-2xl: 24px;
+  --hush-space-3xl: 32px;
+  --hush-space-4xl: 48px;
 
   /* Radius */
-  --srb-radius-none: 0;
-  --srb-radius-xs: 4px;
-  --srb-radius-sm: 7px;
-  --srb-radius-md: 10px;
-  --srb-radius-lg: 12px;
-  --srb-radius-xl: 16px;
-  --srb-radius-card: 18px;
-  --srb-radius-dialog: 20px;
-  --srb-radius-full: 999px;
+  --hush-radius-none: 0;
+  --hush-radius-xs: 4px;
+  --hush-radius-sm: 7px;
+  --hush-radius-md: 10px;
+  --hush-radius-lg: 12px;
+  --hush-radius-xl: 16px;
+  --hush-radius-card: 18px;
+  --hush-radius-dialog: 20px;
+  --hush-radius-full: 999px;
 
   /* Shadows */
-  --srb-shadow-xs: 0 1px 3px rgba(32, 31, 30, 0.05);
-  --srb-shadow-sm: 0 2px 6px rgba(32, 31, 30, 0.07);
-  --srb-shadow-md: 0 6px 18px rgba(32, 31, 30, 0.1);
-  --srb-shadow-lg: 0 10px 28px rgba(32, 31, 30, 0.12);
-  --srb-shadow-dialog: 0 16px 44px rgba(32, 31, 30, 0.15);
-  --srb-shadow-accent: 0 10px 26px rgba(79, 114, 232, 0.2);
-  --srb-focus-ring: 0 0 0 3px rgba(79, 114, 232, 0.2);
+  --hush-shadow-xs: 0 1px 3px rgba(32, 31, 30, 0.05);
+  --hush-shadow-sm: 0 2px 6px rgba(32, 31, 30, 0.07);
+  --hush-shadow-md: 0 6px 18px rgba(32, 31, 30, 0.1);
+  --hush-shadow-lg: 0 10px 28px rgba(32, 31, 30, 0.12);
+  --hush-shadow-dialog: 0 16px 44px rgba(32, 31, 30, 0.15);
+  --hush-shadow-accent: 0 10px 26px rgba(79, 114, 232, 0.2);
+  --hush-focus-ring: 0 0 0 3px rgba(79, 114, 232, 0.2);
 
   /* Component sizes */
-  --srb-options-min-width: 1024px;
-  --srb-options-max-width: 1280px;
-  --srb-nav-height: 56px;
-  --srb-popup-width: 290px;
-  --srb-input-height: 42px;
-  --srb-input-height-compact: 36px;
-  --srb-button-height: 42px;
-  --srb-button-height-compact: 34px;
-  --srb-icon-button-size: 32px;
-  --srb-floating-button-size: 40px;
-  --srb-inline-button-size: 24px;
-  --srb-toggle-width: 44px;
-  --srb-toggle-height: 26px;
-  --srb-toggle-thumb-size: 20px;
-  --srb-popup-toggle-width: 38px;
-  --srb-popup-toggle-height: 22px;
-  --srb-popup-toggle-thumb-size: 18px;
-  --srb-dialog-width: 460px;
-  --srb-settings-width: 600px;
+  --hush-options-min-width: 1024px;
+  --hush-options-max-width: 1280px;
+  --hush-nav-height: 56px;
+  --hush-popup-width: 290px;
+  --hush-input-height: 42px;
+  --hush-input-height-compact: 36px;
+  --hush-button-height: 42px;
+  --hush-button-height-compact: 34px;
+  --hush-icon-button-size: 32px;
+  --hush-floating-button-size: 40px;
+  --hush-inline-button-size: 24px;
+  --hush-toggle-width: 44px;
+  --hush-toggle-height: 26px;
+  --hush-toggle-thumb-size: 20px;
+  --hush-popup-toggle-width: 38px;
+  --hush-popup-toggle-height: 22px;
+  --hush-popup-toggle-thumb-size: 18px;
+  --hush-dialog-width: 460px;
+  --hush-settings-width: 600px;
 
   /* Layering */
-  --srb-z-nav: 50;
-  --srb-z-dialog: 100;
-  --srb-z-dropdown: 20;
-  --srb-z-page-injection: 9999;
-  --srb-z-page-overlay: 999999;
+  --hush-z-nav: 50;
+  --hush-z-dialog: 100;
+  --hush-z-dropdown: 20;
+  --hush-z-page-injection: 9999;
+  --hush-z-page-overlay: 999999;
 
   /* Effects */
-  --srb-transition-fast: 0.12s ease;
-  --srb-transition-base: 0.15s ease;
-  --srb-transition-slow: 0.3s ease;
-  --srb-overlay: rgba(24, 24, 27, 0.38);
-  --srb-overlay-soft: rgba(0, 0, 0, 0.25);
-  --srb-mask-danger: repeating-linear-gradient(
+  --hush-transition-fast: 0.12s ease;
+  --hush-transition-base: 0.15s ease;
+  --hush-transition-slow: 0.3s ease;
+  --hush-overlay: rgba(24, 24, 27, 0.38);
+  --hush-overlay-soft: rgba(0, 0, 0, 0.25);
+  --hush-mask-danger: repeating-linear-gradient(
     -45deg,
     rgba(220, 38, 38, 0.06),
     rgba(220, 38, 38, 0.06) 6px,
@@ -197,6 +197,6 @@
   );
 
   /* Common gradients */
-  --srb-hero-gradient: linear-gradient(135deg, #ffffff 0%, #f1f2f4 100%);
-  --srb-chart-gradient: linear-gradient(180deg, var(--srb-primary), var(--srb-accent));
+  --hush-hero-gradient: linear-gradient(135deg, #ffffff 0%, #f1f2f4 100%);
+  --hush-chart-gradient: linear-gradient(180deg, var(--hush-primary), var(--hush-accent));
 }

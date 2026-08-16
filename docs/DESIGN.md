@@ -243,7 +243,7 @@ Options 页是主工作台：顶部导航高度固定为 56px，内容区最大�
 
 Popup 是 290px 宽的紧凑控制面板，信息顺序应保持为品牌与启用开关、关键统计、当前站点状态、趋势、设置入口。Popup 内的数字卡、状态条和图表必须有稳定高度，避免 storage 更新时跳动。
 
-Content script 注入的元素使用 `srb-` 前缀，尽量采用绝对定位或 fixed 定位，不改变搜索结果页面原有文档流。浮动按钮、结果内屏蔽按钮、badge、toast 和 picker overlay 都必须让用户明确知道这是扩展层，而不是搜索引擎页面原生内容。
+Content script 注入的元素使用 `hush-` 前缀，尽量采用绝对定位或 fixed 定位，不改变搜索结果页面原有文档流。浮动按钮、结果内屏蔽按钮、badge、toast 和 picker overlay 都必须让用户明确知道这是扩展层，而不是搜索引擎页面原生内容。
 
 ## Elevation & Depth
 
@@ -281,7 +281,7 @@ Do:
 - 使用靛蓝表达启用和确认，使用红色表达屏蔽、删除和错误。
 - 为所有固定格式控件设置稳定尺寸，包括 nav、toggle、图表柱、表格列、icon button 和 popup 宽度。
 - 在长域名、URL、选择器上使用等宽字体和断行策略。
-- 让 content script 注入元素独立、可识别、可撤销，并始终使用 `srb-` 前缀。
+- 让 content script 注入元素独立、可识别、可撤销，并始终使用 `hush-` 前缀。
 
 Don't:
 

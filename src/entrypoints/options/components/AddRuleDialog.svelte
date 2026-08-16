@@ -72,106 +72,106 @@
   .overlay {
     position: fixed;
     inset: 0;
-    z-index: var(--srb-z-dialog);
+    z-index: var(--hush-z-dialog);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--srb-overlay);
+    background: var(--hush-overlay);
     backdrop-filter: blur(2px);
   }
   .dialog {
-    width: var(--srb-dialog-width);
-    padding: var(--srb-space-2xl);
-    border-radius: var(--srb-radius-dialog);
-    background: var(--srb-surface);
-    box-shadow: var(--srb-shadow-dialog);
+    width: var(--hush-dialog-width);
+    padding: var(--hush-space-2xl);
+    border-radius: var(--hush-radius-dialog);
+    background: var(--hush-surface);
+    box-shadow: var(--hush-shadow-dialog);
   }
   .dialog-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: var(--srb-space-md);
+    gap: var(--hush-space-md);
     margin-bottom: 18px;
   }
   .dialog-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--srb-icon-button-size);
-    height: var(--srb-icon-button-size);
+    width: var(--hush-icon-button-size);
+    height: var(--hush-icon-button-size);
     flex-shrink: 0;
     border: none;
-    border-radius: var(--srb-radius-md);
+    border-radius: var(--hush-radius-md);
     background: transparent;
-    color: var(--srb-text-subtle);
+    color: var(--hush-text-subtle);
     cursor: pointer;
-    transition: background var(--srb-transition-fast), color var(--srb-transition-fast);
+    transition: background var(--hush-transition-fast), color var(--hush-transition-fast);
   }
   .dialog-close:hover {
-    background: var(--srb-bg);
-    color: var(--srb-text);
+    background: var(--hush-bg);
+    color: var(--hush-text);
   }
 
   .card-title {
     margin: 0;
-    font-size: var(--srb-font-size-title);
-    font-weight: var(--srb-weight-bold);
+    font-size: var(--hush-font-size-title);
+    font-weight: var(--hush-weight-bold);
     letter-spacing: -0.02em;
-    line-height: var(--srb-line-height-tight);
+    line-height: var(--hush-line-height-tight);
   }
   .add-row {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: var(--srb-space-sm);
+    gap: var(--hush-space-sm);
   }
   .add-row input {
     width: 100%;
-    height: var(--srb-input-height);
+    height: var(--hush-input-height);
     padding: 0 14px;
-    border: 1px solid var(--srb-border-strong);
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-surface);
-    color: var(--srb-text);
+    border: 1px solid var(--hush-border-strong);
+    border-radius: var(--hush-radius-lg);
+    background: var(--hush-surface);
+    color: var(--hush-text);
     font: inherit;
-    font-size: var(--srb-font-size-body);
+    font-size: var(--hush-font-size-body);
     outline: none;
-    transition: border-color var(--srb-transition-base), box-shadow var(--srb-transition-base);
+    transition: border-color var(--hush-transition-base), box-shadow var(--hush-transition-base);
   }
   .add-row input:focus {
-    border-color: var(--srb-engine-google);
-    box-shadow: var(--srb-focus-ring);
+    border-color: var(--hush-engine-google);
+    box-shadow: var(--hush-focus-ring);
   }
   .btn-primary {
-    height: var(--srb-button-height);
+    height: var(--hush-button-height);
     padding: 0 22px;
     border: none;
-    border-radius: var(--srb-radius-lg);
-    background: var(--srb-primary-action);
-    color: var(--srb-on-primary);
+    border-radius: var(--hush-radius-lg);
+    background: var(--hush-primary-action);
+    color: var(--hush-on-primary);
     font: inherit;
-    font-size: var(--srb-font-size-body);
-    font-weight: var(--srb-weight-bold);
+    font-size: var(--hush-font-size-body);
+    font-weight: var(--hush-weight-bold);
     cursor: pointer;
     white-space: nowrap;
-    transition: background var(--srb-transition-base);
+    transition: background var(--hush-transition-base);
   }
   .btn-primary:hover {
-    background: var(--srb-primary-action-hover);
+    background: var(--hush-primary-action-hover);
   }
   .btn-primary:active {
-    background: var(--srb-primary-active);
+    background: var(--hush-primary-active);
   }
 
   .feedback {
     margin: 10px 0 0;
-    font-size: var(--srb-font-size-sm);
-    line-height: var(--srb-line-height-body);
+    font-size: var(--hush-font-size-sm);
+    line-height: var(--hush-line-height-body);
   }
   .feedback.hint {
-    color: var(--srb-text-subtle);
+    color: var(--hush-text-subtle);
   }
   .feedback.error {
-    color: var(--srb-danger);
-    font-weight: var(--srb-weight-semibold);
+    color: var(--hush-danger);
+    font-weight: var(--hush-weight-semibold);
   }
 </style>

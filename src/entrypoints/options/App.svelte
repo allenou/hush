@@ -363,29 +363,29 @@
 
 <style>
   .app {
-    --srb-options-page-gutter: var(--srb-space-2xl);
+    --hush-options-page-gutter: var(--hush-space-2xl);
   }
   :global(html) {
     scrollbar-gutter: stable;
   }
   :global(body) {
     margin: 0;
-    min-width: var(--srb-options-min-width);
-    background: var(--srb-bg);
-    color: var(--srb-text);
-    font-family: var(--srb-font);
+    min-width: var(--hush-options-min-width);
+    background: var(--hush-bg);
+    color: var(--hush-text);
+    font-family: var(--hush-font);
     -webkit-font-smoothing: antialiased;
   }
   :global(*) { box-sizing: border-box; }
 
   .main {
     max-width: calc(
-      var(--srb-options-max-width)
-      + var(--srb-options-page-gutter)
-      + var(--srb-options-page-gutter)
+      var(--hush-options-max-width)
+      + var(--hush-options-page-gutter)
+      + var(--hush-options-page-gutter)
     );
     margin: 0 auto;
-    padding: var(--srb-space-2xl) var(--srb-options-page-gutter);
+    padding: var(--hush-space-2xl) var(--hush-options-page-gutter);
   }
 
   @media (max-width: 1100px) {
@@ -393,10 +393,10 @@
   }
 
   @media (max-width: 760px) {
-    .app { --srb-options-page-gutter: var(--srb-space-lg); }
+    .app { --hush-options-page-gutter: var(--hush-space-lg); }
   }
 
   @media (max-width: 420px) {
-    .app { --srb-options-page-gutter: var(--srb-space-md); }
+    .app { --hush-options-page-gutter: var(--hush-space-md); }
   }
 </style>

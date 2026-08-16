@@ -119,7 +119,7 @@ describe('search-engine DOM fixtures', () => {
     }, detected);
     scanResults(detected);
 
-    expect(document.querySelectorAll('.srb-blocked-badge')).toHaveLength(2);
-    expect(document.querySelectorAll('[data-srb-target-url]')).toHaveLength(2);
+    expect(document.querySelectorAll('.hush-blocked-badge')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-hush-target-url]')).toHaveLength(2);
   });
 });

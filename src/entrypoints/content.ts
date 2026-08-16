@@ -21,8 +21,8 @@ import { autoDetectSearchResults } from '@/helpers/detector';
 import { subscribeToUrlChanges } from '@/helpers/url-navigation';
 import { getScanObserverTarget } from '@/helpers/scan-observer';
 import {
-  countPageMarkerSummary,
-  isPageMarkerSummaryRequest,
+  isPageMarkerReportRequest,
+  reportPageMarkerCount,
 } from '@/utils/page-badge';
 import {
   initBlocker, syncBlockerState,
@@ -294,15 +294,16 @@ export default defineContentScript({
       }
       pushState();
       recordCurrentSearch();
-      ctx.addEventListener(document, 'srb-start-picker', () => {
+      ctx.addEventListener(document, 'hush-start-picker', () => {
         if (isEnabled) activatePicker(getHostname);
       });
-      browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        if (message?.type === 'srb-start-picker' && isEnabled) {
+      browser.runtime.onMessage.addListener((message) => {
+        if (message?.type === 'hush-start-picker' && isEnabled) {
           activatePicker(getHostname);
         }
-        if (isPageMarkerSummaryRequest(message)) {
-          sendResponse(countPageMarkerSummary());
+        if (isPageMarkerReportRequest(message)) {
+          // 所有页面统计统一由 content script 主动上报给 background。
+          reportPageMarkerCount();
         }
       });
       if (isEnabled) startMarking();

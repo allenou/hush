@@ -25,8 +25,8 @@ export function isDomainHomepageUrl(value: string): boolean {
 export function resolveContextTargetUrl(target: Element | null, pageUrl: string): string {
   const linkUrl = target?.closest<HTMLAnchorElement>('a[href]')?.href;
   const storedUrl = target
-    ?.closest<HTMLElement>('[data-srb-target-url]')
-    ?.dataset.srbTargetUrl;
+    ?.closest<HTMLElement>('[data-hush-target-url]')
+    ?.dataset.hushTargetUrl;
 
   for (const candidate of [linkUrl, storedUrl, pageUrl]) {
     if (!candidate) continue;

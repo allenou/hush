@@ -14,7 +14,7 @@ let handlers: {
   onKey: ((e: KeyboardEvent) => void) | null;
 } | null = null;
 
-const PICKER_EXCLUDE_SELECTOR = '.srb-picker-confirm-overlay, .srb-undo-toast';
+const PICKER_EXCLUDE_SELECTOR = '.hush-picker-confirm-overlay, .hush-undo-toast';
 
 // ========== Selector Generation ==========
 
@@ -186,39 +186,39 @@ function findBlockTarget(el: Element): Element | null {
 
 function showPickerConfirm(el: Element, selector: string, currentHost: string): void {
   const overlay = document.createElement('div');
-  overlay.className = 'srb-picker-confirm-overlay';
+  overlay.className = 'hush-picker-confirm-overlay';
 
   const preview = (el.textContent ?? '').trim().slice(0, 120);
   const escSelector = selector.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const escPreview = preview.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   overlay.innerHTML =
-    '<div class="srb-picker-confirm-box">' +
-    '<div class="srb-picker-confirm-title">' + t('markElement') + '</div>' +
-    '<div style="margin-bottom:8px;color:#666;">' + t('targetDomain') + ' <code class="srb-picker-confirm-code">' + currentHost + '</code></div>' +
-    '<div style="margin-bottom:8px;color:#666;">' + t('targetSelector') + ' <code class="srb-picker-confirm-code" style="word-break:break-all;">' + escSelector + '</code></div>' +
+    '<div class="hush-picker-confirm-box">' +
+    '<div class="hush-picker-confirm-title">' + t('markElement') + '</div>' +
+    '<div style="margin-bottom:8px;color:#666;">' + t('targetDomain') + ' <code class="hush-picker-confirm-code">' + currentHost + '</code></div>' +
+    '<div style="margin-bottom:8px;color:#666;">' + t('targetSelector') + ' <code class="hush-picker-confirm-code" style="word-break:break-all;">' + escSelector + '</code></div>' +
     '<div style="margin-bottom:16px;color:#666;">' + t('contentPreview') + ' <span style="color:#333;">' + escPreview + '</span></div>' +
-    '<div class="srb-picker-confirm-actions">' +
-    '<button class="srb-picker-cancel">' + t('cancel') + '</button>' +
-    '<button class="srb-picker-ok">' + t('mark') + '</button>' +
+    '<div class="hush-picker-confirm-actions">' +
+    '<button class="hush-picker-cancel">' + t('cancel') + '</button>' +
+    '<button class="hush-picker-ok">' + t('mark') + '</button>' +
     '</div>' +
     '</div>';
 
   document.body.appendChild(overlay);
 
-  overlay.querySelector('.srb-picker-ok')?.addEventListener('click', async () => {
-    const wasCounted = el.hasAttribute('data-srb-counted');
-    if (!wasCounted) el.setAttribute('data-srb-counted', 'true');
+  overlay.querySelector('.hush-picker-ok')?.addEventListener('click', async () => {
+    const wasCounted = el.hasAttribute('data-hush-counted');
+    if (!wasCounted) el.setAttribute('data-hush-counted', 'true');
     try {
       const full = currentHost + '||' + selector;
       await addBlockedSelector(full);
       await recordBlock('selector', currentHost, undefined, currentHost);
       (el as HTMLElement).style.position = (el as HTMLElement).style.position || 'relative';
       const mask = document.createElement('div');
-      mask.className = 'srb-mask';
+      mask.className = 'hush-mask';
       el.appendChild(mask);
       const badge = document.createElement('div');
-      badge.className = 'srb-blocked-badge';
+      badge.className = 'hush-blocked-badge';
       lockBadgeTypography(badge);
       badge.textContent = '🎯 ' + t('elementHit');
       badge.title = t('elementBlocked');
@@ -234,13 +234,13 @@ function showPickerConfirm(el: Element, selector: string, currentHost: string): 
        reportPageMarkerCount();
        overlay.remove();
     } catch (err) {
-      if (!wasCounted) el.removeAttribute('data-srb-counted');
-      console.error('[SRB] Failed to block by selector:', err);
+      if (!wasCounted) el.removeAttribute('data-hush-counted');
+      console.error('[Hush] Failed to block by selector:', err);
       overlay.remove();
     }
   });
 
-  overlay.querySelector('.srb-picker-cancel')?.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.hush-picker-cancel')?.addEventListener('click', () => overlay.remove());
 }
 
 // ========== Public API ==========
@@ -251,7 +251,7 @@ export function isPickerActive(): boolean {
 
 export function deactivatePicker(): void {
   active = false;
-  document.body.classList.remove('srb-picker-active');
+  document.body.classList.remove('hush-picker-active');
   document.body.style.cursor = '';
   highlight?.remove();
   highlight = null;
@@ -268,16 +268,16 @@ export function deactivatePicker(): void {
 export function activatePicker(getHostnameFn: () => string): void {
   if (active) deactivatePicker();
   active = true;
-  document.body.classList.add('srb-picker-active');
+  document.body.classList.add('hush-picker-active');
   document.body.style.cursor = 'crosshair';
 
   tooltip = document.createElement('div');
-  tooltip.className = 'srb-picker-tooltip';
+  tooltip.className = 'hush-picker-tooltip';
   tooltip.textContent = t('pickerTooltip');
   document.body.appendChild(tooltip);
 
   highlight = document.createElement('div');
-  highlight.className = 'srb-picker-highlight';
+  highlight.className = 'hush-picker-highlight';
   document.body.appendChild(highlight);
 
   const onMove = (e: MouseEvent) => {

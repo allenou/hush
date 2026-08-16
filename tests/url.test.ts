@@ -57,9 +57,9 @@ describe('isDomainHomepageUrl', () => {
 describe('resolveContextTargetUrl', () => {
   it('restores the original result URL when right-clicking an injected badge', () => {
     const item = document.createElement('div');
-    item.dataset.srbTargetUrl = 'https://sub.example.com/article';
+    item.dataset.hushTargetUrl = 'https://sub.example.com/article';
     const badge = document.createElement('div');
-    badge.className = 'srb-blocked-badge';
+    badge.className = 'hush-blocked-badge';
     item.appendChild(badge);
 
     expect(resolveContextTargetUrl(
@@ -70,7 +70,7 @@ describe('resolveContextTargetUrl', () => {
 
   it('prefers the exact clicked link inside a marked result', () => {
     const item = document.createElement('div');
-    item.dataset.srbTargetUrl = 'https://example.com/primary';
+    item.dataset.hushTargetUrl = 'https://example.com/primary';
     const link = document.createElement('a');
     link.href = 'https://example.com/sitelink';
     item.appendChild(link);

@@ -43,7 +43,7 @@
     stroke-width: 1.7;
   }
   .handling-mode-icon.mode-off {
-    color: var(--srb-text-muted);
+    color: var(--hush-text-muted);
     stroke-width: 2;
   }
 </style>

@@ -115,7 +115,7 @@ npm run wxt-prepare  # WXT 类型生成
 - **CSS**：组件内使用 `<style>` 标签隔离样式；注入的 DOM 元素使用行内 `cssText` 赋值
 - **API 兼容**：使用 `chrome.*` API（非 `browser.*`）
 - **代码风格**：无 Prettier/ESLint 配置，遵循项目现有风格（2 空格缩进，Svelte 组件使用单文件 `.svelte`）
-- **命名**：注入的 DOM 元素使用 `srb-` 前缀（Hush）
+- **命名**：注入的 DOM 元素使用 `hush-` 前缀（Hush）
 - **通信**：Content Script ↔ Popup 通过 `chrome.runtime.sendMessage` / `onMessage`
 
 ## 重要注意事项

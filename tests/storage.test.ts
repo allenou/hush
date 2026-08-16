@@ -287,12 +287,12 @@ describe('selector rule recovery', () => {
     await vi.waitFor(async () => {
       expect((await get()).selectorBlockCount).toBe(1);
     });
-    (document.querySelector('.srb-blocked-badge') as HTMLElement).click();
+    (document.querySelector('.hush-blocked-badge') as HTMLElement).click();
 
     await vi.waitFor(async () => {
       expect((await get()).blockedSelectors).toEqual([]);
     });
-    expect(document.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+    expect(document.querySelector('.hush-mask, .hush-blocked-badge')).toBeNull();
   });
 
   it('does not apply selector rules while the selector category is off', () => {
@@ -313,7 +313,7 @@ describe('selector rule recovery', () => {
 
     applyBlockedSelectors();
 
-    expect(document.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+    expect(document.querySelector('.hush-mask, .hush-blocked-badge')).toBeNull();
   });
 });
 
@@ -364,15 +364,15 @@ describe('result hit badge recovery', () => {
 
     injectBadge(item, true, false, href);
 
-    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge')!;
+    const badge = item.querySelector<HTMLElement>('.hush-blocked-badge')!;
     expect(badge.dataset.ruleType).toBe('domain');
-    expect(item.querySelector('.srb-cancel-badge')).toBeNull();
+    expect(item.querySelector('.hush-cancel-badge')).toBeNull();
     badge.click();
 
     await vi.waitFor(async () => {
       expect((await get()).urls).toEqual([]);
     });
-    expect(item.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+    expect(item.querySelector('.hush-mask, .hush-blocked-badge')).toBeNull();
   });
 
   it('switches from domain hit to URL hit when both rules matched', async () => {
@@ -387,12 +387,12 @@ describe('result hit badge recovery', () => {
       blockSubdomains: true,
     }, null);
     const item = document.createElement('div');
-    item.setAttribute('data-srb-domain-blocked', 'true');
+    item.setAttribute('data-hush-domain-blocked', 'true');
     document.body.appendChild(item);
 
     injectBadge(item, true, true, href);
 
-    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge')!;
+    const badge = item.querySelector<HTMLElement>('.hush-blocked-badge')!;
     expect(badge.dataset.ruleType).toBe('domain');
     badge.click();
 
@@ -402,15 +402,15 @@ describe('result hit badge recovery', () => {
       expect(storage.blockedUrls).toEqual([href]);
       expect(badge.dataset.ruleType).toBe('url');
     });
-    expect(item.querySelector('.srb-mask')).toBeTruthy();
-    expect(item.hasAttribute('data-srb-domain-blocked')).toBe(false);
+    expect(item.querySelector('.hush-mask')).toBeTruthy();
+    expect(item.hasAttribute('data-hush-domain-blocked')).toBe(false);
 
     badge.click();
 
     await vi.waitFor(async () => {
       expect((await get()).blockedUrls).toEqual([]);
     });
-    expect(item.querySelector('.srb-mask, .srb-blocked-badge')).toBeNull();
+    expect(item.querySelector('.hush-mask, .hush-blocked-badge')).toBeNull();
   });
 });
 
@@ -648,7 +648,7 @@ describe('result domain matching', () => {
   it('upgrades an already processed result when a later domain rule matches it', () => {
     const hostileStyle = document.createElement('style');
     hostileStyle.textContent = `
-      #host-result .srb-blocked-badge {
+      #host-result .hush-blocked-badge {
         font-size: 48px !important;
         line-height: 80px !important;
       }
@@ -663,16 +663,16 @@ describe('result domain matching', () => {
     syncForDomains([]);
     processItem(item);
 
-    expect(item.querySelector('.srb-block-btn, .srb-popup')).toBeNull();
-    expect(item.querySelector('.srb-blocked-badge')).toBeNull();
+    expect(item.querySelector('.hush-block-btn, .hush-popup')).toBeNull();
+    expect(item.querySelector('.hush-blocked-badge')).toBeNull();
 
     syncForDomains(['example.com']);
     processItem(item);
 
-    expect(item.querySelector('.srb-block-btn, .srb-popup')).toBeNull();
-    const badge = item.querySelector<HTMLElement>('.srb-blocked-badge');
+    expect(item.querySelector('.hush-block-btn, .hush-popup')).toBeNull();
+    const badge = item.querySelector<HTMLElement>('.hush-blocked-badge');
     expect(badge).toBeTruthy();
-    expect(item.getAttribute('data-srb-target-url')).toBe('https://sub.example.com/page');
+    expect(item.getAttribute('data-hush-target-url')).toBe('https://sub.example.com/page');
     expect(badge?.style.getPropertyValue('font-size')).toBe('11px');
     expect(badge?.style.getPropertyPriority('font-size')).toBe('important');
     expect(badge?.style.getPropertyValue('line-height')).toBe('15px');
@@ -712,8 +712,8 @@ describe('result domain matching', () => {
     }, makeEngine());
     processItem(urlItem);
 
-    expect(domainItem.querySelector('.srb-blocked-badge')).toBeNull();
-    expect(urlItem.querySelector('.srb-blocked-badge')).toBeNull();
+    expect(domainItem.querySelector('.hush-blocked-badge')).toBeNull();
+    expect(urlItem.querySelector('.hush-blocked-badge')).toBeNull();
   });
 
   it('finds a blocked domain in any attribute of any link before locating its content block', () => {
@@ -751,9 +751,9 @@ describe('result domain matching', () => {
     scanBlockedDomains();
 
     const items = document.querySelectorAll('li.res-list');
-    expect(items[0].querySelector('.srb-blocked-badge')).toBeTruthy();
-    expect(document.getElementById('nested-result')?.hasAttribute('data-srb-domain-blocked')).toBe(false);
-    expect(items[1].querySelector('.srb-blocked-badge')).toBeNull();
+    expect(items[0].querySelector('.hush-blocked-badge')).toBeTruthy();
+    expect(document.getElementById('nested-result')?.hasAttribute('data-hush-domain-blocked')).toBe(false);
+    expect(items[1].querySelector('.hush-blocked-badge')).toBeNull();
   });
 
   it('prefers the full 360 res-list container for domain matches', () => {
@@ -782,11 +782,11 @@ describe('result domain matching', () => {
 
     const fullResult = document.querySelector<HTMLElement>('#full-360-result')!;
     const innerResult = document.querySelector<HTMLElement>('#inner-result-card')!;
-    expect(fullResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(fullResult.hasAttribute('data-hush-domain-blocked')).toBe(true);
     expect(Array.from(fullResult.children).some((child) =>
-      child.classList.contains('srb-mask'))).toBe(true);
+      child.classList.contains('hush-mask'))).toBe(true);
     expect(Array.from(innerResult.children).some((child) =>
-      child.classList.contains('srb-mask'))).toBe(false);
+      child.classList.contains('hush-mask'))).toBe(false);
   });
 
   it('does not block a search link only because its query text contains a blocked domain', () => {
@@ -811,7 +811,7 @@ describe('result domain matching', () => {
 
     scanBlockedDomains();
 
-    expect(document.querySelector('.srb-blocked-badge')).toBeNull();
+    expect(document.querySelector('.hush-blocked-badge')).toBeNull();
   });
 
   it('uses Sogou linkurl and link child span text for domain matching', () => {
@@ -853,14 +853,14 @@ describe('result domain matching', () => {
     scanBlockedDomains();
 
     const matchedResult = document.querySelector<HTMLElement>('#span-match')!;
-    expect(matchedResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(matchedResult.hasAttribute('data-hush-domain-blocked')).toBe(true);
     expect(Array.from(matchedResult.children).some((child) =>
-      child.classList.contains('srb-mask'))).toBe(true);
+      child.classList.contains('hush-mask'))).toBe(true);
     expect(Array.from(matchedResult.children).some((child) =>
-      child.classList.contains('srb-blocked-badge'))).toBe(true);
+      child.classList.contains('hush-blocked-badge'))).toBe(true);
     const linkurlResult = document.querySelector<HTMLElement>('#linkurl-match')!;
-    expect(linkurlResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
-    expect(linkurlResult.querySelector('.srb-blocked-badge')).toBeTruthy();
+    expect(linkurlResult.hasAttribute('data-hush-domain-blocked')).toBe(true);
+    expect(linkurlResult.querySelector('.hush-blocked-badge')).toBeTruthy();
   });
 
   it('falls back to generic container lookup for Sogou results without vrwrap', () => {
@@ -889,9 +889,9 @@ describe('result domain matching', () => {
     scanBlockedDomains();
 
     const fallbackResult = document.querySelector<HTMLElement>('#fallback-result')!;
-    expect(fallbackResult.hasAttribute('data-srb-domain-blocked')).toBe(true);
+    expect(fallbackResult.hasAttribute('data-hush-domain-blocked')).toBe(true);
     expect(Array.from(fallbackResult.children).some((child) =>
-      child.classList.contains('srb-mask'))).toBe(true);
+      child.classList.contains('hush-mask'))).toBe(true);
   });
 
   it('records each newly rendered blocked result once while enabled', async () => {
@@ -1003,11 +1003,33 @@ describe('result domain matching', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect((await get()).blockCount).toBe(0);
-    expect(item.querySelector('.srb-blocked-badge')).toBeNull();
+    expect(item.querySelector('.hush-blocked-badge')).toBeNull();
   });
 });
 
 describe('search engine ad detection', () => {
+  function enableSoAdMarking(): void {
+    initBlocker({
+      getHostname: () => 'so.com',
+      extractResultUrl: () => '',
+    });
+    syncBlockerState({
+      blockedDomains: [],
+      blockedUrls: [],
+      blockedSelectors: [],
+      isEnabled: true,
+      blockAds: true,
+      adDisplayMode: 'mark',
+      blockSubdomains: true,
+    }, null);
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+    document.head.querySelectorAll('[data-test-ad-style]').forEach((style) => style.remove());
+  });
+
   it('does not mistake Bing deeplink labels containing "ad" for advertisements', () => {
     initBlocker({
       getHostname: () => 'bing.com',
@@ -1039,6 +1061,180 @@ describe('search engine ad detection', () => {
     expect(isAdItem(ordinaryResult)).toBe(false);
   });
 
+  it('keeps a 360 sidebar ad inside its local module instead of masking the whole sidebar', () => {
+    enableSoAdMarking();
+    const style = document.createElement('style');
+    style.setAttribute('data-test-ad-style', '');
+    style.textContent = '.test-sticky-sidebar { position: fixed; }';
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <div class="test-sticky-sidebar" data-test="sidebar">
+        <div><a href="https://news.example/1">热搜榜一及相关内容</a></div>
+        <div><a href="https://news.example/2">热搜榜二及相关内容</a></div>
+        <div data-test="ad-slot">
+          <div data-test="ad-module">
+            <div><h3>猜你想搜</h3><span>广告</span></div>
+            <ul><li><a href="https://advertiser.example">推广内容</a></li></ul>
+          </div>
+        </div>
+        <div><a href="https://news.example/3">更多侧栏内容</a></div>
+      </div>
+    `;
+
+    scanForAds();
+
+    const sidebar = document.querySelector<HTMLElement>('[data-test="sidebar"]')!;
+    const adModule = document.querySelector<HTMLElement>('[data-test="ad-module"]')!;
+    expect(sidebar.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(sidebar.querySelector(':scope > .hush-ad-badge')).toBeNull();
+    expect(sidebar.children[0].querySelector('.hush-ad-badge')).toBeNull();
+    expect(adModule.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(adModule.querySelector('.hush-ad-badge')).not.toBeNull();
+  });
+
+  it('does not depend on sidebar IDs or classes when separating independent modules', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <div data-test="layout">
+        <div><a href="https://example.com/a">第一个独立内容模块，包含普通链接</a></div>
+        <div><a href="https://example.com/b">第二个独立内容模块，包含普通链接</a></div>
+        <div>
+          <div data-test="local-ad">
+            <div><span>广告</span></div>
+            <div><a href="https://advertiser.example">纯 div 广告正文</a></div>
+          </div>
+        </div>
+        <div><a href="https://example.com/c">第三个独立内容模块，包含普通链接</a></div>
+        <div><a href="https://example.com/d">第四个独立内容模块，包含普通链接</a></div>
+      </div>
+    `;
+
+    scanForAds();
+
+    const layout = document.querySelector<HTMLElement>('[data-test="layout"]')!;
+    const localAd = document.querySelector<HTMLElement>('[data-test="local-ad"]')!;
+    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(layout.querySelector(':scope > .hush-ad-badge')).toBeNull();
+    expect(localAd.hasAttribute('data-hush-ad-scanned')).toBe(true);
+  });
+
+  it('does not mask an unpositioned multi-module layout when an ad slot is incomplete', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <div data-test="plain-layout">
+        <div><a href="https://example.com/a">普通模块一，包含独立内容链接</a></div>
+        <div><a href="https://example.com/b">普通模块二，包含独立内容链接</a></div>
+        <div data-test="incomplete-ad"><div><span data-test="plain-label">广告</span></div></div>
+        <div><a href="https://example.com/c">普通模块三，包含独立内容链接</a></div>
+        <div><a href="https://example.com/d">普通模块四，包含独立内容链接</a></div>
+      </div>
+    `;
+
+    scanForAds();
+
+    const layout = document.querySelector<HTMLElement>('[data-test="plain-layout"]')!;
+    const incompleteAd = document.querySelector<HTMLElement>('[data-test="incomplete-ad"]')!;
+    const label = document.querySelector<HTMLElement>('[data-test="plain-label"]')!;
+    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(incompleteAd.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(label.hasAttribute('data-hush-ad-badge')).toBe(false);
+  });
+
+  it('still recognizes an ordinary pure-div advertising card', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <main>
+        <div data-test="div-ad-card">
+          <div><strong>推荐内容</strong><span>推广</span></div>
+          <div><a href="https://advertiser.example/product">查看产品详情与优惠信息</a></div>
+        </div>
+      </main>
+    `;
+
+    scanForAds();
+
+    const card = document.querySelector<HTMLElement>('[data-test="div-ad-card"]')!;
+    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(card.querySelector('.hush-ad-badge')).not.toBeNull();
+  });
+
+  it('retries an unresolved ad label after its local content loads asynchronously', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <div data-test="async-layout" style="position: sticky">
+        <div><a href="https://example.com/a">普通侧栏模块一</a></div>
+        <div><a href="https://example.com/b">普通侧栏模块二</a></div>
+        <div data-test="async-card"><div><span data-test="async-label">广告</span></div></div>
+      </div>
+    `;
+
+    scanForAds();
+
+    const layout = document.querySelector<HTMLElement>('[data-test="async-layout"]')!;
+    const card = document.querySelector<HTMLElement>('[data-test="async-card"]')!;
+    const label = document.querySelector<HTMLElement>('[data-test="async-label"]')!;
+    expect(layout.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(label.hasAttribute('data-hush-ad-badge')).toBe(false);
+
+    const content = document.createElement('div');
+    content.innerHTML = '<a href="https://advertiser.example">异步加载的广告正文</a>';
+    card.appendChild(content);
+    scanForAds();
+
+    expect(card.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(card.querySelector('.hush-ad-badge')).not.toBeNull();
+  });
+
+  it('does not inject or count a hidden 360 ad slot until it becomes visible', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <div data-test="hidden-wrapper" style="visibility: hidden">
+        <div class="e-pc-li-131-1" data-test="ad-slot">
+          <span>广告</span><a href="https://advertiser.example">推广内容</a>
+        </div>
+      </div>
+    `;
+
+    scanForAds();
+
+    const wrapper = document.querySelector<HTMLElement>('[data-test="hidden-wrapper"]')!;
+    const adSlot = document.querySelector<HTMLElement>('[data-test="ad-slot"]')!;
+    expect(adSlot.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(adSlot.querySelector('.hush-ad-badge')).toBeNull();
+
+    wrapper.style.visibility = 'visible';
+    scanForAds();
+
+    expect(adSlot.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(adSlot.querySelector('.hush-ad-badge')).not.toBeNull();
+  });
+
+  it('retries a zero-size 360 ad slot after the page gives it layout space', () => {
+    enableSoAdMarking();
+    document.body.innerHTML = `
+      <div class="e-pc-li-131-1" data-test="ad-slot">
+        <span>广告</span><a href="https://advertiser.example">推广内容</a>
+      </div>
+    `;
+    const adSlot = document.querySelector<HTMLElement>('[data-test="ad-slot"]')!;
+    vi.spyOn(document.documentElement, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 1200, height: 800 }));
+    const slotRect = vi.spyOn(adSlot, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 0, height: 0 }));
+
+    scanForAds();
+
+    expect(adSlot.hasAttribute('data-hush-ad-scanned')).toBe(false);
+    expect(adSlot.querySelector('.hush-ad-badge')).toBeNull();
+
+    slotRect.mockReturnValue(DOMRect.fromRect({ width: 320, height: 120 }));
+    scanForAds();
+
+    expect(adSlot.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(adSlot.querySelector('.hush-ad-badge')).not.toBeNull();
+  });
+
   it('hides standalone Sogou ad-results containers during the global ad scan', () => {
     initBlocker({
       getHostname: () => 'sogou.com',
@@ -1060,8 +1256,8 @@ describe('search engine ad detection', () => {
 
     scanForAds();
 
-    expect(document.querySelector('.ad-results')?.hasAttribute('data-srb-ad-hidden')).toBe(true);
-    expect(document.querySelector('.vrwrap')?.hasAttribute('data-srb-ad-hidden')).toBe(false);
+    expect(document.querySelector('.ad-results')?.hasAttribute('data-hush-ad-hidden')).toBe(true);
+    expect(document.querySelector('.vrwrap')?.hasAttribute('data-hush-ad-hidden')).toBe(false);
   });
 
   it('keeps Sogou ad containers hidden after the site rewrites their contents', () => {
@@ -1082,17 +1278,17 @@ describe('search engine ad detection', () => {
 
     scanForAds();
     const adContainer = document.querySelector<HTMLElement>('.ad-results')!;
-    expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
-    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
+    expect(adContainer.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(adContainer.hasAttribute('data-hush-ad-hidden')).toBe(true);
 
     // 模拟搜狗异步渲染覆盖容器内容；容器本身的本地隐藏状态应保留。
     adContainer.innerHTML = '<div class="ad_result">重新渲染的广告内容</div>';
-    expect(adContainer.hasAttribute('data-srb-ad-scanned')).toBe(true);
-    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
+    expect(adContainer.hasAttribute('data-hush-ad-scanned')).toBe(true);
+    expect(adContainer.hasAttribute('data-hush-ad-hidden')).toBe(true);
 
     scanForAds();
 
-    expect(adContainer.hasAttribute('data-srb-ad-hidden')).toBe(true);
+    expect(adContainer.hasAttribute('data-hush-ad-hidden')).toBe(true);
   });
 });
 
