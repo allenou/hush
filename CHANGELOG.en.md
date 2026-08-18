@@ -2,6 +2,20 @@
 
 This file records notable user-facing changes in each Hush release. For Simplified Chinese, see [CHANGELOG.zh-CN.md](./CHANGELOG.zh-CN.md).
 
+## [1.1.0] - 2026-08-18
+
+### New and improved
+
+- Added session controls in the popup. Independently mark, hide, or pause domain, URL, ad, and element rules for the current session without changing saved settings.
+- Improved page-handling settings, rule management, search history, and statistics, including a reset action for page-handling preferences.
+- Added search-engine hostname aliases for better compatibility across regional domains and entry points.
+- Hush is now available in the Microsoft Edge Add-ons store.
+
+### Fixed
+
+- Improved marking and tab-badge statistics across dynamic results and page navigation.
+- Fixed Sogou link-target detection and reduced false positives when identifying advertising and sponsored results.
+
 ## [1.0.0] - 2026-08-07
 
 ### Initial release
